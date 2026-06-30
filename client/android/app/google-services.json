@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "432970570650",
+    "project_id": "sirius-hub-df66a",
+    "storage_bucket": "sirius-hub-df66a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:432970570650:android:18a0efc017730ca2073823",
+        "android_client_info": {
+          "package_name": "com.example.client"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCxvLKNVHwXsf-nnOa3nYgMoLEl9VA0t9k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
