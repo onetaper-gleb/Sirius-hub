@@ -41,48 +41,48 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBAgK8N_SfkE6BxyNdZzkQllA-gAdRnJ0k',
-    appId: '1:265696164054:web:2123184be6fa5495357177',
-    messagingSenderId: '265696164054',
-    projectId: 'camphub-sirius-ee21d',
-    authDomain: 'camphub-sirius-ee21d.firebaseapp.com',
-    storageBucket: 'camphub-sirius-ee21d.firebasestorage.app',
-    measurementId: 'G-CH9VWJSQFN',
+    apiKey: 'AIzaSyBs-pchQRxJ6SHMHSs1XmRaw7MwOiiaY_k',
+    appId: '1:432970570650:web:5a548c95395fde3c073823',
+    messagingSenderId: '432970570650',
+    projectId: 'sirius-hub-df66a',
+    authDomain: 'sirius-hub-df66a.firebaseapp.com',
+    storageBucket: 'sirius-hub-df66a.firebasestorage.app',
+    measurementId: 'G-WJ1VSSF7RT',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyB6jIqzURVVRU6naC-G370MRVQEzl1ikX4',
-    appId: '1:265696164054:android:a2ffc70b333f5980357177',
-    messagingSenderId: '265696164054',
-    projectId: 'camphub-sirius-ee21d',
-    storageBucket: 'camphub-sirius-ee21d.firebasestorage.app',
+    apiKey: 'AIzaSyCxvLKNVHwXsf-nnOa3nYgMoLEl9VA0t9k',
+    appId: '1:432970570650:android:18a0efc017730ca2073823',
+    messagingSenderId: '432970570650',
+    projectId: 'sirius-hub-df66a',
+    storageBucket: 'sirius-hub-df66a.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCB59sv3kSO7S_tr2ZrH0K4MbSiKenjdt8',
-    appId: '1:265696164054:ios:83803eac98e2eec7357177',
-    messagingSenderId: '265696164054',
-    projectId: 'camphub-sirius-ee21d',
-    storageBucket: 'camphub-sirius-ee21d.firebasestorage.app',
+    apiKey: 'AIzaSyDZ_OSzFbSrDaSAQt8qmCdIB3gi-NnF9Fg',
+    appId: '1:432970570650:ios:3a8ea345eded0d9e073823',
+    messagingSenderId: '432970570650',
+    projectId: 'sirius-hub-df66a',
+    storageBucket: 'sirius-hub-df66a.firebasestorage.app',
     iosBundleId: 'com.example.client',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCB59sv3kSO7S_tr2ZrH0K4MbSiKenjdt8',
-    appId: '1:265696164054:ios:83803eac98e2eec7357177',
-    messagingSenderId: '265696164054',
-    projectId: 'camphub-sirius-ee21d',
-    storageBucket: 'camphub-sirius-ee21d.firebasestorage.app',
+    apiKey: 'AIzaSyDZ_OSzFbSrDaSAQt8qmCdIB3gi-NnF9Fg',
+    appId: '1:432970570650:ios:3a8ea345eded0d9e073823',
+    messagingSenderId: '432970570650',
+    projectId: 'sirius-hub-df66a',
+    storageBucket: 'sirius-hub-df66a.firebasestorage.app',
     iosBundleId: 'com.example.client',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyBAgK8N_SfkE6BxyNdZzkQllA-gAdRnJ0k',
-    appId: '1:265696164054:web:aa523de9d50f15e9357177',
-    messagingSenderId: '265696164054',
-    projectId: 'camphub-sirius-ee21d',
-    authDomain: 'camphub-sirius-ee21d.firebaseapp.com',
-    storageBucket: 'camphub-sirius-ee21d.firebasestorage.app',
-    measurementId: 'G-X4G7PTYY30',
+    apiKey: 'AIzaSyBs-pchQRxJ6SHMHSs1XmRaw7MwOiiaY_k',
+    appId: '1:432970570650:web:daa4a68081d98c91073823',
+    messagingSenderId: '432970570650',
+    projectId: 'sirius-hub-df66a',
+    authDomain: 'sirius-hub-df66a.firebaseapp.com',
+    storageBucket: 'sirius-hub-df66a.firebasestorage.app',
+    measurementId: 'G-GX7TQKZEMN',
   );
 }
