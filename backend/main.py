@@ -35,6 +35,8 @@ import news
 import profiles
 import forum
 
+import manage_roles
+
 os.makedirs("uploads", exist_ok=True)
 
 @asynccontextmanager
@@ -58,3 +60,5 @@ app.include_router(news.router)
 app.include_router(schedule.router)
 app.include_router(forum.forum_router)
 app.include_router(forum.topic_router)
+
+app.include_router(manage_roles.router)
