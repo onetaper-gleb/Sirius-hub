@@ -15,21 +15,25 @@ class TopicBloc extends Bloc<TopicEvent, TopicState> {
     required TopicRepository topicRepository,
     required AuthRepository authRepository,
   }) : _topicRepository = topicRepository,
-        _authRepository = authRepository,
-        super(TopicInitial()) {
+       _authRepository = authRepository,
+       super(TopicInitial()) {
     on<TopicLoadRequested>(_onLoadComments);
     on<TopicCreateCommentRequested>(_onCreateComment);
   }
 
   Future<void> _onLoadComments(
-      TopicLoadRequested event,
-      Emitter<TopicState> emit,
-      ) async {
+    TopicLoadRequested event,
+    Emitter<TopicState> emit,
+  ) async {
     emit(TopicLoading());
     try {
       final comments = await _topicRepository.getComments(event.topicId);
 
-      final authorIds = comments.map((c) => c.author_id).where((id) => id.isNotEmpty).toSet().toList();
+      final authorIds = comments
+          .map((c) => c.author_id)
+          .where((id) => id.isNotEmpty)
+          .toSet()
+          .toList();
       final Map<String, RegistrationProfileData> profiles = {};
       for (final id in authorIds) {
         try {
@@ -47,9 +51,9 @@ class TopicBloc extends Bloc<TopicEvent, TopicState> {
   }
 
   Future<void> _onCreateComment(
-      TopicCreateCommentRequested event,
-      Emitter<TopicState> emit,
-      ) async {
+    TopicCreateCommentRequested event,
+    Emitter<TopicState> emit,
+  ) async {
     try {
       await _topicRepository.createComment(event.content, event.topicId);
       add(TopicLoadRequested(topicId: event.topicId));

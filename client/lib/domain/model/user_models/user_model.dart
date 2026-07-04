@@ -14,7 +14,11 @@ class UserModel {
     this.name,
   });
 
-  factory UserModel.fromResponse(String id, String? email, Map<String, dynamic> data) {
+  factory UserModel.fromResponse(
+    String id,
+    String? email,
+    Map<String, dynamic> data,
+  ) {
     return UserModel(
       id: id,
       email: email ?? '',
