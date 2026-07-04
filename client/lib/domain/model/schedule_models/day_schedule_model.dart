@@ -18,6 +18,8 @@ class DayScheduleModel {
     json['events'].forEach((el) {
       day.add(LessonModel.fromJson(el));
     });
+    print('DaySchedule');
+    print(day);
     return DayScheduleModel(
       lessons: day,
       date: json['date'],

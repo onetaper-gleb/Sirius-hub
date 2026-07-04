@@ -11,6 +11,10 @@ class WeekScheduleModel {
     json.forEach((el) {
       lessons.add(DayScheduleModel.fromJson(el));
     });
+    print('WeekSchedule');
+    for (final i in lessons) {
+      print(i.dayWeek);
+    }
     return WeekScheduleModel(lessonModel: lessons, days: lessons.length);
   }
 }
