@@ -155,3 +155,5 @@ async def promote_user(
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Ошибка при повышении: {str(e)}")
+
+

@@ -14,16 +14,12 @@ class UserModel {
     this.name,
   });
 
-  factory UserModel.fromFirestore(String id, Map<String, dynamic> data) {
+  factory UserModel.fromResponse(String id, String? email, Map<String, dynamic> data) {
     return UserModel(
       id: id,
-      email: data['email'] ?? '',
+      email: email ?? '',
       role: UserRole.fromString(data['role'] ?? 'student'),
       name: data['name'],
     );
-  }
-
-  Map<String, dynamic> toFirestore() {
-    return {'email': email, 'role': role.name, if (name != null) 'name': name};
   }
 }
