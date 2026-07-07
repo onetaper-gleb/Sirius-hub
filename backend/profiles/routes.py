@@ -21,7 +21,6 @@ router = APIRouter(
     tags=["Profile"],
 )
 
-
 class ProfileResponse(BaseModel):
     id: str
     email: str | None
@@ -119,7 +118,7 @@ async def get_my_profile(
     if row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Пользователь не найден в БД. Сначала вызовите POST /auth/init.",
+            detail="Пользователь не найден в БД",
         )
     return row
 

@@ -32,6 +32,8 @@ class News(Base):
 class UserRole(str, enum.Enum):
     student = "student"
     council = "council"
+    admin = "admin"
+    superadmin = "superadmin"
 
 
 class User(Base):

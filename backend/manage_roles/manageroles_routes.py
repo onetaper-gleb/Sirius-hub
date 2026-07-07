@@ -1,7 +1,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from firebase_admin import auth, firestore
+from firebase_admin import auth
 from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +14,6 @@ from database.models import User as DBUser
 from auth.auth_routes import get_current_user
 
 security = HTTPBearer()
-db_firestore = firestore.client()
 
 router = APIRouter(
     prefix="/roles",
@@ -28,13 +27,16 @@ async def give_me_role(uid: str, role_u: str,
 
     try:
         auth.set_custom_user_claims(uid, {"role": role_u})
-
+        
+        role = user.get("role", "student")
+        if role == "student":
+            raise HTTPException(
+                status_code=403, detail="Доступ запрещен."
+            )
+        
         stmt = update(DBUser).where(DBUser.id == uid).values(role=role_u)
         await db_postgres.execute(stmt)
         await db_postgres.commit()
-
-        user_ref = db_firestore.collection("users").document(uid)
-        user_ref.update({"role": role_u})
 
         return {"status": "success", "message": "Роль обновлена везде!"}
     
