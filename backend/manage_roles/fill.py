@@ -12,6 +12,8 @@ import os
 from datetime import datetime, timezone
 import uuid
 
+from firebase_admin import auth
+
 load_dotenv()
 
 DB_USER = os.getenv("DB_USER")
@@ -143,7 +145,7 @@ async def show_users():
 
 async def main():
     await create_tables()
-    
+
     await fill_test_data()
     
     await show_users()
