@@ -12,7 +12,6 @@ import 'domain/bloc/schedule/schedule_bloc.dart';
 import 'network/http_client.dart';
 
 // Internal packages
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -41,16 +40,10 @@ void main() async {
 
   final authDataSource = FirebaseAuthDataSource(auth: fireBaseAuth);
 
-  // FireStore initialization
-  final fireStore = FirebaseFirestore.instance;
-
-  final userFireStore = UserFirestoreDataSource(firestore: fireStore);
-
   // Initializing repos
   final authRepository = AuthRepository(
     dio: dio,
     authDataSource: authDataSource,
-    firestoreDataSource: userFireStore,
   );
 
   final newsRepository = NewsRepository(

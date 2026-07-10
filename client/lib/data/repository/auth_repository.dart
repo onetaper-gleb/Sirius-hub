@@ -1,4 +1,3 @@
-import 'package:client/core/api_config.dart';
 import 'package:client/domain/model/profile_model.dart';
 import 'package:dio/dio.dart';
 import 'package:client/data/local/registration_draft_storage.dart';
@@ -8,15 +7,12 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase;
 
 class AuthRepository {
   final FirebaseAuthDataSource _authDataSource;
-  final UserFirestoreDataSource _firestoreDataSource;
   final Dio _dio;
 
   AuthRepository({
     required FirebaseAuthDataSource authDataSource,
-    required UserFirestoreDataSource firestoreDataSource,
     required Dio dio,
   }) : _authDataSource = authDataSource,
-       _firestoreDataSource = firestoreDataSource,
        _dio = dio;
 
   Stream<UserModel?> get userStream {
@@ -115,7 +111,6 @@ class AuthRepository {
         role: UserRole.student,
         name: profile.displayName == null ? '' : profile.displayName!.trim(),
       );
-      await _firestoreDataSource.saveUser(newUser);
 
       return newUser;
     } on firebase.FirebaseAuthException {
@@ -217,7 +212,7 @@ class AuthRepository {
 
         final model = RegistrationProfileData.fromJson(data);
         return model;
-      } on DioException catch (e) {
+      } on DioException {
         rethrow;
       } catch (e) {
         rethrow;
@@ -330,12 +325,21 @@ class AuthRepository {
   }
 
   Future<UserModel> _fetchUserOrCreateDefault(String uid, String? email) async {
-    final userModel = await _firestoreDataSource.getUser(uid);
+    print('Fecthing user');
+    final token = await _authDataSource.getToken(forceRefresh: true);
+    if (token == null) throw Exception('Not registered');
 
-    if (userModel != null) {
+    try {
+      final response = await _dio.get(
+        '/profile/user/$uid',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      final data = response.data;
+      final UserModel userModel = UserModel.fromResponse(uid, email, data);
+
       return userModel;
+    } catch (e) {
+      return UserModel(id: uid, email: email ?? '', role: UserRole.student);
     }
-
-    return UserModel(id: uid, email: email ?? '', role: UserRole.student);
   }
 }

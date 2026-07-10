@@ -1,44 +1,34 @@
-﻿import datetime
+﻿
 import io
 import os
 import uuid
-from typing import List, Optional
+from typing import List
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from PIL import Image
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from auth.auth_routes import get_current_user, require_council_role
 from database.database import get_db
-from database.models import News
+from database.models import News, RegStatus, EventStatus
+
+from .schemas import NewsResponse, EventResponse, RegistrationResponse
 
 router = APIRouter(
     prefix="/news",
     tags=["News"],
 )
 
-
-class NewsResponse(BaseModel):
-    id: str
-    title: str
-    content: str
-    image_url: Optional[str] = None
-    author_id: str
-    created_at: datetime.datetime
-
-    class Config:
-        from_attributes = True
-
-
 MAX_FILE_SIZE = 4 * 1024 * 1024
 
 
 @router.post("/", response_model=NewsResponse)
 async def create_news(
+
     title: str = Form(...),
     content: str = Form(...),
+    is_event: bool = Form(default=False),
     image: UploadFile = File(None),
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
@@ -83,15 +73,13 @@ async def create_news(
 
     return new_news
 
+@router.put("/{news_id}", response_model=NewsResponse)
+async def update_news():
+    pass
 
-@router.get("/", response_model=List[NewsResponse])
-async def get_all_news(
-    user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(News).order_by(News.created_at.desc()))
-    news_list = result.scalars().all()
-    return news_list
-
+@router.get("/{news_id}", response_model=NewsResponse)
+async def get_news():
+    pass
 
 @router.delete("/{news_id}")
 async def delete_news(
@@ -119,3 +107,34 @@ async def delete_news(
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Ошибка при удалении: {str(e)}")
+
+@router.get("/", response_model=List[NewsResponse])
+async def get_all_news(
+    user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(News).order_by(News.created_at.desc()))
+    news_list = result.scalars().all()
+    return news_list
+
+@router.patch("/events/{event_id}")
+async def update_event_status():
+    pass
+
+
+@router.post("/events/{event_id}/register", response_model=RegistrationResponse)
+async def create_reg():
+    pass
+
+@router.delete("/events/{event_id}/register")
+async def delete_reg():
+    pass
+
+@router.get("/events/{event_id}", response_model=List[RegistrationResponse])
+async def get_all_part():
+    pass
+
+@router.patch("/events/{event_id}{user_id}")
+async def update_part_status():
+    pass
+
+

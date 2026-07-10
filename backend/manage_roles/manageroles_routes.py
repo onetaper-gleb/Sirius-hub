@@ -1,6 +1,6 @@
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPBearer
 from firebase_admin import auth
 from sqlalchemy import update, select
 from sqlalchemy.dialects.postgresql import insert
@@ -45,14 +45,15 @@ async def give_me_role(
         role_u = request.u_role
         user_record = auth.get_user_by_email(email_u)
         uid = user_record.uid
+        aid = request.admin_id
 
-        role = user.get("role", "student")
-        role2 = select(DBUser.email).where(DBUser.email == email_u)
-        if role != role2:
-            role_u = "student"
-            print(f"Роли не совпадают, установлена роль 'student'")
+        # role_a = user.get("role", "student")
+        role_a = select(DBUser.role).where(DBUser.id == aid)
+        # if role != role2:
+        #     role_u = "student"
+        #     print(f"Роли не совпадают, установлена роль 'student'")
 
-        if role == "student" or role == "council":
+        if role_a == "student" or role_a == "council":
             raise HTTPException(
                 status_code=403, detail="Доступ запрещен."
             )

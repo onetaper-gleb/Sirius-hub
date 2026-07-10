@@ -10,9 +10,12 @@ from dotenv import load_dotenv
 import asyncio
 import os
 from datetime import datetime, timezone
-import uuid
 
 from firebase_admin import auth
+import firebase_admin
+from firebase_admin import credentials
+import json
+import base64
 
 load_dotenv()
 
@@ -42,90 +45,174 @@ async def create_tables():
         await conn.run_sync(Base.metadata.create_all)
     print("Таблицы созданы успешно!")
 
-async def fill_test_data():
+def init_firebase():
+    if firebase_admin._apps:
+        print("Firebase уже инициализирован")
+        return firebase_admin.get_app()
+    
+    base64_config = os.getenv("FIREBASE_CONFIG_BASE64")
+    if base64_config:
+        decoded_bytes = base64.b64decode(base64_config)
+        config_dict = json.loads(decoded_bytes)
+        cred = credentials.Certificate(config_dict)
+        firebase_admin.initialize_app(cred)
+        print("Firebase инициализирован через Base64!")
+    else:
+        print("Base64 конфиг не найден, ищу файл...")
+        cred = credentials.Certificate("firebase-adminsdk.json")
+        firebase_admin.initialize_app(cred)
+
+init_firebase()
+
+async def create_firebase_users_and_db():
+    try:
+        app = init_firebase()
+    except Exception as e:
+        print(f"Ошибка инициализации Firebase: {e}")
+        print("⏭Пропускаем создание пользователей в Firebase")
+        return []
+    
+    firebase_and_db_users = [
+        {
+            "email": "test-student@gmail.com",
+            "password": "Test123!@#",
+            "display_name": "Test Student",
+            "role": "student",
+            "avatar_emoji": "👨‍🎓",
+            "group_code": "G001",
+            "bio": "Test student bio",
+            "telegram_handle": "@test_student"
+        },
+        {
+            "email": "test-council@gmail.com",
+            "password": "Test123!@#",
+            "display_name": "Test Council",
+            "role": "council",
+            "avatar_emoji": "👨‍💼",
+            "group_code": "G002",
+            "bio": "Test council member bio",
+            "telegram_handle": "@test_council"
+        },
+        {
+            "email": "test-admin@gmail.com",
+            "password": "Test123!@#",
+            "display_name": "Test Admin",
+            "role": "admin",
+            "avatar_emoji": "👨‍💻",
+            "group_code": "G003",
+            "bio": "Test admin bio",
+            "telegram_handle": "@test_admin"
+        },
+        {
+            "email": "test-superadmin@gmail.com",
+            "password": "Test123!@#",
+            "display_name": "Test Super Admin",
+            "role": "superadmin",
+            "avatar_emoji": "👑",
+            "group_code": "G004",
+            "bio": "Test super admin bio",
+            "telegram_handle": "@test_superadmin"
+        },
+        {
+            "email": "new-email1@gmail.com",
+            "password": "Test123!@#",
+            "display_name": "New User 1",
+            "role": "student",
+            "avatar_emoji": "👤",
+            "group_code": "G005",
+            "bio": "New user 1 bio",
+            "telegram_handle": "@new_user1"
+        },
+        {
+            "email": "new-email2@gmail.com",
+            "password": "Test123!@#",
+            "display_name": "New User 2",
+            "role": "student",
+            "avatar_emoji": "👤",
+            "group_code": "G006",
+            "bio": "New user 2 bio",
+            "telegram_handle": "@new_user2"
+        }
+    ]
+    
+    created_count = 0
+    updated_count = 0
+    skipped_count = 0
+    
+    print("\nСоздание пользователей в Firebase и БД...")
+    
     async with SessionLocal() as session:
-        test_users = [
-            {
-                "email": "test-student@gmail.com",
-                "role": "student",
-                "display_name": "Test Student",
-                "avatar_emoji": "👨‍🎓",
-                "group_code": "G001",
-                "bio": "Test student bio",
-                "telegram_handle": "@test_student"
-            },
-            {
-                "email": "test-council@gmail.com",
-                "role": "council",
-                "display_name": "Test Council",
-                "avatar_emoji": "👨‍💼",
-                "group_code": "G002",
-                "bio": "Test council member bio",
-                "telegram_handle": "@test_council"
-            },
-            {
-                "email": "test-admin@gmail.com",
-                "role": "admin",
-                "display_name": "Test Admin",
-                "avatar_emoji": "👨‍💻",
-                "group_code": "G003",
-                "bio": "Test admin bio",
-                "telegram_handle": "@test_admin"
-            },
-            {
-                "email": "test-superadmin@gmail.com",
-                "role": "superadmin",
-                "display_name": "Test Super Admin",
-                "avatar_emoji": "👑",
-                "group_code": "G004",
-                "bio": "Test super admin bio",
-                "telegram_handle": "@test_superadmin"
-            },
-            {
-                "email": "new-email1@gmail.com",
-                "role": "student",
-                "display_name": "New User 1",
-                "avatar_emoji": "👤",
-                "group_code": "G005",
-                "bio": "New user 1 bio",
-                "telegram_handle": "@new_user1"
-            },
-            {
-                "email": "new-email2@gmail.com",
-                "role": "student",
-                "display_name": "New User 2",
-                "avatar_emoji": "👤",
-                "group_code": "G006",
-                "bio": "New user 2 bio",
-                "telegram_handle": "@new_user2"
-            }
-        ]
-        
-        for user_data in test_users:
-            stmt = select(DBUser).where(DBUser.email == user_data["email"])
-            result = await session.execute(stmt)
-            existing_user = result.scalar_one_or_none()
+        for user_data in firebase_and_db_users:
+            firebase_uid = None
             
-            if existing_user:
-                print(f"Пользователь {user_data['email']} уже существует")
+            # Работа с Firebase
+            try:
+                try:
+                    user = auth.get_user_by_email(user_data["email"])
+                    firebase_uid = user.uid
+                    print(f"Пользователь {user_data['email']} уже существует в Firebase")
+                    
+                    auth.update_user(
+                        user.uid,
+                        password=user_data["password"],
+                        display_name=user_data["display_name"],
+                        email_verified=True
+                    )
+                    updated_count += 1
+                    print(f"Обновлены данные")
+                    
+                except auth.UserNotFoundError:
+                    user = auth.create_user(
+                        email=user_data["email"],
+                        password=user_data["password"],
+                        display_name=user_data["display_name"],
+                        email_verified=True
+                    )
+                    firebase_uid = user.uid
+                    created_count += 1
+                    print(f"Создан пользователь в Firebase: {user_data['email']} (UID: {user.uid})")
+                
+            except Exception as e:
+                print(f"Ошибка при создании в Firebase {user_data['email']}: {e}")
+                skipped_count += 1
                 continue
             
-            user = DBUser(
-                id=str(uuid.uuid4()),
-                email=user_data["email"],
-                role=user_data["role"],
-                display_name=user_data.get("display_name"),
-                avatar_emoji=user_data.get("avatar_emoji"),
-                group_code=user_data.get("group_code"),
-                bio=user_data.get("bio"),
-                telegram_handle=user_data.get("telegram_handle"),
-                created_at=utc_now_naive()
-            )
-            session.add(user)
-            print(f"Добавлен пользователь: {user_data['email']} с ролью {user_data['role']}")
+            # Работа с БД
+            if firebase_uid:
+                stmt = select(DBUser).where(DBUser.email == user_data["email"])
+                result = await session.execute(stmt)
+                existing_user = result.scalar_one_or_none()
+                
+                if existing_user:
+                    print(f"Пользователь {user_data['email']} уже существует в БД")
+                    continue
+                
+                user = DBUser(
+                    id=firebase_uid,
+                    email=user_data["email"],
+                    role=user_data["role"],
+                    display_name=user_data.get("display_name"),
+                    avatar_emoji=user_data.get("avatar_emoji"),
+                    group_code=user_data.get("group_code"),
+                    bio=user_data.get("bio"),
+                    telegram_handle=user_data.get("telegram_handle"),
+                    created_at=utc_now_naive()
+                )
+                session.add(user)
+                print(f"Добавлен пользователь в БД: {user_data['email']} с ролью {user_data['role']}")
         
         await session.commit()
-        print(f"\nТестовые данные успешно добавлены!")
+        print(f"\nБД: Данные успешно добавлены!")
+    
+    if created_count > 0:
+        print(f"Создано новых пользователей в Firebase: {created_count}")
+    if updated_count > 0:
+        print(f"Обновлено существующих пользователей: {updated_count}")
+    if skipped_count > 0:
+        print(f"Пропущено пользователей: {skipped_count}")
+    print(f"Всего обработано: {created_count + updated_count + skipped_count}\n")
+    
+    return firebase_and_db_users
 
 async def show_users():
     async with SessionLocal() as session:
@@ -146,7 +233,7 @@ async def show_users():
 async def main():
     await create_tables()
 
-    await fill_test_data()
+    await create_firebase_users_and_db()
     
     await show_users()
     
@@ -157,6 +244,10 @@ async def main():
     print("\n📝 Примеры:")
     print("  python promote.py new-email1@gmail.com admin")
     print("  python promote.py test-student@gmail.com council")
+
+    print("\nДля входа в Firebase используйте:")
+    print("  Email: test-student@gmail.com")
+    print("  Пароль: Test123!@#")
 
 if __name__ == "__main__":
     asyncio.run(main())

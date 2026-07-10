@@ -3,7 +3,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from firebase_admin import auth
-from sqlalchemy import update
+from sqlalchemy import update, select
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database.models import User as DBUser
@@ -39,12 +39,24 @@ SessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_co
 
 print('engine got')
 
+def init_firebase():
+    base64_config = os.getenv("FIREBASE_CONFIG_BASE64")
+    if base64_config:
+        decoded_bytes = base64.b64decode(base64_config)
+        config_dict = json.loads(decoded_bytes)
+        cred = credentials.Certificate(config_dict)
+        firebase_admin.initialize_app(cred)
+        print("Firebase инициализирован через Base64!")
+    else:
+        print("Base64 конфиг не найден, ищу файл...")
+        cred = credentials.Certificate("firebase-adminsdk.json")
+        firebase_admin.initialize_app(cred)
+
+init_firebase()
+
 async def give_me_role(email, role_u):
     async with SessionLocal() as session:
         print('Session done')
-
-    # session = SessionLocal()
-    # print('Session done')
 
     try:
         # user_record = auth.get_user_by_email(email)
@@ -76,8 +88,6 @@ async def give_me_role(email, role_u):
 
     # finally:
     #     session.close()
-
-
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
