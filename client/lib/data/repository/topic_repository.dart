@@ -15,22 +15,22 @@ class TopicRepository {
 
   final List<CommentModel> _mockComments = [
     const CommentModel(
-        id: '1',
-        author_id: 'Daniel',
-        content: 'first comment!',
-        topicId: '1',
+      id: '1',
+      author_id: 'Daniel',
+      content: 'first comment!',
+      topicId: '1',
     ),
     const CommentModel(
-        id: '2',
-        author_id: 'Hleb',
-        content: 'another comment',
-        topicId: '1',
+      id: '2',
+      author_id: 'Hleb',
+      content: 'another comment',
+      topicId: '1',
     ),
     const CommentModel(
-        id: '3',
-        author_id: 'Varya',
-        content: 'yet another comment',
-        topicId: '2',
+      id: '3',
+      author_id: 'Varya',
+      content: 'yet another comment',
+      topicId: '2',
     ),
   ];
 
@@ -62,17 +62,12 @@ class TopicRepository {
       }
     } on DioException catch (e) {
       throw Exception("Ошибка сети при загрузке топиков: ${e.message}");
-    }   catch (e) {
+    } catch (e) {
       throw Exception("Неизвестная ошибка: $e");
+    }
   }
-  }
 
-
-  Future<void> createComment(
-    String content,
-    String topicId,
-  ) async {
-
+  Future<void> createComment(String content, String topicId) async {
     try {
       final rawToken = await _authDataSource.getToken();
       if (rawToken == null) {
@@ -86,7 +81,6 @@ class TopicRepository {
         data: data,
         options: Options(headers: {'Authorization': 'Bearer $rawToken'}),
       );
-
     } on DioException catch (e) {
       final data = e.response?.data;
       final errorDetail =

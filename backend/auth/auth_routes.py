@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from firebase_admin import auth, firestore
-from sqlalchemy import update
+from firebase_admin import auth
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +11,6 @@ from database.models import USER_DISPLAY_NAME_MAX_LEN
 from database.models import User as DBUser
 
 security = HTTPBearer()
-db_firestore = firestore.client()
 
 router = APIRouter(
     prefix="/auth",
@@ -111,9 +110,6 @@ async def make_me_council(
         await db_postgres.execute(stmt)
         await db_postgres.commit()
 
-        user_ref = db_firestore.collection("users").document(uid)
-        user_ref.update({"role": "council"})
-
         return {"status": "success", "message": "Роль обновлена везде!"}
 
     except Exception as e:
@@ -140,9 +136,6 @@ async def promote_user(
                 status_code=404, detail="Пользователь не найден в PostgreSQL."
             )
 
-        user_ref = db_firestore.collection("users").document(target_uid)
-        user_ref.set({"role": "council"}, merge=True)
-
         await db.commit()
 
         return {
@@ -155,5 +148,3 @@ async def promote_user(
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Ошибка при повышении: {str(e)}")
-
-
