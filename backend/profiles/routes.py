@@ -21,6 +21,7 @@ router = APIRouter(
     tags=["Profile"],
 )
 
+
 class ProfileResponse(BaseModel):
     id: str
     email: str | None

@@ -1,5 +1,4 @@
-﻿
-import io
+﻿import io
 import os
 import uuid
 from typing import List
@@ -11,9 +10,9 @@ from sqlalchemy.future import select
 
 from auth.auth_routes import get_current_user, require_council_role
 from database.database import get_db
-from database.models import News, RegStatus, EventStatus
+from database.models import EventStatus, News, RegStatus
 
-from .schemas import NewsResponse, EventResponse, RegistrationResponse
+from .schemas import EventResponse, NewsResponse, RegistrationResponse
 
 router = APIRouter(
     prefix="/news",
@@ -25,7 +24,6 @@ MAX_FILE_SIZE = 4 * 1024 * 1024
 
 @router.post("/", response_model=NewsResponse)
 async def create_news(
-
     title: str = Form(...),
     content: str = Form(...),
     is_event: bool = Form(default=False),
@@ -73,13 +71,16 @@ async def create_news(
 
     return new_news
 
+
 @router.put("/{news_id}", response_model=NewsResponse)
 async def update_news():
     pass
 
+
 @router.get("/{news_id}", response_model=NewsResponse)
 async def get_news():
     pass
+
 
 @router.delete("/{news_id}")
 async def delete_news(
@@ -108,6 +109,7 @@ async def delete_news(
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Ошибка при удалении: {str(e)}")
 
+
 @router.get("/", response_model=List[NewsResponse])
 async def get_all_news(
     user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -115,6 +117,7 @@ async def get_all_news(
     result = await db.execute(select(News).order_by(News.created_at.desc()))
     news_list = result.scalars().all()
     return news_list
+
 
 @router.patch("/events/{event_id}")
 async def update_event_status():
@@ -125,16 +128,17 @@ async def update_event_status():
 async def create_reg():
     pass
 
+
 @router.delete("/events/{event_id}/register")
 async def delete_reg():
     pass
+
 
 @router.get("/events/{event_id}", response_model=List[RegistrationResponse])
 async def get_all_part():
     pass
 
+
 @router.patch("/events/{event_id}{user_id}")
 async def update_part_status():
     pass
-
-

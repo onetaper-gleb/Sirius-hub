@@ -100,8 +100,8 @@ class _NewsScreenState extends State<NewsScreen> {
                 await newsBloc.stream
                     .firstWhere(
                       (state) => state is NewsLoaded || state is NewsError,
-                  orElse: () => NewsError(message: 'Unknown error'),
-                )
+                      orElse: () => NewsError(message: 'Unknown error'),
+                    )
                     .timeout(const Duration(seconds: 5));
               } catch (e) {
                 rethrow;
@@ -115,21 +115,22 @@ class _NewsScreenState extends State<NewsScreen> {
                 final news = newsList[index];
 
                 return Card(
-                  margin:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   elevation: 0,
                   shadowColor: Colors.transparent,
                   surfaceTintColor: Colors.transparent,
                   clipBehavior: Clip.antiAlias,
                   child: GestureDetector(
                     onLongPress: () {
-                      final isAdmin = context.read<AuthBloc>().state
-                      is AuthAuthenticated &&
-                          (context.read<AuthBloc>().state
-                          as AuthAuthenticated)
-                              .profileModel
-                              .userModel
-                              .role ==
+                      final isAdmin =
+                          context.read<AuthBloc>().state is AuthAuthenticated &&
+                          (context.read<AuthBloc>().state as AuthAuthenticated)
+                                  .profileModel
+                                  .userModel
+                                  .role ==
                               UserRole.council;
                       if (isAdmin) _confirmDelete(context, news.id);
                     },
@@ -147,10 +148,10 @@ class _NewsScreenState extends State<NewsScreen> {
                               child: Center(child: CircularProgressIndicator()),
                             ),
                             errorWidget: (context, url, error) =>
-                            const AspectRatio(
-                              aspectRatio: 16 / 9,
-                              child: Icon(Icons.broken_image, size: 80),
-                            ),
+                                const AspectRatio(
+                                  aspectRatio: 16 / 9,
+                                  child: Icon(Icons.broken_image, size: 80),
+                                ),
                           ),
                         Padding(
                           padding: const EdgeInsets.all(16),
@@ -180,7 +181,7 @@ class _NewsScreenState extends State<NewsScreen> {
                                     color: Colors.grey[600],
                                   ),
                                 ),
-                              )
+                              ),
                             ],
                           ),
                         ),
@@ -203,7 +204,7 @@ class _NewsScreenState extends State<NewsScreen> {
           );
         },
         heroTag: 'news_fab',
-      )
+      ),
     );
   }
 
