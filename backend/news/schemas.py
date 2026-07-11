@@ -33,3 +33,15 @@ class RegistrationResponse(BaseModel):
     user_id: str
     status: RegStatus
     comment: str
+
+class NewsEventsRequest(BaseModel):
+    title: str
+    content: str
+    is_event: bool = False
+    event_status: Optional[str] = None
+    event_start: Optional[str] = None
+    event_end: Optional[str] = None
+    location: Optional[str] = None
+    max_partic: Optional[int] = None
+    is_reg_open: bool = False
+
