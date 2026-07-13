@@ -52,6 +52,41 @@ class Registrations(Base):
     status = Column(String, default="registration open")
     comment = Column(String(USER_COMMENT_MAX), nullable=True)
 
+class Offers(Base):
+    __tablename__ = "offers"
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    title = Column(String, nullable=False)
+    content = Column(Text, nullable=False)
+    image_url = Column(String, nullable=True)
+    author_id = Column(String, nullable=False)
+    contacts_author = Column(String, nullable=False)
+    is_event = Column(Boolean, default=False)
+    event_id = Column(String, nullable=True)
+    status_mod = Column(String, default="draft")
+    admin_id = Column(String, nullable=True)
+    comment_admin = Column(Text, nullable=True)
+    moderated_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=_utc_now_naive)
+
+    event_status = Column(String, default="draft")
+    event_start = Column(String, nullable=False)
+    event_end = Column(String, nullable=False)
+    location = Column(String, nullable=False)
+    max_partic = Column(Integer, nullable=False)
+    cur_partic = Column(Integer, nullable=False)
+    is_reg_open = Column(Boolean, nullable=False, default=False)
+
+
+class ModerationAction(str, enum.Enum):
+    draft = 'draft'
+    moderation = 'moderation'
+    approved = 'approved'
+    rejected = 'rejected'
+    revision = 'revision'
+    archived = 'archived'
+    published = 'published'
+
+
 class EventStatus(str, enum.Enum):
     draft = 'draft'
     moderation = 'moderation'
