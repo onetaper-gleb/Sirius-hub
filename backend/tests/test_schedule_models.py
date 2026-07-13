@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from schedule.models import Event
+from schedule.group_models import Event
 
 
 def test_event_parses_teacher_string_list():
