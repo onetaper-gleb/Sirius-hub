@@ -23,15 +23,6 @@ router = APIRouter(
 
 MAX_FILE_SIZE = 4 * 1024 * 1024
 
-# utils/image_utils.py
-import io
-import os
-import uuid
-from PIL import Image
-from fastapi import HTTPException, UploadFile
-
-MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB
-
 async def process_image(image: UploadFile | None):
     if not image:
         return None
@@ -57,13 +48,65 @@ async def process_image(image: UploadFile | None):
 
 
 async def delete_old_image(image_url: str | None) -> None:
-    """Удаляет старое изображение с диска"""
     if not image_url:
         return
     
     old_file_path = image_url.replace("/static/", "uploads/")
     if os.path.exists(old_file_path):
         os.remove(old_file_path)
+
+async def get_news_or_404(db: AsyncSession, news_id: str):
+    result = await db.execute(select(News).where(News.id == news_id))
+    news = result.scalar_one_or_none()
+    if not news:
+        raise HTTPException(status_code=404, detail="Новость не найдена")
+    return news
+
+async def get_event_or_404(db: AsyncSession, event_id: str):
+    result = await db.execute(select(Events).where(Events.id == event_id))
+    event = result.scalar_one_or_none()
+    if not event:
+        raise HTTPException(status_code=404, detail="Событие не найдено")
+    return event
+
+async def get_registration_or_404(db: AsyncSession, reg_id: str):
+    result = await db.execute(select(Registrations).where(Registrations.id == reg_id))
+    reg = result.scalar_one_or_none()
+    if not reg:
+        raise HTTPException(status_code=404, detail="Событие не найдено")
+    return reg
+    
+async def validate_event_data(request: NewsEventsRequest, db: AsyncSession):
+    if not all([
+        request.event_status, 
+        request.event_start, 
+        request.event_end, 
+        request.location, 
+        request.max_partic
+    ]):
+        await db.rollback()
+        raise HTTPException(
+            status_code=400, 
+            detail="Для создания события обязательны все поля: event_status, event_start, event_end, location, max_partic"
+        )
+    if request.event_status not in [s.value for s in EventStatus]:
+        await db.rollback()
+        valid_values = ', '.join([s.value for s in EventStatus])
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Недопустимый статус события: {request.event_status}. Доступные статусы: {valid_values}"
+        )
+    if request.max_partic < 1:
+        await db.rollback()
+        raise HTTPException(
+            status_code=400, 
+            detail="max_partic должно быть больше 0"
+        )
+
+def validate_registration_status(status: str):
+    if status not in [s.value for s in RegStatus]:
+        valid_values = ', '.join([s.value for s in RegStatus])
+        raise HTTPException(400, f"Недопустимый статус: {status}, доступные: {valid_values}")
 
 @router.post("/", response_model=NewsResponse)
 async def create_news(
@@ -88,23 +131,7 @@ async def create_news(
     await db.flush()
 
     if request.is_event:
-        if not all([request.event_status, request.event_start, request.event_end, request.location, request.max_partic]):
-            await db.rollback()
-            raise HTTPException(
-                status_code=400, 
-                detail="Для события обязательны: event_status, event_start, event_end, location, max_partic"
-            )
-        if request.event_status not in [s.value for s in EventStatus]:
-            await db.rollback()
-            valid_values = ', '.join([s.value for s in EventStatus])
-            raise HTTPException(400, f"Недопустимый статус: {request.event_status}, доступные: {valid_values}")
-        
-        if request.max_partic is not None and request.max_partic < 1:
-            await db.rollback()
-            raise HTTPException(
-                status_code=400, 
-                detail="max_partic должно быть больше 0"
-            )
+        await validate_event_data(request, db)
         
         new_event = Events(
             status=request.event_status, 
@@ -137,10 +164,8 @@ async def update_news(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(News).where(News.id == news_id))
-    news = result.scalar_one_or_none()
-    if not news:
-        raise HTTPException(status_code=404, detail="Новость не найдена")
+    news = await get_news_or_404(db, news_id)
+    
     if news.author_id != user.get("uid"):
         raise HTTPException(status_code=403, detail="Нет прав на редактирование")
     
@@ -159,16 +184,7 @@ async def update_news(
         result = await db.execute(select(Events).where(Events.news_id == news.id))
         event = result.scalar_one_or_none()
         if not event:
-            if not all([request.event_status, request.event_start, request.event_end, request.location, request.max_partic]):
-                await db.rollback()
-                raise HTTPException(400, "Для создания события обязательны все поля")
-            if request.event_status not in [s.value for s in EventStatus]:
-                await db.rollback()
-                valid = ', '.join([s.value for s in EventStatus])
-                raise HTTPException(400, f"Недопустимый статус. Доступные: {valid}")
-            if request.max_partic < 1:
-                await db.rollback()
-                raise HTTPException(400, "max_partic должно быть больше 0")
+            await validate_event_data(request, db)
             
             new_event = Events(
                 status=request.event_status,
@@ -207,8 +223,7 @@ async def update_news(
                 event.is_reg_open = request.is_reg_open
 
     elif request.is_event is False and news.event_id:
-        result = await db.execute(select(Events).where(Events.id == news.event_id))
-        event = result.scalar_one_or_none()
+        event = await get_event_or_404(db, news.event_id)
         if event:
             await db.delete(event)
             news.event_id = None
@@ -224,11 +239,7 @@ async def get_news(
     news_id: str,
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(News).where(News.id == news_id))
-    news = result.scalar_one_or_none()
-    if not news:
-        raise HTTPException(status_code=404, detail="Новость не найдена")
-    return news
+    return await get_news_or_404(db, news_id)
 
 @router.delete("/{news_id}")
 async def delete_news(
@@ -236,22 +247,17 @@ async def delete_news(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(News).where(News.id == news_id))
-    news_item = result.scalar_one_or_none()
-
-    if not news_item:
-        raise HTTPException(status_code=404, detail="Новость не найдена")
+    news_item = await get_news_or_404(db, news_id)
+    
     if news_item.author_id != user.get("uid"):
         raise HTTPException(status_code=403, detail="Нет прав на удаление")
 
     try:
         if news_item.image_url:
             await delete_old_image(news_item.image_url)
-        if news_item.event_id:
-            result = await db.execute(select(Events).where(Events.id == news_item.event_id))
-            event = result.scalar_one_or_none()
-            if event:
-                await db.delete(event)
+        event = await get_event_or_404(db, news_item.event_id)
+        if event:
+            await db.delete(event)
 
         await db.delete(news_item)
         await db.commit()
@@ -279,14 +285,9 @@ async def update_event_status(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Events).where(Events.id == event_id))
-    event = result.scalar_one_or_none()
-    if not event:
-        raise HTTPException(status_code=404, detail="Событие не найдено")
-    result = await db.execute(select(News).where(News.id == event.news_id))
-    news = result.scalar_one_or_none()
-    if not news:
-        raise HTTPException(status_code=404, detail="Связанная новость не найдена")
+    event = await get_event_or_404(db, event_id)
+    news = await get_news_or_404(db, event.news_id)
+    
     if news.author_id != user.get("uid"):
         raise HTTPException(status_code=403, detail="Нет прав на изменение статуса события")
     
@@ -308,10 +309,7 @@ async def create_reg(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Events).where(Events.id == event_id))
-    event = result.scalar_one_or_none()
-    if not event:
-        raise HTTPException(status_code=404, detail="Событие не найдено")
+    event = await get_event_or_404(db, event_id)
     if not event.is_reg_open:
         raise HTTPException(status_code=400, detail="Регистрация на событие закрыта")
     
@@ -361,10 +359,8 @@ async def delete_reg(
     registration = result.scalar_one_or_none()
     if not registration:
         raise HTTPException(status_code=404, detail="Регистрация не найдена")
-    result = await db.execute(select(Events).where(Events.id == event_id))
-    event = result.scalar_one_or_none()
-    if not event:
-        raise HTTPException(status_code=404, detail="Событие не найдено")
+    
+    event = await get_event_or_404(db, event_id)
     await db.delete(registration)
 
     if registration.status != RegStatus.waiting_list.value:
@@ -380,10 +376,7 @@ async def get_all_part(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Events).where(Events.id == event_id))
-    event = result.scalar_one_or_none()
-    if not event:
-        raise HTTPException(status_code=404, detail="Событие не найдено")
+    event = await get_event_or_404(db, event_id)
     
     result = await db.execute(
         select(Registrations)
@@ -394,7 +387,7 @@ async def get_all_part(
     
     return registrations
 
-@router.patch("/events/{event_id}{user_id}", response_model=RegistrationResponse)
+@router.patch("/events/{event_id}/{user_id}", response_model=RegistrationResponse)
 async def update_part_status(
     event_id: str,
     user_id: str,
@@ -402,13 +395,8 @@ async def update_part_status(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Events).where(Events.id == event_id))
-    event = result.scalar_one_or_none()
-    if not event:
-        raise HTTPException(status_code=404, detail="Событие не найдено")
-    
-    result = await db.execute(select(News).where(News.id == event.news_id))
-    news = result.scalar_one_or_none()
+    event = await get_event_or_404(db, event_id)
+    news = await get_news_or_404(db, event.news_id)
     
     if not news or news.author_id != user.get("uid"):
         raise HTTPException(status_code=403, detail="Только автор события может менять статусы участников")
@@ -424,9 +412,7 @@ async def update_part_status(
     if not registration:
         raise HTTPException(status_code=404, detail="Регистрация не найдена")
     
-    if status not in [s.value for s in RegStatus]:
-        valid_values = ', '.join([s.value for s in RegStatus])
-        raise HTTPException(status_code=400, detail=f"Недопустимый статус. Доступные: {valid_values}")
+    validate_registration_status(status)
     
     old_status = registration.status
     registration.status = status
