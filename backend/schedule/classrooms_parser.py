@@ -146,9 +146,9 @@ class Schedule:
                         new_value = value[second_index:]
                     else:
                         new_value = value[first_index:]
-                elif 'К_' in value and (value.startswith('1') or value.startswith('2')):
-                    first_index = value.find('К_')
-                    if value.count('.') < 2:
+                elif "К_" in value and (value.startswith("1") or value.startswith("2")):
+                    first_index = value.find("К_")
+                    if value.count(".") < 2:
                         new_value = value[first_index:]
                     elif value.count(".") == 2:
                         new_value = value[(first_index - 5) :]
@@ -207,20 +207,25 @@ class Schedule:
     String with valid group name. (Group names must be written with '-' instead of ' ')
     Also you can choose between this week or next week.
     """
+
     async def classroom(self, number, next=False):
         # Choosing method to use.
         # If we need second week of different from previous classroom, then we need to change page to new classroom.
         if type(number) != str or type(next) != type(False):
-            raise TypeError('Group number must be a string. Type of variable next must be Bull.')
+            raise TypeError(
+                "Group number must be a string. Type of variable next must be Bull."
+            )
 
-        method = 'set'
+        method = "set"
         if next:
-            method = 'addWeek'
+            method = "addWeek"
 
         session = aiohttp.ClientSession()
-        session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 YaBrowser/25.8.0.0 Safari/537.36'
-        })
+        session.headers.update(
+            {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 YaBrowser/25.8.0.0 Safari/537.36"
+            }
+        )
 
         # Prepairing web-page for main request session.
         try:
@@ -228,69 +233,68 @@ class Schedule:
                 text = await resp.text()
         except Exception as e:
             await session.close()
-            raise NetworkError('error')
+            raise NetworkError("error")
 
-        soup = BeautifulSoup(text, 'html.parser')
-        all_divs = soup.find_all('div')
+        soup = BeautifulSoup(text, "html.parser")
+        all_divs = soup.find_all("div")
 
         # We look for meta info that is hidden in the body of last request
         for link in all_divs:
-          if link.get('wire:id'):
-            wire = json.loads(link.get('wire:initial-data'))
-            break
+            if link.get("wire:id"):
+                wire = json.loads(link.get("wire:initial-data"))
+                break
         else:
             await session.close()
-            raise ParsingError('No serverMemo found. Maybe problem with URL. ')
+            raise ParsingError("No serverMemo found. Maybe problem with URL. ")
 
-        all_scripts = soup.find_all('script')
+        all_scripts = soup.find_all("script")
 
         for link in all_scripts:
-            if link.text.count('livewire_token'):
+            if link.text.count("livewire_token"):
                 token = link.text[121:161]
                 break
         else:
             await session.close()
-            raise ParsingError('No token found. Maybe problem with URL.')
+            raise ParsingError("No token found. Maybe problem with URL.")
 
         # Setting data
         payload = {
-          "updates": [
-            {
-              "type": "callMethod",
-              "payload": {
-                "id": "get1",
-                "method": method,
-                "params": [number]
-              }
-            }
-          ],
-          "fingerprint": wire['fingerprint'],
-          "serverMemo": wire['serverMemo'],
+            "updates": [
+                {
+                    "type": "callMethod",
+                    "payload": {"id": "get1", "method": method, "params": [number]},
+                }
+            ],
+            "fingerprint": wire["fingerprint"],
+            "serverMemo": wire["serverMemo"],
         }
 
         # Setting headers
         headers = {
-            'Content-type': 'application/json',
-            'X-CSRF-TOKEN': token,
-            'X-livewire': 'true',
-            'Origin': 'https://schedule.siriusuniversity.ru',
-            'Referer': 'https://schedule.siriusuniversity.ru/'
+            "Content-type": "application/json",
+            "X-CSRF-TOKEN": token,
+            "X-livewire": "true",
+            "Origin": "https://schedule.siriusuniversity.ru",
+            "Referer": "https://schedule.siriusuniversity.ru/",
         }
 
         # Requesting schedule from web-site
         try:
-            async with session.post(self.__URL_CLASSROOM, headers=headers, json=payload) as response:
+            async with session.post(
+                self.__URL_CLASSROOM, headers=headers, json=payload
+            ) as response:
                 ans = await response.json()
             # Resetting position on web-site
-            payload['updates'][0]['payload']['method'] = 'minusWeek'
-            async with session.post(self.__URL_CLASSROOM, headers=headers, json=payload) as r:
+            payload["updates"][0]["payload"]["method"] = "minusWeek"
+            async with session.post(
+                self.__URL_CLASSROOM, headers=headers, json=payload
+            ) as r:
                 pass
         except:
             await session.close()
 
             raise NetworkError("Failed to make request to sirius university.")
 
-        
         # Creates the returning dictionary
         schedule = {
             0: [],
@@ -300,39 +304,41 @@ class Schedule:
             4: [],
             5: [],
             6: [],
-            'classroom': number
+            "classroom": number,
         }
 
         # Parsing response structure
         try:
-            if not ans['serverMemo']['data'].get('events', 0):
+            if not ans["serverMemo"]["data"].get("events", 0):
                 await session.close()
                 return number
-            for i in ans['serverMemo']['data']['events'].keys():
-                for j in ans['serverMemo']['data']['events'][i]:
-                    if type(j['teachers']) == dict:
-                        j['teacher'] = j['teachers'][list(j['teachers'].keys())[0]]
-                        if type(j['teacher']) != str:
-                            del j['teacher']['id']
-                        del j['teachers']
-                    del j['code']
-                    del j['color']
-                    if not i.startswith('Д'):
-                        j['numberPair'] = int(i[:1]) + 1
+            for i in ans["serverMemo"]["data"]["events"].keys():
+                for j in ans["serverMemo"]["data"]["events"][i]:
+                    if type(j["teachers"]) == dict:
+                        j["teacher"] = j["teachers"][list(j["teachers"].keys())[0]]
+                        if type(j["teacher"]) != str:
+                            del j["teacher"]["id"]
+                        del j["teachers"]
+                    del j["code"]
+                    del j["color"]
+                    if not i.startswith("Д"):
+                        j["numberPair"] = int(i[:1]) + 1
                         schedule[int(i[2:3])].append(j)
                     else:
-                        hour, minute = map(lambda x: int(x), j['startTime'].split(":"))
+                        hour, minute = map(lambda x: int(x), j["startTime"].split(":"))
                         for m, time in enumerate(self.__lessons):
                             if time > hour * 60 + minute:
                                 pair = m
                                 break
-                        j['numberPair'] = pair
+                        j["numberPair"] = pair
                         schedule[int(i[4:5])].append(j)
             for i in list(schedule.keys())[:-1]:
-                schedule[i].sort(key=lambda x: x['numberPair'])
+                schedule[i].sort(key=lambda x: x["numberPair"])
         except Exception as e:
             await session.close()
-            raise ScheduleParsingError("Error in parsing server response. Might be wrong group name.")
+            raise ScheduleParsingError(
+                "Error in parsing server response. Might be wrong group name."
+            )
 
         await session.close()
         return schedule

@@ -12,6 +12,7 @@ from urllib.request import HTTPCookieProcessor, Request, build_opener
 ROOT_URL = "https://schedule.siriusuniversity.ru/"
 LIVEWIRE_ENDPOINT = "https://schedule.siriusuniversity.ru/livewire/message/main-grid"
 
+
 @dataclass
 class LivewireState:
     token: str
