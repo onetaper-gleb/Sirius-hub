@@ -206,7 +206,7 @@ class Schedule:
     This function gives you this week schedule for certain classroom.
     String with valid group name. (Group names must be written with '-' instead of ' ')
     Also you can choose between this week or next week.
-    '''
+    """
     async def classroom(self, number, next=False):
         # Choosing method to use.
         # If we need second week of different from previous classroom, then we need to change page to new classroom.
