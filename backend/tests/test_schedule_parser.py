@@ -1,4 +1,4 @@
-from schedule.parser import SiriusScheduleClient
+from schedule.group_parser import SiriusScheduleClient
 
 
 def test_build_updates_for_positive_and_negative_offsets():
