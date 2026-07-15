@@ -1,20 +1,20 @@
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from firebase_admin import auth
-from sqlalchemy import update, select
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from database.models import User as DBUser
+import asyncio
+import base64
+import json
+
 import firebase_admin
 from dotenv import load_dotenv
-from firebase_admin import credentials
-import asyncio
-import json
-import base64
+from firebase_admin import auth, credentials
+from sqlalchemy import create_engine, select, update
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import sessionmaker
 
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from database.models import User as DBUser
 
 load_dotenv()
 
@@ -28,16 +28,21 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
     if DB_USER and DB_PASSWORD and DB_NAME:
-        DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+        DATABASE_URL = (
+            f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+        )
     else:
         DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./test.db")
 
-print(f'DATABASE_URL: {DATABASE_URL}')
+print(f"DATABASE_URL: {DATABASE_URL}")
 engine = create_async_engine(DATABASE_URL)
 # SessionLocal = sessionmaker(bind=engine)
-SessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+SessionLocal = async_sessionmaker(
+    bind=engine, class_=AsyncSession, expire_on_commit=False
+)
 
-print('engine got')
+print("engine got")
+
 
 def init_firebase():
     base64_config = os.getenv("FIREBASE_CONFIG_BASE64")
@@ -52,11 +57,13 @@ def init_firebase():
         cred = credentials.Certificate("firebase-adminsdk.json")
         firebase_admin.initialize_app(cred)
 
+
 init_firebase()
+
 
 async def give_me_role(email, role_u):
     async with SessionLocal() as session:
-        print('Session done')
+        print("Session done")
 
     try:
         # user_record = auth.get_user_by_email(email)
@@ -65,18 +72,18 @@ async def give_me_role(email, role_u):
 
         stmt = update(DBUser).where(DBUser.email == email).values(role=role_u)
 
-        print('stmt created')
+        print("stmt created")
         result = await session.execute(stmt)
-        print('stmt executed') 
+        print("stmt executed")
 
         await session.commit()
-        
+
         if result.rowcount == 0:
-            print(f'Ошибка: пользователь с email {email} не найден')
+            print(f"Ошибка: пользователь с email {email} не найден")
             sys.exit(1)
         else:
             print(f"status: success; Роль обновлена везде!")
-    
+
     # except auth.UserNotFoundError:
     #     print(f"Ошибка: Пользователь с email '{email}' не найден")
     #     sys.exit(1)
@@ -89,6 +96,7 @@ async def give_me_role(email, role_u):
     # finally:
     #     session.close()
 
+
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("Использование: python manage_roles.py EMAIL ROLE")
@@ -98,7 +106,7 @@ if __name__ == "__main__":
     email = sys.argv[1]
     role_u = sys.argv[2]
 
-    print(email, role_u )
+    print(email, role_u)
 
     valid_roles = ["student", "council", "admin"]
     if role_u not in valid_roles:

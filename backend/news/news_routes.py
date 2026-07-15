@@ -1,5 +1,4 @@
-﻿
-import io
+﻿import io
 import os
 import uuid
 from typing import List, Optional
@@ -161,6 +160,7 @@ async def create_news(
 
     return new_news
 
+
 @router.put("/{news_id}", response_model=NewsResponse)
 async def update_news(
     news_id: str,
@@ -244,6 +244,7 @@ async def get_news(
 ):
     return await get_news_or_404(db, news_id)
 
+
 @router.delete("/{news_id}")
 async def delete_news(
     news_id: str,
@@ -274,6 +275,7 @@ async def delete_news(
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Ошибка при удалении: {str(e)}")
+
 
 @router.get("/", response_model=List[NewsResponse])
 async def get_all_news(
@@ -352,6 +354,7 @@ async def create_reg(
     return new_registration
 
 
+
 @router.delete("/events/{event_id}/register")
 async def delete_reg(
     event_id: str,
@@ -376,6 +379,7 @@ async def delete_reg(
     
     await db.commit()
     return {"status": "success", "message": "Регистрация успешно отменена"}
+
 
 
 @router.get("/events/{event_id}", response_model=List[RegistrationResponse])

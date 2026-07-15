@@ -1,7 +1,10 @@
-from pydantic import BaseModel
-from typing import Optional
 import datetime
-from database.models import RegStatus, EventStatus
+from typing import Optional
+
+from pydantic import BaseModel
+
+from database.models import EventStatus, RegStatus
+
 
 class NewsResponse(BaseModel):
     id: str
@@ -16,6 +19,7 @@ class NewsResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class EventResponse(BaseModel):
     id: str
     status: EventStatus
@@ -26,6 +30,7 @@ class EventResponse(BaseModel):
     max_partic: int
     cur_partic: int
     is_reg_open: bool
+
 
 class RegistrationResponse(BaseModel):
     id: str

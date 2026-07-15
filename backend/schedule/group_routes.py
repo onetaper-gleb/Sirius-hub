@@ -2,8 +2,8 @@ from typing import List
 
 from fastapi import APIRouter, HTTPException
 
-from .models import Day
-from .parser import SiriusScheduleClient
+from .group_models import Day
+from .group_parser import SiriusScheduleClient
 
 router = APIRouter(
     prefix="/schedule",
