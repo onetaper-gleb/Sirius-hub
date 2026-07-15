@@ -437,6 +437,7 @@ async def update_part_status(
         if event.cur_partic < event.max_partic:
             event.cur_partic += 1
         else:
+            await db.rollback()
             raise HTTPException(status_code=403, detail="Превышено максимальное количество участников")
     elif old_status == RegStatus.confimed.value and status != RegStatus.confimed.value:
         event.cur_partic -= 1
