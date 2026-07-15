@@ -107,11 +107,11 @@ async def create_firebase_users_and_db():
             "email": "test-superadmin@gmail.com",
             "password": "Test123!@#",
             "display_name": "Test Super Admin",
-            "role": "superadmin",
+            "role": "admin",
             "avatar_emoji": "👑",
             "group_code": "G004",
             "bio": "Test super admin bio",
-            "telegram_handle": "@test_superadmin"
+            "telegram_handle": "@test_admin"
         },
         {
             "email": "new-email1@gmail.com",
@@ -239,7 +239,7 @@ async def main():
     
     print("\nТеперь вы можете тестировать ваш скрипт:")
     print("  python promote.py new-email1@gmail.com admin")
-    print("  python promote.py test-student@gmail.com superadmin")
+    print("  python promote.py test-student@gmail.com admin")
     print("  python promote.py fake@gmail.com admin")
     print("\n📝 Примеры:")
     print("  python promote.py new-email1@gmail.com admin")

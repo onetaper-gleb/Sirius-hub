@@ -92,7 +92,7 @@ async def give_me_role(email, role_u):
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("Использование: python manage_roles.py EMAIL ROLE")
-        print("Роли: student, council, admin, superadmin")
+        print("Роли: student, council, admin")
         sys.exit(1)
 
     email = sys.argv[1]
@@ -100,7 +100,7 @@ if __name__ == "__main__":
 
     print(email, role_u )
 
-    valid_roles = ["student", "council", "admin", "superadmin"]
+    valid_roles = ["student", "council", "admin"]
     if role_u not in valid_roles:
         print(f"Ошибка: роль '{role_u}' не существует")
         sys.exit(1)
