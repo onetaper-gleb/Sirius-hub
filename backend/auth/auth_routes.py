@@ -32,11 +32,17 @@ def get_current_user(res: HTTPAuthorizationCredentials = Depends(security)):
         )
 
 
-def require_council_role(user: dict = Depends(get_current_user)):
-    role = select(DBUser.role).where(DBUser.id == id)
-        if role == "student":
-            raise HTTPException(
-                status_code=403, detail="Только студсовет администраторы могут публиковать новости."
+async def require_council_role(db: AsyncSession, user: dict = Depends(get_current_user)):
+    uid = user.get("uid")
+    stmt = select(DBUser.role).where(DBUser.id == uid)
+    result = await db.execute(stmt)
+    role = result.scalar()
+
+    if role == "student":
+        raise HTTPException(
+            status_code=403,
+            detail="Только студсовет администраторы могут публиковать новости."
+        )
     return user
 
 
