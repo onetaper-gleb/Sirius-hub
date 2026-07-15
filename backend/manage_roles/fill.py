@@ -121,7 +121,7 @@ async def create_firebase_users_and_db():
             "avatar_emoji": "👑",
             "group_code": "G004",
             "bio": "Test super admin bio",
-            "telegram_handle": "@test_admin"
+            "telegram_handle": "@test_admin",
         },
         {
             "email": "new-email1@gmail.com",

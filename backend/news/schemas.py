@@ -39,6 +39,7 @@ class RegistrationResponse(BaseModel):
     status: RegStatus
     comment: str
 
+
 class NewsEventsRequest(BaseModel):
     title: str
     content: str
@@ -49,4 +50,3 @@ class NewsEventsRequest(BaseModel):
     location: Optional[str] = None
     max_partic: Optional[int] = None
     is_reg_open: bool = False
-
