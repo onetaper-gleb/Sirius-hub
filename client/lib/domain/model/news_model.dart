@@ -7,12 +7,14 @@ class NewsModel {
   final String? imageUrl; // Может быть null
   final String authorId;
   final DateTime createdAt;
+  final String? topicId;
 
   NewsModel({
     required this.id,
     required this.title,
     required this.content,
     this.imageUrl,
+    this.topicId,
     required this.authorId,
     required this.createdAt,
   });
@@ -33,6 +35,7 @@ class NewsModel {
       createdAt:
           DateTime.tryParse(createdAtRaw?.toString() ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
+      topicId: json['topic_id'] as String?,
     );
   }
 }

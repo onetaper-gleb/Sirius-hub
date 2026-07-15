@@ -9,16 +9,20 @@ import 'package:client/domain/bloc/topic/topic_controller.dart';
 import '../../core/dependencies.dart';
 import '../../domain/model/forum_models/comment_model.dart';
 import '../../domain/model/registration_profile.dart';
+import '../../domain/model/news_model.dart';
 
 class TopicScreen extends StatelessWidget {
   final String topicId;
   final String title;
   final bool isAnonymous;
+  final NewsModel? attachedNews;
+
   const TopicScreen({
     super.key,
     required this.topicId,
     required this.title,
     required this.isAnonymous,
+    this.attachedNews,
   });
 
   @override
@@ -38,6 +42,7 @@ class TopicScreen extends StatelessWidget {
               child: _TopicView(
                 topicId: topicId,
                 isAnonymousTopic: isAnonymous,
+                attachedNews: attachedNews,
               ),
             ),
             Builder(
@@ -147,7 +152,12 @@ class _CommentInputFieldState extends State<_CommentInputField> {
 class _TopicView extends StatelessWidget {
   final String topicId;
   final bool isAnonymousTopic;
-  const _TopicView({required this.topicId, required this.isAnonymousTopic});
+  final NewsModel? attachedNews;
+  const _TopicView({
+    required this.topicId,
+    required this.isAnonymousTopic,
+    this.attachedNews,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +169,7 @@ class _TopicView extends StatelessWidget {
           final comments = state.comments;
           final profiles = state.profiles;
 
-          if (comments.isEmpty) {
+          if (comments.isEmpty && attachedNews == null) {
             return const Center(child: Text('Пока нет сообщений'));
           }
 
@@ -170,9 +180,31 @@ class _TopicView extends StatelessWidget {
               );
             },
             child: ListView.builder(
-              itemCount: comments.length,
+              itemCount: attachedNews != null ? comments.length+1: comments.length,
               itemBuilder: (context, index) {
-                final comment = comments[index];
+                if (attachedNews != null && index == 0) {
+                  return Padding(padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          attachedNews!.title,
+                          style:const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          attachedNews!.content,
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                        const SizedBox(height: 16),
+                        const Divider(thickness: 4, color: Colors.black12),
+                      ],
+                    ),
+                  );
+                }
+
+                final commentIndex = attachedNews != null ? index - 1: index;
+                final comment = comments[commentIndex];
                 final profile = profiles[comment.author_id];
                 return _Comment(
                   comment: comment,
@@ -180,6 +212,7 @@ class _TopicView extends StatelessWidget {
                   isAnonymousTopic: isAnonymousTopic,
                 );
               },
+
             ),
           );
         } else if (state is TopicError) {

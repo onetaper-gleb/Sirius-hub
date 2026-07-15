@@ -19,18 +19,21 @@ class TopicRepository {
       author_id: 'Daniel',
       content: 'first comment!',
       topicId: '1',
+      repliesIds: [],
     ),
     const CommentModel(
       id: '2',
       author_id: 'Hleb',
       content: 'another comment',
       topicId: '1',
+      repliesIds: [],
     ),
     const CommentModel(
       id: '3',
       author_id: 'Varya',
       content: 'yet another comment',
       topicId: '2',
+      repliesIds: [],
     ),
   ];
 
