@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from http.cookiejar import CookieJar
 from typing import Any
+from datetime import datetime, timedelta
 from urllib.request import HTTPCookieProcessor, Request, build_opener
 
 ROOT_URL = "https://schedule.siriusuniversity.ru/"
@@ -36,7 +37,9 @@ class SiriusScheduleClient:
         }
         response = self._post_livewire(payload)
         data = response.get("serverMemo", {}).get("data", {})
-        return self._normalize_response(group, week_offset, data)
+        days =  self._normalize_response(group, week_offset, data)
+
+        return self._add_empty_days(days)
 
     def _get_initial_state(self) -> LivewireState:
         with self._opener.open(ROOT_URL, timeout=30) as response:
@@ -183,6 +186,45 @@ class SiriusScheduleClient:
             )
 
         return days
+
+    def _add_empty_days(self, days: list[dict[str, Any]]) -> list[dict[str, Any]]:
+
+        if not days:
+            datetime_now = datetime.now()
+            monday = datetime_now - timedelta(days=datetime_now.weekday())
+            
+            result = []
+            for i in range(6):
+                date = monday + timedelta(days=i)
+                result.append({
+                    "date": date.strftime("%d.%m.%Y"),
+                    "day_week": i + 1,
+                    "events": []
+                })
+            return result
+
+        first_date = datetime.strptime(days[0]["date"], "%d.%m.%Y")
+        dict_days = {}
+        for day in days:
+            dict_days[day["date"]] = day
+
+        result = []
+        for i in range(6):
+            date = first_date + timedelta(days=i)
+            date_str = date.strftime("%d.%m.%Y")
+
+            if date_str in dict_days:
+                day = dict_days[date_str]
+                day["day_week"] = i + 1
+                result.append(day)
+            else:
+                result.append({
+                    "date": date_str,
+                    "day_week": i + 1,
+                    "events": []
+                })
+
+        return result
 
     @staticmethod
     def _parse_date(value: Any) -> datetime:
