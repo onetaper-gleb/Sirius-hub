@@ -32,7 +32,7 @@ def get_current_user(res: HTTPAuthorizationCredentials = Depends(security)):
         )
 
 
-async def require_council_role(db: AsyncSession, user: dict = Depends(get_current_user)):
+async def require_council_role(db: AsyncSession = Depends(get_db), user: dict = Depends(get_current_user)):
     uid = user.get("uid")
     stmt = select(DBUser.role).where(DBUser.id == uid)
     result = await db.execute(stmt)
