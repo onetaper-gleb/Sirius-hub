@@ -33,10 +33,10 @@ def get_current_user(res: HTTPAuthorizationCredentials = Depends(security)):
 
 
 def require_council_role(user: dict = Depends(get_current_user)):
-    role = user.get("role", "student")
-    if role != "council":
+    role = select(DBUser.role).where(DBUser.id == id)
+    if role == "student":
         raise HTTPException(
-            status_code=403, detail="Только студсовет может публиковать новости."
+            status_code=403, detail="Только студсовет администраторы могут публиковать новости."
         )
     return user
 
