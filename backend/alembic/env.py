@@ -1,17 +1,19 @@
-import sys
+import asyncio
 import os
-from pathlib import Path
+import sys
 from logging.config import fileConfig
+from pathlib import Path
+
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
+
 from alembic import context
-import asyncio
 
 # 1. Пути для импортов
 sys.path.append(str(Path(__file__).parent.parent))
-from database.database import Base
 import database.models
+from database.database import Base
 
 target_metadata = Base.metadata
 
@@ -61,7 +63,7 @@ def do_run_migrations(connection: Connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        render_as_batch=True  # <--- ВОТ ЭТА СТРОЧКА НУЖНА ДЛЯ SQLITE
+        render_as_batch=True,  # <--- ВОТ ЭТА СТРОЧКА НУЖНА ДЛЯ SQLITE
     )
 
     with context.begin_transaction():
