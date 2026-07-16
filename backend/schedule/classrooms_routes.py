@@ -13,7 +13,7 @@ router = APIRouter(
 )
 
 
-@router.get("/free", response_model=FreeClassrooms)
+@router.get("/free", response_model=List[str])
 async def get_free_classrooms(
     date: Optional[str] = Query(None, description="YYYY-MM-DD"),
     time: Optional[str] = Query(None, description="HH:MM"),
