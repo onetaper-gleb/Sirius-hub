@@ -175,8 +175,8 @@ class AuthRepository {
       userModel: auth,
     );
     return authModel;
-      // String? token = await _authDataSource.getToken(forceRefresh: true);
-      // print("Bearer "+ token.toString());
+    // String? token = await _authDataSource.getToken(forceRefresh: true);
+    // print("Bearer "+ token.toString());
   }
 
   Future<void> signOut() async {
@@ -204,7 +204,6 @@ class AuthRepository {
         );
 
         final data = response.data;
-
 
         if (data is! Map<String, dynamic>) {
           throw Exception('Неправильный формат response при логине.');
@@ -299,9 +298,7 @@ class AuthRepository {
     try {
       final response = await _dio.get(
         'profile/user/$userId',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       final data = response.data;

@@ -67,7 +67,6 @@ class ForumRepository {
     }
   }
 
-
   Future<void> createTopic(String title, bool isAnonymous) async {
     try {
       final rawToken = await _authDataSource.getToken();
@@ -75,10 +74,7 @@ class ForumRepository {
         await _authDataSource.deleteCurrentUser();
         throw Exception('Не удалось получить токен после регистрации');
       }
-      final formData = {
-        'title': title,
-        'anon': isAnonymous,
-      };
+      final formData = {'title': title, 'anon': isAnonymous};
 
       final response = await _dio.post(
         '/forum/topics',
@@ -86,7 +82,9 @@ class ForumRepository {
         options: Options(headers: {'Authorization': 'Bearer $rawToken'}),
       );
       print('=== CREATE TOPIC RESPONSE status: ${response.statusCode}');
-      print('=== CREATE TOPIC RESPONSE data type: ${response.data.runtimeType}');
+      print(
+        '=== CREATE TOPIC RESPONSE data type: ${response.data.runtimeType}',
+      );
       print('=== CREATE TOPIC RESPONSE data: ${response.data}');
     } on DioException catch (e) {
       print('=== DIO EXCEPTION: ${e.message}');

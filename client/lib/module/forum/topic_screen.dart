@@ -10,7 +10,6 @@ import '../../core/dependencies.dart';
 import '../../domain/model/forum_models/comment_model.dart';
 import '../../domain/model/registration_profile.dart';
 
-
 class TopicScreen extends StatelessWidget {
   final String topicId;
   final String title;
@@ -27,9 +26,10 @@ class TopicScreen extends StatelessWidget {
     final topicRepository = context.dependencies.topicRepository;
     final authRepository = context.dependencies.authRepository;
     return BlocProvider(
-      create: (context) =>
-      TopicBloc(topicRepository: topicRepository, authRepository: authRepository)
-        ..add(TopicLoadRequested(topicId: topicId)),
+      create: (context) => TopicBloc(
+        topicRepository: topicRepository,
+        authRepository: authRepository,
+      )..add(TopicLoadRequested(topicId: topicId)),
       child: Scaffold(
         appBar: AppBar(title: Text(title)),
         body: Column(
@@ -41,16 +41,16 @@ class TopicScreen extends StatelessWidget {
               ),
             ),
             Builder(
-                builder: (context) => _CommentInputField(
-                  onSubmit: (content) {
-                    context.read<TopicBloc>().add(
-                      TopicCreateCommentRequested(
-                        content: content,
-                        topicId: topicId,
-                      ),
-                    );
-                  },
-                )
+              builder: (context) => _CommentInputField(
+                onSubmit: (content) {
+                  context.read<TopicBloc>().add(
+                    TopicCreateCommentRequested(
+                      content: content,
+                      topicId: topicId,
+                    ),
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -112,11 +112,13 @@ class _CommentInputFieldState extends State<_CommentInputField> {
                     vertical: 10,
                   ),
                 ),
-                buildCounter: (context,
-                    {required currentLength,
+                buildCounter:
+                    (
+                      context, {
+                      required currentLength,
                       required maxLength,
-                      required isFocused}) =>
-                null,
+                      required isFocused,
+                    }) => null,
               ),
             ),
             const SizedBox(width: 8),
@@ -163,7 +165,9 @@ class _TopicView extends StatelessWidget {
 
           return RefreshIndicator(
             onRefresh: () async {
-              context.read<TopicBloc>().add(TopicLoadRequested(topicId: topicId));
+              context.read<TopicBloc>().add(
+                TopicLoadRequested(topicId: topicId),
+              );
             },
             child: ListView.builder(
               itemCount: comments.length,
@@ -180,7 +184,10 @@ class _TopicView extends StatelessWidget {
           );
         } else if (state is TopicError) {
           return Center(
-            child: Text('Ошибка: ${state.error}', style: const TextStyle(color: Colors.red)),
+            child: Text(
+              'Ошибка: ${state.error}',
+              style: const TextStyle(color: Colors.red),
+            ),
           );
         }
 
@@ -212,7 +219,10 @@ class _Comment extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: InkWell(
-        onTap: (!isAnonymousTopic && comment.author_id.isNotEmpty && profile != null)
+        onTap:
+            (!isAnonymousTopic &&
+                comment.author_id.isNotEmpty &&
+                profile != null)
             ? () => _showProfileDialog(context, profile!)
             : null,
         borderRadius: BorderRadius.circular(12),
@@ -232,14 +242,21 @@ class _Comment extends StatelessWidget {
                       color: Theme.of(context).colorScheme.primaryContainer,
                     ),
                     child: showEmoji
-                        ? Text(avatarEmoji, style: const TextStyle(fontSize: 18))
+                        ? Text(
+                            avatarEmoji,
+                            style: const TextStyle(fontSize: 18),
+                          )
                         : Text(
-                      displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                            displayName.isNotEmpty
+                                ? displayName[0].toUpperCase()
+                                : '?',
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -260,13 +277,19 @@ class _Comment extends StatelessWidget {
     );
   }
 
-  void _showProfileDialog(BuildContext context, RegistrationProfileData profile) {
+  void _showProfileDialog(
+    BuildContext context,
+    RegistrationProfileData profile,
+  ) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Row(
           children: [
-            Text(profile.avatarEmoji ?? '😀', style: const TextStyle(fontSize: 28)),
+            Text(
+              profile.avatarEmoji ?? '😀',
+              style: const TextStyle(fontSize: 28),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -315,7 +338,10 @@ class _Comment extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+                Text(
+                  label,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
                 const SizedBox(height: 2),
                 Text(value),
               ],

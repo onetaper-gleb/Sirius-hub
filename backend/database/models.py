@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, String, Text, Integer
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
 
 from .database import Base
 
@@ -31,6 +31,7 @@ class News(Base):
     is_event = Column(Boolean, nullable=False, default=False)
     event_id = Column(String, nullable=True)
 
+
 class Events(Base):
     __tablename__ = "events"
 
@@ -43,7 +44,8 @@ class Events(Base):
     max_partic = Column(Integer, nullable=False)
     cur_partic = Column(Integer, nullable=False)
     is_reg_open = Column(Boolean, nullable=False, default=False)
-    
+
+
 class Registrations(Base):
     __tablename__ = "registrations"
     id = Column(String, primary_key=True, index=True)
@@ -88,27 +90,28 @@ class ModerationAction(str, enum.Enum):
 
 
 class EventStatus(str, enum.Enum):
-    draft = 'draft'
-    moderation = 'moderation'
-    published = 'published'
-    finished = 'finished'
-    canceled = 'canceled'
-    archived = 'archived'
+    draft = "draft"
+    moderation = "moderation"
+    published = "published"
+    finished = "finished"
+    canceled = "canceled"
+    archived = "archived"
+
 
 class RegStatus(str, enum.Enum):
-    r_open = 'registration open'
-    pending = 'pending'
-    confimed = 'confimed'
-    waiting_list = 'waiting_list'
-    canceled_by_user = 'canceled_by_user'
-    canceled_by_admin = 'canceled_by_admin'
-    r_closed = 'registration closed'
+    r_open = "registration open"
+    pending = "pending"
+    confimed = "confimed"
+    waiting_list = "waiting_list"
+    canceled_by_user = "canceled_by_user"
+    canceled_by_admin = "canceled_by_admin"
+    r_closed = "registration closed"
+
 
 class UserRole(str, enum.Enum):
     student = "student"
     council = "council"
     admin = "admin"
-    superadmin = "superadmin"
 
 
 class User(Base):

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from firebase_admin import auth
-from sqlalchemy import update, select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,11 +32,16 @@ def get_current_user(res: HTTPAuthorizationCredentials = Depends(security)):
         )
 
 
-def require_council_role(user: dict = Depends(get_current_user)):
-    role = user.get("role", "student")
-    if role != "council":
+async def require_council_role(db: AsyncSession = Depends(get_db), user: dict = Depends(get_current_user)):
+    uid = user.get("uid")
+    stmt = select(DBUser.role).where(DBUser.id == uid)
+    result = await db.execute(stmt)
+    role = result.scalar()
+
+    if role == "student":
         raise HTTPException(
-            status_code=403, detail="Только студсовет может публиковать новости."
+            status_code=403,
+            detail="Только студсовет администраторы могут публиковать новости."
         )
     return user
 
@@ -148,4 +153,3 @@ async def promote_user(
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Ошибка при повышении: {str(e)}")
-
