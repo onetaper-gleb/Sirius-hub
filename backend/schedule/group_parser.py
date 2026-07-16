@@ -4,10 +4,9 @@ import html
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from http.cookiejar import CookieJar
 from typing import Any
-from datetime import datetime, timedelta
 from urllib.request import HTTPCookieProcessor, Request, build_opener
 
 ROOT_URL = "https://schedule.siriusuniversity.ru/"
@@ -37,7 +36,7 @@ class SiriusScheduleClient:
         }
         response = self._post_livewire(payload)
         data = response.get("serverMemo", {}).get("data", {})
-        days =  self._normalize_response(group, week_offset, data)
+        days = self._normalize_response(group, week_offset, data)
 
         return self._add_empty_days(days)
 
@@ -205,7 +204,7 @@ class SiriusScheduleClient:
         if not days:
             datetime_now = datetime.now()
             monday = datetime_now - timedelta(days=datetime_now.weekday())
-            
+
             result = []
             for i in range(6):
                 date = monday + timedelta(days=i)
