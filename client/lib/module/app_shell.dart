@@ -17,12 +17,12 @@ class _AppShellState extends State<AppShell> {
 
   static const _titles = ['Новости', 'Форум', 'Расписание', 'Профиль'];
 
-  List<Widget> get _pages => [
+  late final List<Widget> _pages = [
     const NewsScreen(),
     Navigator(
       key: const ValueKey('forum_navigator'),
       onGenerateRoute: (settings) =>
-          MaterialPageRoute(builder: (context) => const ForumScreen()),
+        MaterialPageRoute(builder: (context) => const ForumScreen()),
     ),
     const ScheduleScreen(),
     const ProfileScreen(),
@@ -31,7 +31,38 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_titles[_index])),
+      appBar: AppBar(title: Text(_titles[_index]),
+        actions: [
+          if (_index == 2)
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.blue,
+                  elevation: 0,
+                  side: const BorderSide(color: Colors.blue, width: 1)
+                ),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Вызов диалога свободных аудиторий (в разработке)'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.manage_search, size: 20),
+                label: const Text(
+                  'Свободные ауд.',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
       body: IndexedStack(index: _index, children: _pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
