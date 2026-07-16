@@ -146,9 +146,9 @@ async def create_news(
         content=request.content,
         image_url=image_url,
         author_id=user.get("uid"),
-        is_event=request.has_event,
+        has_event=request.has_event,
         event_id=None,
-        is_topic=request.has_topic,
+        has_topic=request.has_topic,
         topic_id=None,
     )
 
@@ -175,7 +175,8 @@ async def create_news(
     if request.has_topic:
         new_topic = Topics(
             title=request.title,
-            anon=request.anon
+            anon=request.anon,
+            news_id=new_news.id,
         )
         db.add(new_topic)
         await db.flush()
