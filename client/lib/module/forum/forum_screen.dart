@@ -8,6 +8,7 @@ import 'package:client/domain/bloc/forum/forum_state.dart';
 import 'package:client/domain/model/forum_models/topic_model.dart';
 import 'package:client/domain/bloc/forum/forum_controller.dart';
 
+import '../../domain/model/news_model.dart';
 import '../widgets/admin_fab.dart';
 
 class ForumScreen extends StatelessWidget {
@@ -210,3 +211,4 @@ class _TopicTile extends StatelessWidget {
     );
   }
 }
+

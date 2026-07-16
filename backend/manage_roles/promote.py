@@ -98,7 +98,7 @@ async def give_me_role(email, role_u):
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("Использование: python promote.py EMAIL ROLE")
+        print("Использование: python3 promote.py EMAIL ROLE")
         print("Роли: student, council, admin")
         sys.exit(1)
 
