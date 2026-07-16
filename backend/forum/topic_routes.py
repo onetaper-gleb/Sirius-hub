@@ -33,6 +33,10 @@ async def get_comments(
     user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    topic = await _get_db_topic(db, topic_id)
+    if topic is None:
+        raise HTTPException(status_code=400, detail="Topic does not exist")
+    
     comments_schemas = await db.execute(
         select(Comments)
         .where(Comments.topic_id == topic_id)
@@ -41,7 +45,6 @@ async def get_comments(
     comments_models = comments_schemas.scalars().all()
 
     comments_schemas = []
-    topic = await _get_db_topic(db, topic_id)
     for comment in comments_models:
         comment_author = await _get_db_user(db, comment.user_id)
         comments_schemas.append(
@@ -51,6 +54,7 @@ async def get_comments(
                 "author": (
                     "" if topic.anon or comment_author is None else comment_author.id
                 ),
+                "parent_comment_id": comment.parent_comment_id,
             }
         )
 
