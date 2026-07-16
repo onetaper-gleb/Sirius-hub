@@ -24,56 +24,14 @@ router = APIRouter(
     tags=["Offers"],
 )
 
-# @router.post("/offers", response_model=OfferNewsResponse)
-# async def create_offer(
-#     request: OfferNewsEventsRequest,
-#     image: UploadFile = File(None),
-#     user: dict = Depends(require_council_role),
-#     db: AsyncSession = Depends(get_db),
-# ):
-#     image_url = await process_image(image)
-
-#     new_offer = OfferNews(
-#         title=request.title, 
-#         content=request.content, 
-#         image_url=image_url, 
-#         author_id=user.get("uid"), 
-#         contacts_author=request.contacts_author,
-#         is_event=request.is_event,
-#         event_id=None,
-#         status_mod='moderation',
-#         admin_id=None,
-#         comment_admin=None
-#     )
-
-#     db.add(new_offer)
-#     await db.flush()
-
-#     if request.is_event:
-#         await validate_event_data(request, db)
-        
-#         new_event = Events(
-#             status=request.event_status, 
-#             event_start=request.event_start, 
-#             event_end=request.event_end, 
-#             location=request.location, 
-#             max_partic=request.max_partic, 
-#             cur_partic=0, 
-#             is_reg_open=request.is_reg_open,
-#             news_id=new_offer.id
-#         )
-
-#         db.add(new_event)
-#         await db.flush()
-#         new_offer.event_id = new_event.id
-#         db.add(new_offer)
-
-#     await db.commit()
-#     await db.refresh(new_offer)
-#     if request.is_event:
-#         await db.refresh(new_event)
-
-#     return new_offer
+@router.post("/offers", response_model=OfferNewsResponse)
+async def create_offer(
+    request: OfferNewsEventsRequest,
+    image: UploadFile = File(None),
+    user: dict = Depends(require_council_role),
+    db: AsyncSession = Depends(get_db),
+):
+    pass
     
 
 @router.get("/admin/offers", response_model=List[OfferNewsResponse])

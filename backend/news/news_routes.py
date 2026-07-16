@@ -1,17 +1,16 @@
-﻿import datetime
-import io
+﻿import io
 import os
 import uuid
 from typing import List, Optional
+from PIL import Image
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from auth.auth_routes import get_current_user, require_council_role
 from database.database import get_db
-from database.models import Events, EventStatus, News, Registrations, RegStatus
+from database.models import Events, EventStatus, News, Registrations, RegStatus, Topics
 
 from .schemas import (
     EventResponse,
@@ -27,10 +26,8 @@ router = APIRouter(
 
 MAX_FILE_SIZE = 4 * 1024 * 1024
 
-
 class NotFound(Exception):
     pass
-
 
 async def process_image(image: UploadFile | None):
     if not image:
@@ -88,6 +85,13 @@ async def get_registration_or_404(db: AsyncSession, reg_id: str):
         raise NotFound(status_code=404, detail="Событие не найдено")
     return reg
 
+async def get_topic_or_404(db: AsyncSession, topic_id: str):
+    result = await db.execute(select(Topics).where(Topics.id == topic_id))
+    topic = result.scalar_one_or_none()
+    if not topic:
+        raise NotFound(status_code=404, detail="Топик не найден")
+    return topic
+
 
 def validate_event_status(status: str):
     if status not in [s.value for s in EventStatus]:
@@ -142,16 +146,17 @@ async def create_news(
         content=request.content,
         image_url=image_url,
         author_id=user.get("uid"),
-        is_event=request.is_event,
+        is_event=request.has_event,
         event_id=None,
+        is_topic=request.has_topic,
+        topic_id=None,
     )
 
     db.add(new_news)
     await db.flush()
 
-    if request.is_event:
+    if request.has_event:
         await validate_event_data(request, db)
-
         new_event = Events(
             status=request.event_status,
             event_start=request.event_start,
@@ -162,16 +167,27 @@ async def create_news(
             is_reg_open=request.is_reg_open,
             news_id=new_news.id,
         )
-
         db.add(new_event)
         await db.flush()
         new_news.event_id = new_event.id
         db.add(new_news)
 
+    if request.has_topic:
+        new_topic = Topics(
+            title=request.title,
+            anon=request.anon
+        )
+        db.add(new_topic)
+        await db.flush()
+        new_news.topic_id = new_topic.id
+        db.add(new_news)
+
     await db.commit()
     await db.refresh(new_news)
-    if request.is_event:
+    if request.has_event:
         await db.refresh(new_event)
+    if request.has_topic:
+        await db.refresh(new_topic)
 
     return new_news
 
@@ -198,10 +214,12 @@ async def update_news(
         news.title = request.title
     if request.content is not None:
         news.content = request.content
-    if request.is_event is not None:
-        news.is_event = request.is_event
+    if request.has_event is not None:
+        news.has_event = request.has_event
+    if request.has_topic is not None:
+        news.has_topic = request.has_topic
 
-    if news.is_event:
+    if news.has_event:
         result = await db.execute(select(Events).where(Events.news_id == news.id))
         event = result.scalar_one_or_none()
         if not event:
@@ -240,11 +258,37 @@ async def update_news(
             if request.is_reg_open is not None:
                 event.is_reg_open = request.is_reg_open
 
-    elif request.is_event is False and news.event_id:
+    elif request.has_event is False and news.event_id:
         event = await get_event_or_404(db, news.event_id)
         if event:
             await db.delete(event)
             news.event_id = None
+
+    if news.has_topic:
+        result = await db.execute(select(Topics).where(Topics.news_id == news.id))
+        topic = result.scalar_one_or_none()
+        if not topic:
+
+            new_topic = Topics(
+                title=request.title,
+                anon=request.anon,
+                news_id=news.id,
+            )
+            db.add(new_topic)
+            await db.flush()
+            news.topic_id = new_topic.id
+
+        else:
+            if request.title is not None:
+                topic.title = request.title
+            if request.anon is not None:
+                topic.anon = request.anon
+
+    elif request.has_topic is False and news.topic_id:
+        topic = await get_topic_or_404(db, news.topic_id)
+        if topic:
+            await db.delete(topic)
+            news.topic_id = None
 
     await db.commit()
     await db.refresh(news)
@@ -276,8 +320,11 @@ async def delete_news(
         if news_item.image_url:
             await delete_old_image(news_item.image_url)
         event = await get_event_or_404(db, news_item.event_id)
+        topic = await get_topic_or_404(db, news_item.topic_id)
         if event:
             await db.delete(event)
+        if topic:
+            await db.delete(topic)
 
         await db.delete(news_item)
         await db.commit()

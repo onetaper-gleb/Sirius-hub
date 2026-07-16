@@ -10,13 +10,14 @@ class OfferNewsResponse(BaseModel):
     image_url: Optional[str] = None
     author_id: str
     created_at: datetime.datetime
-    is_event: bool
+    has_event: bool
     event_id: Optional[str] = None
+    has_topic: bool
+    topic_id: Optional[str] = None
     admin_id: Optional[str] = None
     comment_admin: Optional[str] = None
     status_mod: ModerationStatus
     contacts_author: str
-
 
     class Config:
         from_attributes = True
@@ -32,10 +33,14 @@ class OfferEventResponse(BaseModel):
     cur_partic: int
     is_reg_open: bool
 
+    class Config:
+        from_attributes = True
+
 class OfferNewsEventsRequest(BaseModel):
     title: str
     content: str
-    is_event: bool = False
+    has_event: bool = False
+    has_topic: bool = False
     event_status: Optional[str] = None
     event_start: Optional[str] = None
     event_end: Optional[str] = None

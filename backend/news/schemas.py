@@ -13,8 +13,11 @@ class NewsResponse(BaseModel):
     image_url: Optional[str] = None
     author_id: str
     created_at: datetime.datetime
-    is_event: bool
+    has_event: bool
     event_id: Optional[str] = None
+    has_topic: bool
+    topic_id: Optional[str] = None
+    anon: bool
 
     class Config:
         from_attributes = True
@@ -31,6 +34,9 @@ class EventResponse(BaseModel):
     cur_partic: int
     is_reg_open: bool
 
+    class Config:
+        from_attributes = True
+
 
 class RegistrationResponse(BaseModel):
     id: str
@@ -43,10 +49,12 @@ class RegistrationResponse(BaseModel):
 class NewsEventsRequest(BaseModel):
     title: str
     content: str
-    is_event: bool = False
+    has_event: bool = False
     event_status: Optional[str] = None
+    has_topic: bool = False
     event_start: Optional[str] = None
     event_end: Optional[str] = None
     location: Optional[str] = None
     max_partic: Optional[int] = None
     is_reg_open: bool = False
+    anon = bool = False
