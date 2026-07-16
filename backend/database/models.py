@@ -54,8 +54,8 @@ class Registrations(Base):
     status = Column(String, default="registration open")
     comment = Column(String(USER_COMMENT_MAX), nullable=True)
 
-class Offers(Base):
-    __tablename__ = "offers"
+class OfferNews(Base):
+    __tablename__ = "offernews"
     id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
     title = Column(String, nullable=False)
     content = Column(Text, nullable=False)
@@ -67,10 +67,13 @@ class Offers(Base):
     status_mod = Column(String, default="draft")
     admin_id = Column(String, nullable=True)
     comment_admin = Column(Text, nullable=True)
-    moderated_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=_utc_now_naive)
 
+class OfferEvent(Base):
+    __tablename__ = "offerevent"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
     event_status = Column(String, default="draft")
+    news_id = Column(String, nullable=False)
     event_start = Column(String, nullable=False)
     event_end = Column(String, nullable=False)
     location = Column(String, nullable=False)
@@ -78,8 +81,7 @@ class Offers(Base):
     cur_partic = Column(Integer, nullable=False)
     is_reg_open = Column(Boolean, nullable=False, default=False)
 
-
-class ModerationAction(str, enum.Enum):
+class ModerationStatus(str, enum.Enum):
     draft = 'draft'
     moderation = 'moderation'
     approved = 'approved'
@@ -99,14 +101,13 @@ class EventStatus(str, enum.Enum):
 
 
 class RegStatus(str, enum.Enum):
-    r_open = "registration open"
-    pending = "pending"
-    confimed = "confimed"
-    waiting_list = "waiting_list"
-    canceled_by_user = "canceled_by_user"
-    canceled_by_admin = "canceled_by_admin"
-    r_closed = "registration closed"
-
+    r_open = 'registration open'
+    moderation = 'moderation'
+    confimed = 'confimed'
+    waiting_list = 'waiting_list'
+    canceled_by_user = 'canceled_by_user'
+    canceled_by_admin = 'canceled_by_admin'
+    r_closed = 'registration closed'
 
 class UserRole(str, enum.Enum):
     student = "student"
