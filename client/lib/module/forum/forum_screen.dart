@@ -203,6 +203,7 @@ class _TopicTile extends StatelessWidget {
                 topicId: topic.id,
                 title: topic.title,
                 isAnonymous: topic.isAnonymous,
+                //attachedNews: NewsModel(id: 'fghjkl', title: 'Писька на морозе оказалась меньше, чем цена билета на авиасейлс!!!', content: 'Холодно, мурашки словно от любви\n Хоть и в Антарктиде тают ледники\nЯ грущу один тут, но могли б вдвоём\nА давай друг к другу мы билет найдём\n', authorId: '555', createdAt: DateTime.now()),
               ),
             ),
           );
