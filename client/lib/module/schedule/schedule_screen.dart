@@ -17,7 +17,6 @@ class ScheduleScreen extends StatefulWidget {
 }
 
 class _ScheduleScreenState extends State<ScheduleScreen> {
-  // Local variables
   WeekScheduleModel? _weekScheduleModel;
   Map<int, WeekScheduleModel> _history = {};
   int _currentWeek = 0;
@@ -27,7 +26,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   late List<DateTime> _days;
   final List<String> _dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
-  // Overrides
   @override
   void initState() {
     super.initState();
@@ -52,11 +50,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     }
   }
 
-  // Functions
   void _updateWeek(String method) {
     if (_group == null) return;
     final currentState = context.read<ScheduleBloc>().state;
-    if (currentState is SchedulePending) return;
+    if (currentState is ScheduleWeekPending) return;
     switch (method) {
       case 'nextWeek':
         _currentWeek += 1;
@@ -89,7 +86,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return List.generate(6, (index) => targetMonday.add(Duration(days: index)));
   }
 
-  // Widgets
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
@@ -121,10 +117,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 _buildWeekHeader(),
                 if (_group == null && state is ScheduleInitial)
                   Center(child: Text('Укажите группу в профиле')),
-                if (state is SchedulePending)
-                  Center(child: CircularProgressIndicator()),
-                if (state is ScheduleHasWeek && _weekScheduleModel != null)
-                  _buildScheduleToday(),
+                if (state is ScheduleWeekPending && _weekScheduleModel == null)
+                  const Center(child: CircularProgressIndicator()),
+                if (_weekScheduleModel != null)
+                  Expanded(child: _buildScheduleToday()),
                 if (state is ScheduleError) Text(state.error.toString()),
               ],
             ),
@@ -133,8 +129,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       ),
     );
   }
-
-  // Виджет верхней панели
   Widget _buildWeekHeader() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -205,12 +199,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
     return GestureDetector(
       onTap: () => setState(() => _selectedDay = index),
-      // ✅ opaque — вся область контейнера реагирует на тап,
-      // даже если она прозрачная
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        // ✅ SizedBox вместо Container — вся высота ListView (72px)
-        // становится кликабельной зоной, а не только кружок+текст
         width: (MediaQuery.of(context).size.width - 88) / 6,
         height: 72,
         child: Column(
@@ -266,15 +256,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     required IconData icon,
     required VoidCallback onTap,
   }) {
-    final isLoading = context.read<ScheduleBloc>().state is SchedulePending;
+    final isLoading = context.read<ScheduleBloc>().state is ScheduleWeekPending;
 
     return GestureDetector(
       onTap: isLoading ? null : onTap,
-      // ✅ opaque — область вокруг иконки тоже реагирует
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        // ✅ Padding увеличивает область нажатия вокруг иконки
-        // без изменения визуального размера кнопки
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 18),
         child: Icon(
           icon,
@@ -290,7 +277,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final groups = _groupLessons(day);
     final breaks = _calculateBreaksFromGroups(groups);
 
-    // Строим плоский список: группа, перерыв, группа, перерыв...
     final items = <dynamic>[];
     for (int i = 0; i < groups.length; i++) {
       items.add(groups[i]);
@@ -368,7 +354,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Цветная полоса слева
             Container(width: 4, color: color),
 
             Expanded(
@@ -377,7 +362,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Шапка: тип + время
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [

@@ -43,4 +43,12 @@ class ScheduleRepository {
     print(link);
     return link;
   }
+  Future<List<String>> getFreeRooms({
+    required DateTime date,
+    required String startTime,
+    required String endTime,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 1500));
+    return ['К5', 'К6', 'Альфа5.7'];
+  }
 }

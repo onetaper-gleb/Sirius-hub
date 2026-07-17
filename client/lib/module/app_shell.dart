@@ -4,6 +4,7 @@ import 'forum/forum_screen.dart';
 import 'news/news_screen.dart';
 import 'profile/profile_screen.dart';
 import 'schedule/schedule_screen.dart';
+import 'schedule/widgets/free_room_dialog.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -44,11 +45,9 @@ class _AppShellState extends State<AppShell> {
                   side: const BorderSide(color: Colors.blue, width: 1)
                 ),
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Вызов диалога свободных аудиторий (в разработке)'),
-                      duration: Duration(seconds: 2),
-                    ),
+                  showDialog(
+                    context: context,
+                    builder: (context) => const FreeRoomDialog(),
                   );
                 },
                 icon: const Icon(Icons.manage_search, size: 20),
