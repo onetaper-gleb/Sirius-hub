@@ -31,7 +31,13 @@ class TopicScreen extends StatefulWidget {
 
 class _TopicScreenState extends State<TopicScreen> {
   CommentModel? _replyingToComment;
+  final FocusNode _inputFocusNode = FocusNode();
 
+  @override
+  void dispose() {
+    _inputFocusNode.dispose();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     final topicRepository = context.dependencies.topicRepository;
@@ -54,11 +60,14 @@ class _TopicScreenState extends State<TopicScreen> {
                   setState(() {
                     _replyingToComment = comment;
                   });
+                  _inputFocusNode.requestFocus();
                 }
               ),
             ),
             Builder(
               builder: (context) => _CommentInputField(
+                focusNode: _inputFocusNode,
+                hintText: _replyingToComment != null ? 'Ваш ответ...': 'Ваш комментарий...',
                 onSubmit: (content) {
                   context.read<TopicBloc>().add(
                     TopicCreateCommentRequested(
@@ -82,9 +91,14 @@ class _TopicScreenState extends State<TopicScreen> {
 
 class _CommentInputField extends StatefulWidget {
   final void Function(String content) onSubmit;
+  final FocusNode? focusNode;
+  final String hintText;
 
   const _CommentInputField({
+    super.key,
     required this.onSubmit,
+    this.focusNode,
+    this.hintText = 'Ваш комментарий...',
   });
 
   @override
@@ -123,14 +137,15 @@ class _CommentInputFieldState extends State<_CommentInputField> {
             Expanded(
               child: TextField(
                 controller: _contentController,
+                focusNode: widget.focusNode,
                 minLines: 1,
                 maxLines: 5,
                 maxLength: 200,
                 maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                decoration: const InputDecoration(
-                  hintText: 'Ваш комментарий...',
+                decoration: InputDecoration(
+                  hintText: widget.hintText,
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
+                  contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 10,
                   ),
@@ -176,6 +191,73 @@ class _TopicView extends StatelessWidget {
         if (state is TopicInitial || state is TopicLoading) {
           return const Center(child: CircularProgressIndicator());
         } else if (state is TopicLoaded) {
+          // final List<CommentModel> testComments = [
+          //   CommentModel(
+          //     id: '1',
+          //     author_id: 'user_A',
+          //     content: 'Корневой 1',
+          //     topicId: '1',          // Добавь это
+          //     repliesIds: ['2'],     // Добавь это
+          //     parentCommentId: null,
+          //   ),
+          //   CommentModel(
+          //     id: '2',
+          //     author_id: 'user_B',
+          //     content: 'Ответ на 1',
+          //     topicId: '1',          // Добавь это
+          //     repliesIds: ['3'],     // Добавь это
+          //     parentCommentId: '1',
+          //   ),
+          //   CommentModel(
+          //     id: '3',
+          //     author_id: 'user_C',
+          //     content: 'Ответ на 1.2',
+          //     topicId: '1',          // Добавь это
+          //     repliesIds: [],        // Добавь это
+          //     parentCommentId: '2',
+          //   ),
+          //   CommentModel(
+          //     id: '4',
+          //     author_id: 'user_D',
+          //     content: 'Ответ на 1.3',
+          //     topicId: '1',          // Добавь это
+          //     repliesIds: [],        // Добавь это
+          //     parentCommentId: '3',
+          //   ),
+          //   CommentModel(
+          //     id: '5',
+          //     author_id: 'user_E',
+          //     content: 'Ответ 1.4',
+          //     topicId: '1',          // Добавь это
+          //     repliesIds: [],        // Добавь это
+          //     parentCommentId: '4',
+          //   ),
+          //   CommentModel(
+          //     id: '6',
+          //     author_id: 'user_F',
+          //     content: 'Ответ на 1.5',
+          //     topicId: '1',          // Добавь это
+          //     repliesIds: [],        // Добавь это
+          //     parentCommentId: '5',
+          //   ),
+          //   CommentModel(
+          //     id: '7',
+          //     author_id: 'user_G',
+          //     content: 'Ответ на 1.6',
+          //     topicId: '1',          // Добавь это
+          //     repliesIds: [],        // Добавь это
+          //     parentCommentId: '6',
+          //   ),
+          //   CommentModel(
+          //     id: '8',
+          //     author_id: 'user_AA',
+          //     content: 'Корневой 2',
+          //     topicId: '1',          // Добавь это
+          //     repliesIds: [],        // Добавь это
+          //     parentCommentId: null,
+          //   ),
+          // ];
+          // final comments = testComments;
           final comments = state.comments;
           final profiles = state.profiles;
           final threadedComments = sortCommentsIntoThreads(comments);
@@ -191,7 +273,7 @@ class _TopicView extends StatelessWidget {
               );
             },
             child: ListView.builder(
-              itemCount: attachedNews != null ? comments.length+1: threadedComments.length,
+              itemCount: attachedNews != null ? threadedComments.length+1: threadedComments.length,
               itemBuilder: (context, index) {
                 if (attachedNews != null && index == 0) {
                   return Padding(padding: const EdgeInsets.all(16.0),
@@ -222,6 +304,7 @@ class _TopicView extends StatelessWidget {
                 return _Comment(
                   comment: comment,
                   profile: profile,
+                  allComments: comments,
                   isAnonymousTopic: isAnonymousTopic,
                   depth: threadedItem.depth,
                   onReplyTap: () => onReplySelect(comment),
@@ -247,6 +330,7 @@ class _TopicView extends StatelessWidget {
 class _Comment extends StatelessWidget {
   final CommentModel comment;
   final RegistrationProfileData? profile;
+  final List<CommentModel> allComments;
   final bool isAnonymousTopic;
   final int depth;
   final VoidCallback onReplyTap;
@@ -254,6 +338,7 @@ class _Comment extends StatelessWidget {
   const _Comment({
     required this.comment,
     required this.profile,
+    required this.allComments,
     required this.isAnonymousTopic,
     required this.depth,
     required this.onReplyTap,
@@ -261,15 +346,38 @@ class _Comment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isReply = depth > 0;
+    final double leftIndex = isReply ? 50.0 : 16.0;
+
     final displayName = isAnonymousTopic
         ? 'Аноним'
         : (profile?.displayName ?? comment.author_id);
-    final avatarEmoji = profile?.avatarEmoji ?? '?';
-    final showEmoji = profile != null && !isAnonymousTopic;
-    final double leftIndex = 16.0+(depth>3?3:depth)*20.0;
 
-    return Card(
+    String displayText = comment.content;
+    if (isReply && comment.parentCommentId != null) {
+      try {
+        final parentComment = allComments.firstWhere((c) => c.id == comment.parentCommentId);
+        final parentAuthorId = parentComment.author_id;
+        displayText = "@$parentAuthorId: ${comment.content}";
+      } catch (e) {
+      }
+    }
+    return Container(
       margin: EdgeInsets.only(left: leftIndex, right: 16, top: 4, bottom: 4),
+      decoration: BoxDecoration(
+        color: isReply ? Colors.transparent: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: isReply ? null: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2)
+          )
+        ],
+        border: isReply
+          ? Border(left: BorderSide(color: Colors.grey.withOpacity(0.5), width: 2))
+            : null,
+      ),
       child: InkWell(
         onTap:
             (!isAnonymousTopic &&
@@ -286,29 +394,17 @@ class _Comment extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    width: 32,
-                    height: 32,
+                    width: isReply ? 24 : 32,
+                    height: isReply ? 24 : 32,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: Theme.of(context).colorScheme.primaryContainer,
                     ),
-                    child: showEmoji
-                        ? Text(
-                            avatarEmoji,
-                            style: const TextStyle(fontSize: 18),
-                          )
-                        : Text(
-                            displayName.isNotEmpty
-                                ? displayName[0].toUpperCase()
-                                : '?',
-                            style: TextStyle(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onPrimaryContainer,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                    child: Text(
+                      displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -321,7 +417,7 @@ class _Comment extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              Text(comment.content),
+              Text(displayText),
               const SizedBox(height: 4),
               Align(
                 alignment: Alignment.centerRight,

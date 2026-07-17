@@ -11,4 +11,5 @@ class TopicCreateCommentRequested extends TopicEvent {
   final String? parentCommentId;
 
   TopicCreateCommentRequested({required this.content, required this.topicId, this.parentCommentId});
+
 }
