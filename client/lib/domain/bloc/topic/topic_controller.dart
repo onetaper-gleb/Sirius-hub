@@ -58,7 +58,7 @@ class TopicBloc extends Bloc<TopicEvent, TopicState> {
       await _topicRepository.createComment(
           event.content,
           event.topicId,
-        //event.parentCommentId,
+          event.parentCommentId,
       );
       add(TopicLoadRequested(topicId: event.topicId));
     } catch (e) {

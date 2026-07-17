@@ -33,7 +33,7 @@ class CommentModel {
       topicId: topicIdRaw?.toString() ?? '',
       repliesIds: List<String>.from(json['repliesIds'] ?? []),
       parentCommentId: json['parent_comment_id']?.toString(),
-      //parentCommentId: (json['responses_id'] ?? json['parent_comment_id'])?.toString(),
+      // parentCommentId: (json['responses_id'] ?? json['parent_comment_id'])?.toString(),
     );
   }
 }

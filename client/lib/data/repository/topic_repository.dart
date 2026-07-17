@@ -69,17 +69,17 @@ class TopicRepository {
       throw Exception("Неизвестная ошибка: $e");
     }
   }
-  Future<void> createComment(String content, String topicId) async {
-  //Future<void> createComment(String content, String topicId, String? parentCommentId) async {
+  // Future<void> createComment(String content, String topicId) async {
+  Future<void> createComment(String content, String topicId, String? parentCommentId) async {
     try {
       final rawToken = await _authDataSource.getToken();
       if (rawToken == null) {
         await _authDataSource.deleteCurrentUser();
         throw Exception('Не удалось получить токен после регистрации');
       }
-      final data = {"topic_id": topicId, "content": content};
 
-      //final data = {"topic_id": topicId, "content": content, "responses_id": parentCommentId};
+      final data = {"topic_id": topicId, "content": content};
+      // final data = {"topic_id": topicId, "content": content, "responses_id": parentCommentId};
 
       await _dio.post(
         '/topic/comments',
