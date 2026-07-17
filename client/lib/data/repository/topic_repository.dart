@@ -69,8 +69,13 @@ class TopicRepository {
       throw Exception("Неизвестная ошибка: $e");
     }
   }
+
   // Future<void> createComment(String content, String topicId) async {
-  Future<void> createComment(String content, String topicId, String? parentCommentId) async {
+  Future<void> createComment(
+    String content,
+    String topicId,
+    String? parentCommentId,
+  ) async {
     try {
       final rawToken = await _authDataSource.getToken();
       if (rawToken == null) {

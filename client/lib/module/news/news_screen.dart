@@ -66,9 +66,7 @@ class _NewsScreenState extends State<NewsScreen> {
     final topicId = news.topicId?.trim();
     if (topicId == null || topicId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Комментарии пока что недоступны")
-        ),
+        const SnackBar(content: Text("Комментарии пока что недоступны")),
       );
       return;
     }
