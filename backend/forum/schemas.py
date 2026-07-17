@@ -20,7 +20,7 @@ class CreateTopicRequest(BaseModel):
 class CreateCommentRequest(BaseModel):
     content: str
     topic_id: str
-    parent_comment_id: str | None
+    parent_comment_id: Optional[str] = None
 
 
 class Comment(BaseModel):
@@ -28,4 +28,4 @@ class Comment(BaseModel):
     comment_id: str | None
     author: str | None = "anon"
     parent_comment_id: Optional[str] = None
-    reply_to: Optional[dict] = None
+    reply_to_author: Optional[str] = None
