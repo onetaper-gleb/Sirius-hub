@@ -120,13 +120,13 @@ class SiriusScheduleClient:
         grouped: dict[str, dict[str, Any]] = {}
 
         weekdays_dict = {
-        "1": "ПН",
-        "2": "ВТ",
-        "3": "СР",
-        "4": "ЧТ",
-        "5": "ПТ",
-        "6": "СБ",
-        "7": "ВС"
+            "1": "ПН",
+            "2": "ВТ",
+            "3": "СР",
+            "4": "ЧТ",
+            "5": "ПТ",
+            "6": "СБ",
+            "7": "ВС",
         }
 
         if isinstance(raw_events, dict):
@@ -199,7 +199,7 @@ class SiriusScheduleClient:
         return days
 
     def _add_empty_days(self, days: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        
+
         weekdays = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"]
         if not days:
             datetime_now = datetime.now()
@@ -208,11 +208,13 @@ class SiriusScheduleClient:
             result = []
             for i in range(6):
                 date = monday + timedelta(days=i)
-                result.append({
-                    "date": date.strftime("%d.%m.%Y"),
-                    "day_week": weekdays[i],
-                    "events": []
-                })
+                result.append(
+                    {
+                        "date": date.strftime("%d.%m.%Y"),
+                        "day_week": weekdays[i],
+                        "events": [],
+                    }
+                )
             return result
 
         first_date = datetime.strptime(days[0]["date"], "%d.%m.%Y")
@@ -231,11 +233,7 @@ class SiriusScheduleClient:
                 day["day_week"] = weekdays[i]
                 result.append(day)
             else:
-                result.append({
-                    "date": date_str,
-                    "day_week": weekdays[i],
-                    "events": []
-                })
+                result.append({"date": date_str, "day_week": weekdays[i], "events": []})
 
         return result
 

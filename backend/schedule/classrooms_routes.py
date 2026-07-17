@@ -17,7 +17,7 @@ router = APIRouter(
 async def get_free_classrooms(
     date: Optional[str] = Query(None, description="YYYY-MM-DD"),
     start_time: Optional[str] = Query(None, description="HH:MM"),
-    end_time: Optional[str] = Query(None, description="HH:MM")
+    end_time: Optional[str] = Query(None, description="HH:MM"),
 ):
 
     if date:
@@ -45,7 +45,9 @@ async def get_free_classrooms(
     client = Schedule()
 
     try:
-        free_classrooms = await client.get_free_classrooms(start_date=start_date, end_date=end_date)
+        free_classrooms = await client.get_free_classrooms(
+            start_date=start_date, end_date=end_date
+        )
         return free_classrooms
     except Exception as e:
         raise HTTPException(

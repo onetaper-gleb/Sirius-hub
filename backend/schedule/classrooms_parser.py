@@ -347,7 +347,9 @@ class Schedule:
     This function gives you free classrooms for certain time of today.
     """
 
-    async def get_free_classrooms(self, start_date: datetime = None, end_date: datetime = None):
+    async def get_free_classrooms(
+        self, start_date: datetime = None, end_date: datetime = None
+    ):
 
         if start_date is None:
             start_date = datetime.now()
@@ -357,10 +359,10 @@ class Schedule:
 
         if start_date.date() != end_date.date():
             raise ValueError("The time interval must be within one day")
-        
+
         if start_date >= end_date:
             raise ValueError("The start time mush be before the end time")
-        
+
         # TODO delete classroom time dependent updates, move them to main and stick them to timer
 
         await self.update_classroom_list()
@@ -418,7 +420,9 @@ async def main():
     start_time = datetime(2026, 7, 15, 9, 0)
     end_time = datetime(2026, 7, 15, 20, 0)
 
-    free_classrooms = await sc.get_free_classrooms(start_date=start_time, end_date=end_time)
+    free_classrooms = await sc.get_free_classrooms(
+        start_date=start_time, end_date=end_time
+    )
 
     print(free_classrooms)
     print(f"Свободных аудиторий: {len(free_classrooms)}")

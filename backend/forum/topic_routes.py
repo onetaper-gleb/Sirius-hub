@@ -41,7 +41,7 @@ async def get_comments(
     topic = await _get_db_topic(db, topic_id)
     if topic is None:
         raise HTTPException(status_code=400, detail="Topic does not exist")
-    
+
     comments_schemas = await db.execute(
         select(Comments)
         .where(Comments.topic_id == topic_id)
@@ -62,7 +62,7 @@ async def get_comments(
 
                 if parent_author and not topic.anon:
                     reply_to_author = parent_author.id
-        
+
         comments_schemas.append(
             {
                 "content": comment.content,
@@ -71,7 +71,7 @@ async def get_comments(
                     "" if topic.anon or comment_author is None else comment_author.id
                 ),
                 "parent_comment_id": comment.parent_comment_id,
-                "reply_to_author": reply_to_author
+                "reply_to_author": reply_to_author,
             }
         )
 
@@ -98,17 +98,22 @@ async def create_comment(
 
         if parent_comment is None:
             raise HTTPException(status_code=400, detail="Parent comment not found")
-        
+
         if parent_comment.topic_id != request.topic_id:
-            raise HTTPException(status_code=400, detail="Can not reply to a comment from another topic")
-        
+            raise HTTPException(
+                status_code=400, detail="Can not reply to a comment from another topic"
+            )
+
         parent_author = await _get_db_user(db, parent_comment.user_id)
-        
+
         if parent_comment and not topic.anon:
             reply_to_author = parent_author.id
 
     new_comment = Comments(
-        content=content, topic_id=request.topic_id, user_id=user.get("uid"), parent_comment_id=request.parent_comment_id
+        content=content,
+        topic_id=request.topic_id,
+        user_id=user.get("uid"),
+        parent_comment_id=request.parent_comment_id,
     )
     db.add(new_comment)
     await db.commit()
@@ -121,5 +126,5 @@ async def create_comment(
         "comment_id": new_comment.id,
         "author": "" if topic.anon or author is None else author.id,
         "parent_comment_id": new_comment.parent_comment_id,
-        "reply_to_author": reply_to_author
+        "reply_to_author": reply_to_author,
     }
