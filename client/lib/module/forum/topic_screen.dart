@@ -11,7 +11,7 @@ import '../../domain/model/forum_models/comment_model.dart';
 import '../../domain/model/registration_profile.dart';
 import '../../domain/model/news_model.dart';
 
-class TopicScreen extends StatelessWidget {
+class TopicScreen extends StatefulWidget {
   final String topicId;
   final String title;
   final bool isAnonymous;
@@ -26,6 +26,13 @@ class TopicScreen extends StatelessWidget {
   });
 
   @override
+  State<TopicScreen> createState() => _TopicScreenState();
+}
+
+class _TopicScreenState extends State<TopicScreen> {
+  CommentModel? _replyingToComment;
+
+  @override
   Widget build(BuildContext context) {
     final topicRepository = context.dependencies.topicRepository;
     final authRepository = context.dependencies.authRepository;
@@ -33,16 +40,21 @@ class TopicScreen extends StatelessWidget {
       create: (context) => TopicBloc(
         topicRepository: topicRepository,
         authRepository: authRepository,
-      )..add(TopicLoadRequested(topicId: topicId)),
+      )..add(TopicLoadRequested(topicId: widget.topicId)),
       child: Scaffold(
-        appBar: AppBar(title: Text(title)),
+        appBar: AppBar(title: Text(widget.title)),
         body: Column(
           children: [
             Expanded(
               child: _TopicView(
-                topicId: topicId,
-                isAnonymousTopic: isAnonymous,
-                attachedNews: attachedNews,
+                topicId: widget.topicId,
+                isAnonymousTopic: widget.isAnonymous,
+                attachedNews: widget.attachedNews,
+                onReplySelect: (comment) {
+                  setState(() {
+                    _replyingToComment = comment;
+                  });
+                }
               ),
             ),
             Builder(
@@ -51,9 +63,13 @@ class TopicScreen extends StatelessWidget {
                   context.read<TopicBloc>().add(
                     TopicCreateCommentRequested(
                       content: content,
-                      topicId: topicId,
+                      topicId: widget.topicId,
+                      parentCommentId: _replyingToComment?.id,
                     ),
                   );
+                  setState(() {
+                    _replyingToComment = null;
+                  });
                 },
               ),
             ),
@@ -67,7 +83,9 @@ class TopicScreen extends StatelessWidget {
 class _CommentInputField extends StatefulWidget {
   final void Function(String content) onSubmit;
 
-  const _CommentInputField({required this.onSubmit});
+  const _CommentInputField({
+    required this.onSubmit,
+  });
 
   @override
   State<_CommentInputField> createState() => _CommentInputFieldState();
@@ -109,38 +127,27 @@ class _CommentInputFieldState extends State<_CommentInputField> {
                 maxLines: 5,
                 maxLength: 200,
                 maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'Ваш комментарий...',
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
+                  contentPadding: EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 10,
                   ),
                 ),
-                buildCounter:
-                    (
-                      context, {
-                      required currentLength,
-                      required maxLength,
-                      required isFocused,
-                    }) => null,
+                buildCounter: (context, {required currentLength, required maxLength, required isFocused}) => null,
               ),
             ),
             const SizedBox(width: 8),
-            Column(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: () {
-                    final content = _contentController.text.trim();
-
-                    if (content.isNotEmpty) {
-                      widget.onSubmit(content);
-                      _contentController.clear();
-                    }
-                  },
-                ),
-              ],
+            IconButton(
+              icon: const Icon(Icons.send),
+              onPressed: () {
+                final content = _contentController.text.trim();
+                if (content.isNotEmpty) {
+                  widget.onSubmit(content);
+                  _contentController.clear();
+                }
+              },
             ),
           ],
         ),
@@ -153,10 +160,13 @@ class _TopicView extends StatelessWidget {
   final String topicId;
   final bool isAnonymousTopic;
   final NewsModel? attachedNews;
+  final ValueChanged<CommentModel> onReplySelect;
+
   const _TopicView({
     required this.topicId,
     required this.isAnonymousTopic,
     this.attachedNews,
+    required this.onReplySelect,
   });
 
   @override
@@ -168,6 +178,7 @@ class _TopicView extends StatelessWidget {
         } else if (state is TopicLoaded) {
           final comments = state.comments;
           final profiles = state.profiles;
+          final threadedComments = sortCommentsIntoThreads(comments);
 
           if (comments.isEmpty && attachedNews == null) {
             return const Center(child: Text('Пока нет сообщений'));
@@ -180,7 +191,7 @@ class _TopicView extends StatelessWidget {
               );
             },
             child: ListView.builder(
-              itemCount: attachedNews != null ? comments.length+1: comments.length,
+              itemCount: attachedNews != null ? comments.length+1: threadedComments.length,
               itemBuilder: (context, index) {
                 if (attachedNews != null && index == 0) {
                   return Padding(padding: const EdgeInsets.all(16.0),
@@ -204,15 +215,18 @@ class _TopicView extends StatelessWidget {
                 }
 
                 final commentIndex = attachedNews != null ? index - 1: index;
-                final comment = comments[commentIndex];
+                final threadedItem = threadedComments[commentIndex];
+                final comment = threadedItem.comment;
                 final profile = profiles[comment.author_id];
+
                 return _Comment(
                   comment: comment,
                   profile: profile,
                   isAnonymousTopic: isAnonymousTopic,
+                  depth: threadedItem.depth,
+                  onReplyTap: () => onReplySelect(comment),
                 );
               },
-
             ),
           );
         } else if (state is TopicError) {
@@ -234,11 +248,15 @@ class _Comment extends StatelessWidget {
   final CommentModel comment;
   final RegistrationProfileData? profile;
   final bool isAnonymousTopic;
+  final int depth;
+  final VoidCallback onReplyTap;
 
   const _Comment({
     required this.comment,
     required this.profile,
     required this.isAnonymousTopic,
+    required this.depth,
+    required this.onReplyTap,
   });
 
   @override
@@ -248,9 +266,10 @@ class _Comment extends StatelessWidget {
         : (profile?.displayName ?? comment.author_id);
     final avatarEmoji = profile?.avatarEmoji ?? '?';
     final showEmoji = profile != null && !isAnonymousTopic;
+    final double leftIndex = 16.0+(depth>3?3:depth)*20.0;
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: EdgeInsets.only(left: leftIndex, right: 16, top: 4, bottom: 4),
       child: InkWell(
         onTap:
             (!isAnonymousTopic &&
@@ -303,6 +322,20 @@ class _Comment extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(comment.content),
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: onReplyTap,
+                  icon: const Icon(Icons.reply, size: 16),
+                  label: const Text('Ответить', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -385,3 +418,48 @@ class _Comment extends StatelessWidget {
     );
   }
 }
+
+ class ThreadedComment {
+  final CommentModel comment;
+  final int depth;
+
+  ThreadedComment({
+    required this.comment,
+    required this.depth
+ });
+ }
+
+ List<ThreadedComment> sortCommentsIntoThreads(List<CommentModel> comments) {
+   final Map<String, CommentModel> commentMap = {
+     for (var c in comments) c.id: c
+   };
+   final Map<String, List<CommentModel>> childrenMap = {};
+   final List<CommentModel> rootComments = [];
+
+   for (var c in comments) {
+     final parentId = c.parentCommentId;
+     if (parentId == null || parentId.isEmpty || !commentMap.containsKey(parentId)) {
+       rootComments.add(c);
+     } else {
+       childrenMap.putIfAbsent(parentId, () => []).add(c);
+     }
+   }
+
+   final List<ThreadedComment> result = [];
+
+   void traverse(CommentModel current, int depth) {
+     result.add(ThreadedComment(comment: current, depth: depth));
+     final children = childrenMap[current.id];
+     if (children != null) {
+       for (var child in children) {
+         traverse(child, depth + 1);
+       }
+     }
+   }
+
+   for (var root in rootComments) {
+     traverse(root, 0);
+   }
+
+   return result;
+ }

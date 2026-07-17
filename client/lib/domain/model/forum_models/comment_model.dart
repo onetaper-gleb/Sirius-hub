@@ -4,13 +4,15 @@ class CommentModel {
   final String content;
   final String topicId;
   final List<String> repliesIds;
+  final String? parentCommentId;
 
   const CommentModel({
     required this.id,
     required this.author_id,
     required this.content,
     required this.topicId,
-    required this.repliesIds
+    required this.repliesIds,
+    this.parentCommentId,
   });
 
   factory CommentModel.fromJson(Map<String, dynamic> json) {
@@ -29,7 +31,9 @@ class CommentModel {
       author_id: (authorIdRaw as String?)?.trim() ?? '',
       content: (contentRaw as String?)?.trim() ?? '',
       topicId: topicIdRaw?.toString() ?? '',
-      repliesIds: List<String>.from(json['repliesIds'] ?? [])
+      repliesIds: List<String>.from(json['repliesIds'] ?? []),
+      parentCommentId: json['parent_comment_id']?.toString(),
+      //parentCommentId: (json['responses_id'] ?? json['parent_comment_id'])?.toString(),
     );
   }
 }

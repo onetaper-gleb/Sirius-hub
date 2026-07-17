@@ -55,7 +55,11 @@ class TopicBloc extends Bloc<TopicEvent, TopicState> {
     Emitter<TopicState> emit,
   ) async {
     try {
-      await _topicRepository.createComment(event.content, event.topicId);
+      await _topicRepository.createComment(
+          event.content,
+          event.topicId,
+        //event.parentCommentId,
+      );
       add(TopicLoadRequested(topicId: event.topicId));
     } catch (e) {
       emit(TopicError(error: e.toString()));
