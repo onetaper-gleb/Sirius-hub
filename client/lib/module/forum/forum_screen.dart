@@ -203,7 +203,6 @@ class _TopicTile extends StatelessWidget {
                 topicId: topic.id,
                 title: topic.title,
                 isAnonymous: topic.isAnonymous,
-                attachedNews: NewsModel(id: 'fghjkl', title: '}{акатон 115.0 🤩', content: 'Студенты, привет!\n 👋 У нас для вас отличные новости — знаем, что многие этого ждали!\n 🌟 Открыта регистрация на }{акатон 155.0 🤩', authorId: 'Университет "Сириус"', createdAt: DateTime.now()),
               ),
             ),
           );
