@@ -78,7 +78,6 @@ class UserRole(str, enum.Enum):
     student = "student"
     council = "council"
     admin = "admin"
-    superadmin = "superadmin"
 
 
 class User(Base):
@@ -112,3 +111,4 @@ class Comments(Base):
     user_id = Column(String, nullable=False)
     content = Column(String(200), nullable=False)
     created_at = Column(DateTime, default=_utc_now_naive)
+    parent_comment_id = Column(String, nullable=True)
