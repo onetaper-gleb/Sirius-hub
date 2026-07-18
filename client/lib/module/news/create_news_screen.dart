@@ -17,6 +17,8 @@ class CreateNewsScreen extends StatefulWidget {
 class _CreateNewsScreenState extends State<CreateNewsScreen> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
+  bool _isEvent = false;
+  String? _eventId;
   File? _selectedImage;
   bool _isLoading = false;
 
@@ -45,6 +47,8 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
         title: _titleController.text.trim(),
         content: _contentController.text.trim(),
         imageFile: _selectedImage,
+        isEvent: _isEvent,
+        eventId: _eventId,
       ),
     );
   }

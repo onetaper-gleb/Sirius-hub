@@ -32,6 +32,8 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
       await _repository.createNews(
         title: event.title,
         content: event.content,
+        isEvent: event.isEvent,
+        eventId: event.eventId,
         imageFile: event.imageFile,
       );
       emit(NewsCreateSuccess());

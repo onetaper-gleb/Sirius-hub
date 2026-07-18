@@ -4,19 +4,23 @@ class NewsModel {
   final String id;
   final String title;
   final String content;
-  final String? imageUrl; // Может быть null
+  final String? imageUrl;
   final String authorId;
   final DateTime createdAt;
   final String? topicId;
+  final bool isEvent;
+  final String? eventId;
 
   NewsModel({
     required this.id,
     required this.title,
     required this.content,
     this.imageUrl,
-    this.topicId,
     required this.authorId,
     required this.createdAt,
+    required this.isEvent,
+    this.eventId,
+    this.topicId,
   });
 
   String? get fullImageUrl {
@@ -36,6 +40,8 @@ class NewsModel {
           DateTime.tryParse(createdAtRaw?.toString() ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
       topicId: json['topic_id'] as String?,
+      isEvent: json['is_event'] as bool? ?? false,
+      eventId: (json['event_id'])?.toString() ?? '',
     );
   }
 }

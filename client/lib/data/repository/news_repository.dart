@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:convert';
+import 'package:http_parser/http_parser.dart';
 import 'package:dio/dio.dart';
 import 'package:client/domain/model/model.dart';
 import 'package:client/data/source/source.dart';
@@ -39,6 +41,8 @@ class NewsRepository {
   Future<NewsModel> createNews({
     required String title,
     required String content,
+    bool isEvent = false,
+    String? eventId,
     File? imageFile,
   }) async {
     try {
@@ -47,18 +51,29 @@ class NewsRepository {
         await _authDataSource.deleteCurrentUser();
         throw Exception('Не удалось получить токен после регистрации');
       }
-      final formData = FormData.fromMap({"title": title, "content": content});
+
+      final formData = FormData();
+      formData.files.add(MapEntry(
+        "request",
+        Multipartfile.fromBytes(
+          utf8.encode(jsonEncode({
+            "title": title,
+            "content": content,
+            "is_event": isEvent,
+            "event_id": eventId,
+          })),
+          contentType: MediaType('application', 'json'),
+        ),
+      ));
 
       if (imageFile != null) {
-        formData.files.add(
-          MapEntry(
-            "image",
-            await MultipartFile.fromFile(
-              imageFile.path,
-              filename: imageFile.path.split('/').last,
-            ),
+        formData.files.add(MapEntry(
+          "image",
+          await MultipartFile.fromFile(
+            imageFile.path,
+            filename: imageFile.path.split('/').last,
           ),
-        );
+        ));
       }
 
       final response = await _dio.post(
