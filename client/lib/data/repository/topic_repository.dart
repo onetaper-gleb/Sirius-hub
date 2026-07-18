@@ -83,8 +83,8 @@ class TopicRepository {
         throw Exception('Не удалось получить токен после регистрации');
       }
 
-      final data = {"topic_id": topicId, "content": content};
-      // final data = {"topic_id": topicId, "content": content, "responses_id": parentCommentId};
+      // final data = {"topic_id": topicId, "content": content};
+      final data = {"topic_id": topicId, "content": content, "parent_comment_id": parentCommentId};
 
       await _dio.post(
         '/topic/comments',
