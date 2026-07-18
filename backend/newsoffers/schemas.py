@@ -1,7 +1,10 @@
-from pydantic import BaseModel
-from typing import Optional
 import datetime
+from typing import Optional
+
+from pydantic import BaseModel
+
 from database.models import EventStatus, ModerationStatus
+
 
 class OfferNewsResponse(BaseModel):
     id: str
@@ -22,6 +25,7 @@ class OfferNewsResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class OfferEventResponse(BaseModel):
     id: str
     status: EventStatus
@@ -36,6 +40,7 @@ class OfferEventResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class OfferNewsEventsRequest(BaseModel):
     title: str
     content: str
@@ -49,8 +54,8 @@ class OfferNewsEventsRequest(BaseModel):
     is_reg_open: bool = False
     contacts_author: str
 
+
 class AdminModRequest(BaseModel):
     offer_id: str
     action: ModerationStatus
     comment_admin: Optional[str] = None
-    

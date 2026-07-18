@@ -42,8 +42,7 @@ async def require_council_role(
 
     if role == "student":
         raise HTTPException(
-            status_code=403,
-            detail="Только студсовет и администраторы имеют доступ."
+            status_code=403, detail="Только студсовет и администраторы имеют доступ."
         )
     return user
 

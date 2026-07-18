@@ -211,4 +211,3 @@ class _TopicTile extends StatelessWidget {
     );
   }
 }
-

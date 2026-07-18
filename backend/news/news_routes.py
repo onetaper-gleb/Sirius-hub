@@ -2,9 +2,9 @@
 import os
 import uuid
 from typing import List, Optional
-from PIL import Image
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -26,8 +26,10 @@ router = APIRouter(
 
 MAX_FILE_SIZE = 4 * 1024 * 1024
 
+
 class NotFound(Exception):
     pass
+
 
 async def process_image(image: UploadFile | None):
     if not image:
@@ -84,6 +86,7 @@ async def get_registration_or_404(db: AsyncSession, reg_id: str):
     if not reg:
         raise NotFound(status_code=404, detail="Событие не найдено")
     return reg
+
 
 async def get_topic_or_404(db: AsyncSession, topic_id: str):
     result = await db.execute(select(Topics).where(Topics.id == topic_id))
@@ -151,7 +154,7 @@ async def create_news(
         has_topic=request.has_topic,
         topic_id=None,
     )
-    
+
     db.add(new_news)
     await db.flush()
 
@@ -167,7 +170,7 @@ async def create_news(
             is_reg_open=request.is_reg_open,
             news_id=new_news.id,
         )
-        
+
         db.add(new_event)
         await db.flush()
         new_news.event_id = new_event.id
@@ -179,7 +182,7 @@ async def create_news(
             anon=request.anon,
             news_id=new_news.id,
         )
-       
+
         db.add(new_topic)
         await db.flush()
         new_news.topic_id = new_topic.id
@@ -206,7 +209,7 @@ async def update_news(
     news = await get_news_or_404(db, news_id)
     role = user.get("role", "student")
 
-    if role in ["student", "council"]: #news.author_id != user.get("uid")
+    if role in ["student", "council"]:  # news.author_id != user.get("uid")
         raise HTTPException(status_code=403, detail="Нет прав на редактирование")
 
     if image:
@@ -259,7 +262,6 @@ async def update_news(
             db.add(new_event)
             await db.flush()
             news.event_id = new_event.id
-            
 
     elif request.has_event is False and news.event_id:
         event = await get_event_or_404(db, news.event_id)
@@ -369,7 +371,7 @@ async def update_event_status(
     news = await get_news_or_404(db, event.news_id)
     role = user.get("role", "student")
 
-    if role in ["student", "council"]: #news.author_id != user.get("uid")
+    if role in ["student", "council"]:  # news.author_id != user.get("uid")
         raise HTTPException(
             status_code=403, detail="Нет прав на изменение статуса события"
         )
@@ -482,7 +484,7 @@ async def update_part_status(
     news = await get_news_or_404(db, event.news_id)
     role = user.get("role", "student")
 
-    if role in ["student", "council"]: #news.author_id != user.get("uid")
+    if role in ["student", "council"]:  # news.author_id != user.get("uid")
         raise HTTPException(
             status_code=403,
             detail="Только автор события может менять статусы участников",

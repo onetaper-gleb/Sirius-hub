@@ -1,11 +1,8 @@
-from fastapi import APIRouter
-from typing import List, Optional
-from .schemas import OfferEventResponse, OfferNewsResponse, OfferNewsEventsRequest, AdminModRequest
+import datetime
 import io
 import os
 import uuid
 from typing import List, Optional
-import datetime
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from PIL import Image
@@ -14,21 +11,42 @@ from sqlalchemy.future import select
 
 from auth.auth_routes import get_current_user, require_role
 from database.database import get_db
-from database.models import News, Events, OfferNews, OfferEvent, OfferTopic, EventStatus, ModerationStatus
+from database.models import (
+    Events,
+    EventStatus,
+    ModerationStatus,
+    News,
+    OfferEvent,
+    OfferNews,
+    OfferTopic,
+)
+from news.news_routes import (
+    NotFound,
+    create_news,
+    delete_old_image,
+    process_image,
+    validate_event_data,
+    validate_event_status,
+)
 
-from news.news_routes import process_image, delete_old_image, validate_event_data, validate_event_status, NotFound, create_news
-
+from .schemas import (
+    AdminModRequest,
+    OfferEventResponse,
+    OfferNewsEventsRequest,
+    OfferNewsResponse,
+)
 
 router = APIRouter(
     prefix="/offers",
     tags=["Offers"],
 )
 
+
 async def update_offer(
     offer: OfferNews,
     request: OfferNewsEventsRequest,
     image: UploadFile = File(None),
-    db: AsyncSession = None
+    db: AsyncSession = None,
 ):
     if image:
         await delete_old_image(offer.image_url)
@@ -44,7 +62,7 @@ async def update_offer(
         offer.has_event = request.has_event
     if request.has_topic is not None:
         offer.has_topic = request.has_topic
-        
+
     if request.has_event:
         if offer.event_id:
             offer_event = await get_offer_event_or_404(db, offer.event_id)
@@ -88,7 +106,6 @@ async def update_offer(
             await db.delete(offer_event)
             offer.event_id = None
 
-
     if request.has_topic:
         if offer.topic_id:
             offer_topic = await get_offer_topic_or_404(db, offer.topic_id)
@@ -111,7 +128,7 @@ async def update_offer(
         offer_topic = await get_offer_topic_or_404(db, offer.topic_id)
         await db.delete(offer_topic)
         offer.topic_id = None
-        
+
 
 async def get_offer_or_404(db: AsyncSession, news_id: str):
     result = await db.execute(select(OfferNews).where(OfferNews.id == news_id))
@@ -120,6 +137,7 @@ async def get_offer_or_404(db: AsyncSession, news_id: str):
         raise NotFound(status_code=404, detail="Новость предложки не найдена")
     return offer
 
+
 async def get_offer_event_or_404(db: AsyncSession, offer_event_id: str):
     result = await db.execute(select(OfferEvent).where(OfferEvent.id == offer_event_id))
     offer_event = result.scalar_one_or_none()
@@ -127,12 +145,14 @@ async def get_offer_event_or_404(db: AsyncSession, offer_event_id: str):
         raise NotFound(status_code=404, detail="Событие предложки не найдено")
     return offer_event
 
+
 async def get_offer_topic_or_404(db: AsyncSession, offer_topic_id: str):
     result = await db.execute(select(OfferTopic).where(OfferTopic.id == offer_topic_id))
     offer_topic = result.scalar_one_or_none()
     if not offer_topic:
         raise NotFound(status_code=404, detail="Топик предложки не найден")
     return offer_topic
+
 
 @router.post("/offers", response_model=OfferNewsResponse)
 async def create_offer(
@@ -144,10 +164,9 @@ async def create_offer(
     image_url = await process_image(image)
     if not request.contacts_author:
         raise HTTPException(
-            status_code=400, 
-            detail="Контакты автора не могут быть пустыми"
+            status_code=400, detail="Контакты автора не могут быть пустыми"
         )
-    
+
     new_offer = OfferNews(
         title=request.title,
         content=request.content,
@@ -160,7 +179,7 @@ async def create_offer(
         topic_id=None,
         status_mod=ModerationStatus.moderation.value,
         admin_id=None,
-        comment_admin=None
+        comment_admin=None,
     )
     db.add(new_offer)
     await db.flush()
@@ -184,9 +203,7 @@ async def create_offer(
 
     if request.has_topic:
         new_topic = OfferTopic(
-            title=request.title,
-            anon=request.anon,
-            news_id=new_offer.id
+            title=request.title, anon=request.anon, news_id=new_offer.id
         )
         db.add(new_topic)
         await db.flush()
@@ -202,7 +219,7 @@ async def create_offer(
 
     return new_offer
 
-    
+
 @router.get("/admin/offers", response_model=List[OfferNewsResponse])
 async def get_all_offers(
     skip: int = 0,
@@ -211,10 +228,14 @@ async def get_all_offers(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(OfferNews).order_by(OfferNews.created_at.desc()).offset(skip).limit(limit)
+        select(OfferNews)
+        .order_by(OfferNews.created_at.desc())
+        .offset(skip)
+        .limit(limit)
     )
     offers_list = result.scalars().all()
     return offers_list
+
 
 @router.get("/offers/my", response_model=List[OfferNewsResponse])
 async def get_my_offers(
@@ -233,12 +254,14 @@ async def get_my_offers(
     offers_list = result.scalars().all()
     return offers_list
 
+
 @router.get("/offers/{offer_id}", response_model=OfferNewsResponse)
 async def get_offer(
     news_id: str,
     db: AsyncSession = Depends(get_db),
 ):
     return await get_offer_or_404(db, news_id)
+
 
 @router.put("/admin/offers/{offer_id}", response_model=OfferNewsResponse)
 async def update_offer(
@@ -247,15 +270,14 @@ async def update_offer(
     image: UploadFile = File(None),
     user: dict = Depends(require_role),
     db: AsyncSession = Depends(get_db),
-
 ):
     offer = await get_offer_or_404(db, news_id)
     role = user.get("role", "student")
     aid = user.get("uid")
 
-    if role in ["student", "council"]: 
+    if role in ["student", "council"]:
         raise HTTPException(status_code=403, detail="Нет прав на редактирование")
-    
+
     await update_offer(offer, request, image, db)
 
     await db.commit()
@@ -263,7 +285,8 @@ async def update_offer(
 
     return offer
 
-@router.put("/offers/{offer_id}", response_model=OfferNewsResponse) # draft only
+
+@router.put("/offers/{offer_id}", response_model=OfferNewsResponse)  # draft only
 async def update_my_offer(
     news_id: str,
     request: OfferNewsEventsRequest,
@@ -275,13 +298,13 @@ async def update_my_offer(
 
     if offer.author_id != user.get("uid"):
         raise HTTPException(status_code=403, detail="Нет прав на редактирование")
-    
+
     if offer.status_mod != ModerationStatus.draft.value:
         raise HTTPException(
-            status_code=400, 
-            detail="Редактирование возможно только в статусе 'черновик'"
+            status_code=400,
+            detail="Редактирование возможно только в статусе 'черновик'",
         )
-    
+
     await update_offer(offer, request, image, db)
 
     await db.commit()
@@ -298,20 +321,21 @@ async def submit_for_moderation(
     offer = await get_offer_or_404(db, news_id)
     if offer.author_id != user.get("uid"):
         raise HTTPException(status_code=403, detail="Нет прав на отправку")
-    
+
     if offer.status_mod != ModerationStatus.draft.value:
         raise HTTPException(
             status_code=400,
-            detail=f"Отправка на модерацию возможна только в статусе 'черновик'"
+            detail=f"Отправка на модерацию возможна только в статусе 'черновик'",
         )
 
     offer.status_mod = ModerationStatus.moderation.value
     offer.admin_id = None
     offer.comment_admin = None
-    
+
     await db.commit()
     await db.refresh(offer)
     return offer
+
 
 @router.patch("/admin/offers/{offer_id}/moderate", response_model=OfferNewsResponse)
 async def moderate_offer(
@@ -323,13 +347,16 @@ async def moderate_offer(
     offer = await get_offer_or_404(db, offer_id)
     if request.comment_admin is not None:
         offer.comment_admin = request.comment_admin
-    
+
     offer.admin_id = user.get("uid")
 
-    if offer.status_mod not in [ModerationStatus.moderation.value, ModerationStatus.revision.value]:
+    if offer.status_mod not in [
+        ModerationStatus.moderation.value,
+        ModerationStatus.revision.value,
+    ]:
         raise HTTPException(
             status_code=400,
-            detail=f"Модерация возможна только для статусов 'moderation' или 'revision'. Текущий статус: {offer.status_mod}"
+            detail=f"Модерация возможна только для статусов 'moderation' или 'revision'. Текущий статус: {offer.status_mod}",
         )
 
     if request.action == ModerationStatus.approved:
@@ -350,7 +377,7 @@ async def moderate_offer(
             await db.commit()
             await db.refresh(offer)
             return new_news
-    
+
         except HTTPException as e:
             await db.rollback()
             raise e
@@ -358,32 +385,30 @@ async def moderate_offer(
             await db.rollback()
             raise HTTPException(
                 status_code=500,
-                detail=f"Ошибка при создании новости из предложки: {str(e)}"
+                detail=f"Ошибка при создании новости из предложки: {str(e)}",
             )
-
 
     elif request.action == ModerationStatus.rejected:
         offer.status_mod = ModerationStatus.rejected.value
         await db.commit()
         await db.refresh(offer)
         return offer
-    
+
     elif request.action == ModerationStatus.revision:
         offer.status_mod = ModerationStatus.revision.value
         await db.commit()
         await db.refresh(offer)
         return offer
-    
+
     elif request.action == ModerationStatus.archived:
         offer.status_mod = ModerationStatus.archived.value
         await db.commit()
         await db.refresh(offer)
         return offer
-        
+
     else:
         raise HTTPException(
-            status_code=400,
-            detail=f"Недопустимое действие модерации: {request.action}"
+            status_code=400, detail=f"Недопустимое действие модерации: {request.action}"
         )
 
 
@@ -419,4 +444,3 @@ async def delete_offer(
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Ошибка при удалении: {str(e)}")
-

@@ -33,6 +33,7 @@ class News(Base):
     has_topic = Column(Boolean, nullable=False, default=False)
     topic_id = Column(String, nullable=True)
 
+
 class Events(Base):
     __tablename__ = "events"
 
@@ -55,6 +56,7 @@ class Registrations(Base):
     status = Column(String, default="registration open")
     comment = Column(String(USER_COMMENT_MAX), nullable=True)
 
+
 class OfferNews(Base):
     __tablename__ = "offernews"
     id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
@@ -72,6 +74,7 @@ class OfferNews(Base):
     comment_admin = Column(Text, nullable=True)
     created_at = Column(DateTime, default=_utc_now_naive)
 
+
 class OfferEvent(Base):
     __tablename__ = "offerevent"
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
@@ -84,6 +87,7 @@ class OfferEvent(Base):
     cur_partic = Column(Integer, nullable=False)
     is_reg_open = Column(Boolean, nullable=False, default=False)
 
+
 class OfferTopic(Base):
     __tablename__ = "offertopics"
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
@@ -93,13 +97,13 @@ class OfferTopic(Base):
 
 
 class ModerationStatus(str, enum.Enum):
-    draft = 'draft'
-    moderation = 'moderation'
-    approved = 'approved'
-    rejected = 'rejected'
-    revision = 'revision'
-    archived = 'archived'
-    published = 'published'
+    draft = "draft"
+    moderation = "moderation"
+    approved = "approved"
+    rejected = "rejected"
+    revision = "revision"
+    archived = "archived"
+    published = "published"
 
 
 class EventStatus(str, enum.Enum):
@@ -112,13 +116,14 @@ class EventStatus(str, enum.Enum):
 
 
 class RegStatus(str, enum.Enum):
-    r_open = 'registration open'
-    moderation = 'moderation'
-    confimed = 'confimed'
-    waiting_list = 'waiting_list'
-    canceled_by_user = 'canceled_by_user'
-    canceled_by_admin = 'canceled_by_admin'
-    r_closed = 'registration closed'
+    r_open = "registration open"
+    moderation = "moderation"
+    confimed = "confimed"
+    waiting_list = "waiting_list"
+    canceled_by_user = "canceled_by_user"
+    canceled_by_admin = "canceled_by_admin"
+    r_closed = "registration closed"
+
 
 class UserRole(str, enum.Enum):
     student = "student"
