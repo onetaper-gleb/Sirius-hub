@@ -191,73 +191,7 @@ class _TopicView extends StatelessWidget {
         if (state is TopicInitial || state is TopicLoading) {
           return const Center(child: CircularProgressIndicator());
         } else if (state is TopicLoaded) {
-          // final List<CommentModel> testComments = [
-          //   CommentModel(
-          //     id: '1',
-          //     author_id: 'user_A',
-          //     content: 'Корневой 1',
-          //     topicId: '1',          // Добавь это
-          //     repliesIds: ['2'],     // Добавь это
-          //     parentCommentId: null,
-          //   ),
-          //   CommentModel(
-          //     id: '2',
-          //     author_id: 'user_B',
-          //     content: 'Ответ на 1',
-          //     topicId: '1',          // Добавь это
-          //     repliesIds: ['3'],     // Добавь это
-          //     parentCommentId: '1',
-          //   ),
-          //   CommentModel(
-          //     id: '3',
-          //     author_id: 'user_C',
-          //     content: 'Ответ на 1.2',
-          //     topicId: '1',          // Добавь это
-          //     repliesIds: [],        // Добавь это
-          //     parentCommentId: '2',
-          //   ),
-          //   CommentModel(
-          //     id: '4',
-          //     author_id: 'user_D',
-          //     content: 'Ответ на 1.3',
-          //     topicId: '1',          // Добавь это
-          //     repliesIds: [],        // Добавь это
-          //     parentCommentId: '3',
-          //   ),
-          //   CommentModel(
-          //     id: '5',
-          //     author_id: 'user_E',
-          //     content: 'Ответ 1.4',
-          //     topicId: '1',          // Добавь это
-          //     repliesIds: [],        // Добавь это
-          //     parentCommentId: '4',
-          //   ),
-          //   CommentModel(
-          //     id: '6',
-          //     author_id: 'user_F',
-          //     content: 'Ответ на 1.5',
-          //     topicId: '1',          // Добавь это
-          //     repliesIds: [],        // Добавь это
-          //     parentCommentId: '5',
-          //   ),
-          //   CommentModel(
-          //     id: '7',
-          //     author_id: 'user_G',
-          //     content: 'Ответ на 1.6',
-          //     topicId: '1',          // Добавь это
-          //     repliesIds: [],        // Добавь это
-          //     parentCommentId: '6',
-          //   ),
-          //   CommentModel(
-          //     id: '8',
-          //     author_id: 'user_AA',
-          //     content: 'Корневой 2',
-          //     topicId: '1',          // Добавь это
-          //     repliesIds: [],        // Добавь это
-          //     parentCommentId: null,
-          //   ),
-          // ];
-          // final comments = testComments;
+
           final comments = state.comments;
           final profiles = state.profiles;
           final threadedComments = sortCommentsIntoThreads(comments);
@@ -304,6 +238,7 @@ class _TopicView extends StatelessWidget {
                 return _Comment(
                   comment: comment,
                   profile: profile,
+                  profiles: profiles,
                   allComments: comments,
                   isAnonymousTopic: isAnonymousTopic,
                   depth: threadedItem.depth,
@@ -333,6 +268,7 @@ class _Comment extends StatelessWidget {
   final List<CommentModel> allComments;
   final bool isAnonymousTopic;
   final int depth;
+  final Map<String, RegistrationProfileData> profiles;
   final VoidCallback onReplyTap;
 
   const _Comment({
@@ -341,6 +277,7 @@ class _Comment extends StatelessWidget {
     required this.allComments,
     required this.isAnonymousTopic,
     required this.depth,
+    required this.profiles,
     required this.onReplyTap,
   });
 
@@ -357,8 +294,16 @@ class _Comment extends StatelessWidget {
     if (isReply && comment.parentCommentId != null) {
       try {
         final parentComment = allComments.firstWhere((c) => c.id == comment.parentCommentId);
-        final parentAuthorId = parentComment.author_id;
-        displayText = "@$parentAuthorId: ${comment.content}";
+
+        String parentDisplayName;
+        if (isAnonymousTopic) {
+          parentDisplayName = 'Аноним';
+        } else {
+          final parentProfile = profiles[parentComment.author_id];
+          parentDisplayName = parentProfile?.displayName ?? parentComment.author_id;
+        }
+
+        displayText = "@$parentDisplayName, ${comment.content}";
       } catch (e) {
       }
     }

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class CommentModel {
   final String id;
   final String author_id;
@@ -16,6 +18,7 @@ class CommentModel {
   });
 
   factory CommentModel.fromJson(Map<String, dynamic> json) {
+    debugPrint('[ CommentModel ] $json');
     final authorIdRaw =
         json['author_id'] ??
         json['user_id'] ??
@@ -32,8 +35,8 @@ class CommentModel {
       content: (contentRaw as String?)?.trim() ?? '',
       topicId: topicIdRaw?.toString() ?? '',
       repliesIds: List<String>.from(json['repliesIds'] ?? []),
-      parentCommentId: json['parent_comment_id']?.toString(),
-      // parentCommentId: (json['responses_id'] ?? json['parent_comment_id'])?.toString(),
+      // parentCommentId: json['parent_comment_id']?.toString(),
+      parentCommentId: (json['responses_id'] ?? json['parent_comment_id'])?.toString(),
     );
   }
 }
