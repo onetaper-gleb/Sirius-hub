@@ -20,8 +20,15 @@ class LessonModel {
   });
 
   factory LessonModel.fromJson(Map<String, dynamic> json) {
+    debugPrint('[ LessonModel ] $json');
+    String teacherName = 'Преподаватель не указан';
+    final teachers = json['teachers'];
+    if (teachers != null && teachers is List && teachers.isNotEmpty) {
+      teacherName = teachers[0]['fio'] ?? 'Преподаватель не указан';
+    }
+
     return LessonModel(
-      name: json['teachers'][0]['fio'] ?? 'Неизвестный преподаватель',
+      name: teacherName,
       classroom: json['classroom'] ?? 'Универ',
       lessonType: _parseLessonType(json['group_type']),
       endTime: json['end_time'],

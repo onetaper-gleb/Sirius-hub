@@ -54,12 +54,29 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     if (_group == null) return;
     final currentState = context.read<ScheduleBloc>().state;
     if (currentState is ScheduleWeekPending) return;
+
+    int targetWeek = _currentWeek;
     switch (method) {
       case 'nextWeek':
-        _currentWeek += 1;
+        targetWeek += 1;
+        break;
       case 'previousWeek':
-        _currentWeek -= 1;
+        targetWeek -= 1;
+        break;
     }
+
+    if (targetWeek > 10 || targetWeek < -10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Дальше листать нельзя'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    _currentWeek = targetWeek;
+
     print('_currentWeek: $_currentWeek');
     if (_history.containsKey(_currentWeek)) {
       _days = _getWeekDays();
@@ -129,6 +146,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       ),
     );
   }
+
   Widget _buildWeekHeader() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -365,7 +383,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Бейдж типа занятия
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
@@ -388,7 +405,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             ),
                           ),
                         ),
-                        // Время
                         Row(
                           children: [
                             Icon(
@@ -411,7 +427,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
                     const SizedBox(height: 10),
 
-                    // Название дисциплины
                     Text(
                       lesson.discipline,
                       style: const TextStyle(
@@ -425,7 +440,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     Divider(color: color.withOpacity(0.15), height: 1),
                     const SizedBox(height: 10),
 
-                    // Преподаватель
                     Row(
                       children: [
                         Icon(
@@ -448,7 +462,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
                     const SizedBox(height: 6),
 
-                    // Аудитория
                     Row(
                       children: [
                         Icon(
@@ -481,7 +494,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       return _buildLessonCard(group.numberPair, group.lessons.first);
     }
 
-    // Несколько пар в одно время — показываем как вкладки
     return _buildMultipleLessonsCard(group);
   }
 
@@ -497,7 +509,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Заголовок группы
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
             child: Row(
@@ -536,7 +547,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
           Divider(color: groupColor, height: 1),
 
-          // Каждая пара
           ...group.lessons.asMap().entries.map((entry) {
             final i = entry.key;
             final lesson = entry.value;
@@ -555,7 +565,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Тип
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
@@ -578,7 +587,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              // Дисциплина
                               Text(
                                 lesson.discipline,
                                 style: const TextStyle(
@@ -588,7 +596,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              // Преподаватель
                               Row(
                                 children: [
                                   Icon(
@@ -609,7 +616,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              // Аудитория
                               Row(
                                 children: [
                                   Icon(
@@ -649,7 +655,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     required DateTime endTime,
     required int durationMinutes,
   }) {
-    // Промежуток обеда: 12:00 - 15:00
     final lunchStart = DateTime(
       startTime.year,
       startTime.month,
@@ -679,28 +684,28 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   Widget _buildBreakCard(BreakModel breakModel) {
     final (
-      Color bgColor,
-      Color borderColor,
-      Color iconColor,
-      IconData icon,
+    Color bgColor,
+    Color borderColor,
+    Color iconColor,
+    IconData icon,
     ) = switch (breakModel.type) {
       BreakType.lunch => (
-        Colors.orange.withOpacity(0.07),
-        Colors.orange.withOpacity(0.3),
-        Colors.orange.shade700,
-        Icons.restaurant_rounded,
+      Colors.orange.withOpacity(0.07),
+      Colors.orange.withOpacity(0.3),
+      Colors.orange.shade700,
+      Icons.restaurant_rounded,
       ),
       BreakType.window => (
-        Colors.purple.withOpacity(0.07),
-        Colors.purple.withOpacity(0.3),
-        Colors.purple.shade700,
-        Icons.access_time_rounded,
+      Colors.purple.withOpacity(0.07),
+      Colors.purple.withOpacity(0.3),
+      Colors.purple.shade700,
+      Icons.access_time_rounded,
       ),
       BreakType.rest => (
-        Colors.blue.withOpacity(0.07),
-        Colors.blue.withOpacity(0.3),
-        Colors.blue.shade700,
-        Icons.coffee_rounded,
+      Colors.blue.withOpacity(0.07),
+      Colors.blue.withOpacity(0.3),
+      Colors.blue.shade700,
+      Icons.coffee_rounded,
       ),
     };
 
@@ -759,7 +764,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       final current = lessons[i];
       final same = <LessonModel>[current];
 
-      // Собираем все пары с одинаковым временем
       while (i + 1 < lessons.length &&
           lessons[i + 1].startTime == current.startTime &&
           lessons[i + 1].endTime == current.endTime) {
