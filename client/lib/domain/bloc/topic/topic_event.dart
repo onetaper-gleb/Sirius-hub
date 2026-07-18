@@ -8,6 +8,8 @@ class TopicLoadRequested extends TopicEvent {
 class TopicCreateCommentRequested extends TopicEvent {
   final String content;
   final String topicId;
+  final String? parentCommentId;
 
-  TopicCreateCommentRequested({required this.content, required this.topicId});
+  TopicCreateCommentRequested({required this.content, required this.topicId, this.parentCommentId});
+
 }
