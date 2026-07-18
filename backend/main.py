@@ -35,6 +35,7 @@ import news
 import profiles
 import forum
 import manage_roles
+import newsoffers
 
 os.makedirs("uploads", exist_ok=True)
 
@@ -60,3 +61,4 @@ app.include_router(schedule.router)
 app.include_router(forum.forum_router)
 app.include_router(forum.topic_router)
 app.include_router(manage_roles.router)
+app.include_router(newsoffers.router)
