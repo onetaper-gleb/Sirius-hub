@@ -24,31 +24,61 @@ class ScheduleRepository {
         );
       } else {
         throw Exception(
-          "Ошибка при запросе на получение расписания группы ${group}. Код ошибки: ${response.statusCode}",
+          "Ошибка при запросе на получение расписания группы $group. Код ошибки: ${response.statusCode}",
         );
       }
     } on DioException catch (e) {
-      // TODO log error
       print(e);
       rethrow;
     } catch (e) {
-      // TODO log error
       rethrow;
     }
   }
 
   String _createLink(List<Object> args) {
-    String link = '${ApiConfig.baseUrl}/${_url}/?';
+    String link = '${ApiConfig.baseUrl}/$_url/?';
     link = link + 'group=${args[0]}' + "&" + "week_offset=${args[1]}";
     print(link);
     return link;
   }
+
   Future<List<String>> getFreeRooms({
     required DateTime date,
     required String startTime,
     required String endTime,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 1500));
-    return ['К5', 'К6', 'Альфа5.7'];
+    final String formattedDate =
+        '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+    final String url = '${ApiConfig.baseUrl}/classrooms/free';
+
+    try {
+      final response = await _dio.get(
+        url,
+        queryParameters: {
+          'date': formattedDate,
+          'start_time': startTime,
+          'end_time': endTime,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        return List<String>.from(data);
+      } else if (response.statusCode == 422) {
+        throw Exception(
+          'Неправильный запрос: ${response.data['detail'][0]['msg']}',
+        );
+      } else {
+        throw Exception(
+          "Ошибка при запросе свободных аудиторий. Код ошибки: ${response.statusCode}",
+        );
+      }
+    } on DioException catch (e) {
+      print(e);
+      rethrow;
+    } catch (e) {
+      rethrow;
+    }
   }
 }

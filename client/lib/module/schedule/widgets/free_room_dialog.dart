@@ -100,6 +100,10 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
               );
             }
 
+            if (state is ScheduleError) {
+              return _buildErrorView(state.error);
+            }
+
             if (state is ScheduleHasFreeRooms) {
               return _buildResultsView(state.freeRooms);
             }
@@ -108,6 +112,32 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
           },
         ),
       ),
+    );
+  }
+
+  Widget _buildErrorView(String error) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Ошибка',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          error,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.red, fontSize: 14),
+        ),
+        const SizedBox(height: 24),
+        FilledButton(
+          onPressed: () => _scheduleBloc.add(ScheduleResetFreeRooms()),
+          style: FilledButton.styleFrom(backgroundColor: Colors.blue),
+          child: const Text('Назад', style: TextStyle(fontSize: 15)),
+        ),
+      ],
     );
   }
 
@@ -130,18 +160,34 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
         else
           ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: 300),
-            child: ListView.separated(
+            child: ListView.builder(
               shrinkWrap: true,
               itemCount: rooms.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (context, index) {
-                return ListTile(
-                  leading: const Icon(Icons.meeting_room_outlined, color: Colors.blue),
-                  title: Text(
-                    rooms[index],
-                    style: const TextStyle(fontWeight: FontWeight.w500),
+                return Container(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.blue, width: 1.5),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  contentPadding: EdgeInsets.zero,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.meeting_room_outlined, color: Colors.blue),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          rooms[index],
+                          style: const TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
                 );
               },
             ),
@@ -333,21 +379,26 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
+            border: Border.all(color: Colors.blue, width: 1.5),
           ),
           child: TextField(
             controller: controller,
             readOnly: true,
             onTap: () => _selectTime(context, controller),
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: 1.5),
+            style: const TextStyle(
+              color: Colors.blue,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 1.5,
+            ),
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              suffixIcon: Icon(Icons.access_time, color: Colors.grey.shade400, size: 20),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.blue, width: 1.5)),
+              suffixIcon: Icon(Icons.access_time, color: Colors.blue.shade400, size: 20),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
               hintText: '00:00',
-              hintStyle: TextStyle(color: Colors.grey.shade400),
+              hintStyle: TextStyle(color: Colors.blue.shade200),
             ),
           ),
         ),
