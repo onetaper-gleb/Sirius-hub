@@ -27,12 +27,21 @@ async def _get_db_topic(db: AsyncSession, uid: str) -> Topics | None:
     return result.scalar_one_or_none()
 
 
+async def _get_db_comment(db: AsyncSession, comment_id: str) -> Comments | None:
+    result = await db.execute(select(Comments).where(Comments.id == comment_id))
+    return result.scalar_one_or_none()
+
+
 @topic_router.get("/comments", response_model=List[CommentScheme])
 async def get_comments(
     topic_id: str,
     user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    topic = await _get_db_topic(db, topic_id)
+    if topic is None:
+        raise HTTPException(status_code=400, detail="Topic does not exist")
+
     comments_schemas = await db.execute(
         select(Comments)
         .where(Comments.topic_id == topic_id)
@@ -41,9 +50,19 @@ async def get_comments(
     comments_models = comments_schemas.scalars().all()
 
     comments_schemas = []
-    topic = await _get_db_topic(db, topic_id)
     for comment in comments_models:
         comment_author = await _get_db_user(db, comment.user_id)
+
+        reply_to_author = None
+        if comment.parent_comment_id:
+            parent_comment = await _get_db_comment(db, comment.parent_comment_id)
+
+            if parent_comment:
+                parent_author = await _get_db_user(db, parent_comment.user_id)
+
+                if parent_author and not topic.anon:
+                    reply_to_author = parent_author.id
+
         comments_schemas.append(
             {
                 "content": comment.content,
@@ -51,6 +70,8 @@ async def get_comments(
                 "author": (
                     "" if topic.anon or comment_author is None else comment_author.id
                 ),
+                "parent_comment_id": comment.parent_comment_id,
+                "reply_to_author": reply_to_author,
             }
         )
 
@@ -71,8 +92,28 @@ async def create_comment(
     if topic is None:
         raise HTTPException(status_code=400, detail="Topic does not exist")
 
+    reply_to_author = None
+    if request.parent_comment_id:
+        parent_comment = await _get_db_comment(db, request.parent_comment_id)
+
+        if parent_comment is None:
+            raise HTTPException(status_code=400, detail="Parent comment not found")
+
+        if parent_comment.topic_id != request.topic_id:
+            raise HTTPException(
+                status_code=400, detail="Can not reply to a comment from another topic"
+            )
+
+        parent_author = await _get_db_user(db, parent_comment.user_id)
+
+        if parent_comment and not topic.anon:
+            reply_to_author = parent_author.id
+
     new_comment = Comments(
-        content=content, topic_id=request.topic_id, user_id=user.get("uid")
+        content=content,
+        topic_id=request.topic_id,
+        user_id=user.get("uid"),
+        parent_comment_id=request.parent_comment_id,
     )
     db.add(new_comment)
     await db.commit()
@@ -84,4 +125,6 @@ async def create_comment(
         "content": new_comment.content,
         "comment_id": new_comment.id,
         "author": "" if topic.anon or author is None else author.id,
+        "parent_comment_id": new_comment.parent_comment_id,
+        "reply_to_author": reply_to_author,
     }

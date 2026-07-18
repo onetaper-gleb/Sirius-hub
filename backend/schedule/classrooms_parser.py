@@ -347,8 +347,24 @@ class Schedule:
     This function gives you free classrooms for certain time of today.
     """
 
-    async def get_free_classrooms(self, date=datetime.now()):
+    async def get_free_classrooms(
+        self, start_date: datetime = None, end_date: datetime = None
+    ):
+
+        if start_date is None:
+            start_date = datetime.now()
+
+        if end_date is None:
+            end_date = start_date + timedelta(hours=1, minutes=20)
+
+        if start_date.date() != end_date.date():
+            raise ValueError("The time interval must be within one day")
+
+        if start_date >= end_date:
+            raise ValueError("The start time mush be before the end time")
+
         # TODO delete classroom time dependent updates, move them to main and stick them to timer
+
         await self.update_classroom_list()
         # Collecting schedules
         all_classrooms = await asyncio.gather(
@@ -363,26 +379,33 @@ class Schedule:
 
         all_classrooms = all_classrooms + all_classrooms_2 + all_classrooms_3
         keys_for_free_classrooms = []
-        pair = 0
+        start_pair = len(self.__lessons)
+        end_pair = len(self.__lessons)
 
-        # Defining which pair is it now.
+        start_date_minutes = start_date.hour * 60 + start_date.minute
+        end_date_minutes = end_date.hour * 60 + end_date.minute - 1
+
         for i, time in enumerate(self.__lessons):
-            if time > date.hour * 60 + date.minute:
-                pair = i
+            if time > start_date_minutes:
+                start_pair = i
                 break
+
+        for i, time in enumerate(self.__lessons):
+            if time > end_date_minutes:
+                end_pair = i
+                break
+
+        need_pairs = set(range(start_pair, end_pair + 1))
+        weekday = start_date.weekday()
 
         # Finding free classrooms
         for i in all_classrooms:
             if type(i) == str:
                 keys_for_free_classrooms.append(i)
                 continue
-            for j in i[date.weekday()]:
-                if j["numberPair"] == pair:
-                    break
-                elif j["numberPair"] > pair:
-                    keys_for_free_classrooms.append(i["classroom"])
-                    break
-            else:
+
+            not_free_pairs = {pair["numberPair"] for pair in i[weekday]}
+            if not need_pairs.intersection(not_free_pairs):
                 keys_for_free_classrooms.append(i["classroom"])
 
         free_classrooms = [
@@ -394,7 +417,13 @@ class Schedule:
 async def main():
     sc = Schedule()
 
-    free_classrooms = await sc.get_free_classrooms(date=datetime(2026, 7, 10, 9))
+    start_time = datetime(2026, 7, 15, 9, 0)
+    end_time = datetime(2026, 7, 15, 20, 0)
+
+    free_classrooms = await sc.get_free_classrooms(
+        start_date=start_time, end_date=end_time
+    )
+
     print(free_classrooms)
     print(f"Свободных аудиторий: {len(free_classrooms)}")
 

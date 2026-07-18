@@ -28,9 +28,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
     if DB_USER and DB_PASSWORD and DB_NAME:
-        DATABASE_URL = (
-            f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-        )
+        DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     else:
         DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./test.db")
 
@@ -98,7 +96,7 @@ async def give_me_role(email, role_u):
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("Использование: python promote.py EMAIL ROLE")
+        print("Использование: python3 promote.py EMAIL ROLE")
         print("Роли: student, council, admin")
         sys.exit(1)
 
