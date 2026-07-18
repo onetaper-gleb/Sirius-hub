@@ -21,6 +21,13 @@ class AdminFab extends StatelessWidget {
   Widget build(BuildContext context) {
     final isAdmin = context.select((AuthBloc bloc) {
       final state = bloc.state;
+      final rl = state is AuthAuthenticated
+          ? state.profileModel.userModel
+          : null;
+      if (rl == null) return false;
+      print(
+        '[Admin fab] $state, ${rl.role}, ${rl.email}, ${rl.id}, ${rl.name}',
+      );
       return state is AuthAuthenticated &&
           state.profileModel.userModel.role == UserRole.council;
     });

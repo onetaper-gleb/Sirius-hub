@@ -19,18 +19,21 @@ class TopicRepository {
       author_id: 'Daniel',
       content: 'first comment!',
       topicId: '1',
+      repliesIds: [],
     ),
     const CommentModel(
       id: '2',
       author_id: 'Hleb',
       content: 'another comment',
       topicId: '1',
+      repliesIds: [],
     ),
     const CommentModel(
       id: '3',
       author_id: 'Varya',
       content: 'yet another comment',
       topicId: '2',
+      repliesIds: [],
     ),
   ];
 
@@ -66,15 +69,17 @@ class TopicRepository {
       throw Exception("Неизвестная ошибка: $e");
     }
   }
-
-  Future<void> createComment(String content, String topicId) async {
+  // Future<void> createComment(String content, String topicId) async {
+  Future<void> createComment(String content, String topicId, String? parentCommentId) async {
     try {
       final rawToken = await _authDataSource.getToken();
       if (rawToken == null) {
         await _authDataSource.deleteCurrentUser();
         throw Exception('Не удалось получить токен после регистрации');
       }
-      final data = {"topic_id": topicId, "content": content};
+
+      // final data = {"topic_id": topicId, "content": content};
+      final data = {"topic_id": topicId, "content": content, "parent_comment_id": parentCommentId};
 
       await _dio.post(
         '/topic/comments',
