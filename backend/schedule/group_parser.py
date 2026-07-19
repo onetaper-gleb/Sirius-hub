@@ -119,6 +119,16 @@ class SiriusScheduleClient:
         raw_events = data.get("events") or {}
         grouped: dict[str, dict[str, Any]] = {}
 
+        weekdays_dict = {
+            "1": "ПН",
+            "2": "ВТ",
+            "3": "СР",
+            "4": "ЧТ",
+            "5": "ПТ",
+            "6": "СБ",
+            "7": "ВС",
+        }
+
         if isinstance(raw_events, dict):
             event_lists = raw_events.values()
         elif isinstance(raw_events, list):
@@ -139,11 +149,13 @@ class SiriusScheduleClient:
                 if not date:
                     continue
 
+                day_week_str = weekdays_dict.get(str(day_week))
+
                 day_bucket = grouped.setdefault(
                     date,
                     {
                         "date": date,
-                        "day_week": day_week,
+                        "day_week": day_week_str,
                         "events": [],
                     },
                 )
@@ -188,6 +200,7 @@ class SiriusScheduleClient:
 
     def _add_empty_days(self, days: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
+        weekdays = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"]
         if not days:
             datetime_now = datetime.now()
             monday = datetime_now - timedelta(days=datetime_now.weekday())
@@ -196,26 +209,31 @@ class SiriusScheduleClient:
             for i in range(6):
                 date = monday + timedelta(days=i)
                 result.append(
-                    {"date": date.strftime("%d.%m.%Y"), "day_week": i + 1, "events": []}
+                    {
+                        "date": date.strftime("%d.%m.%Y"),
+                        "day_week": weekdays[i],
+                        "events": [],
+                    }
                 )
             return result
 
         first_date = datetime.strptime(days[0]["date"], "%d.%m.%Y")
+        monday = first_date - timedelta(days=first_date.weekday())
         dict_days = {}
         for day in days:
             dict_days[day["date"]] = day
 
         result = []
         for i in range(6):
-            date = first_date + timedelta(days=i)
+            date = monday + timedelta(days=i)
             date_str = date.strftime("%d.%m.%Y")
 
             if date_str in dict_days:
                 day = dict_days[date_str]
-                day["day_week"] = i + 1
+                day["day_week"] = weekdays[i]
                 result.append(day)
             else:
-                result.append({"date": date_str, "day_week": i + 1, "events": []})
+                result.append({"date": date_str, "day_week": weekdays[i], "events": []})
 
         return result
 
