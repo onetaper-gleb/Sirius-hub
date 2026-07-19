@@ -7,15 +7,11 @@ class NewsModel {
   final String? imageUrl;
   final String authorId;
   final DateTime createdAt;
-  final String? topicId;
-  final bool isEvent;
-  final String? eventStatus;
-  final String? eventStart;
-  final String? eventEnd;
-  final String? location;
-  final int? maxParticipants;
-  final bool? isRegOpen;
+  final bool hasEvent;
   final String? eventId;
+  final bool hasTopic;
+  final String? topicId;
+  final bool anon;
 
   NewsModel({
     required this.id,
@@ -24,15 +20,11 @@ class NewsModel {
     this.imageUrl,
     required this.authorId,
     required this.createdAt,
-    required this.isEvent,
+    required this.hasEvent,
     this.eventId,
-    this.eventStatus,
-    this.eventStart,
-    this.eventEnd,
-    this.location,
-    this.maxParticipants,
-    this.isRegOpen,
+    required this.hasTopic,
     this.topicId,
+    required this.anon,
   });
 
   String? get fullImageUrl {
@@ -51,15 +43,11 @@ class NewsModel {
       createdAt:
           DateTime.tryParse(createdAtRaw?.toString() ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
-      topicId: (json['topic_id'])?.toString() ?? '',
-      isEvent: json['is_event'] as bool? ?? false,
-      eventId: (json['event_id'])?.toString() ?? '',
-      eventStatus: (json['event_status'])?.toString() ?? '',
-      eventStart: (json['event_start'])?.toString() ?? '',
-      eventEnd: (json['event_end'])?.toString() ?? '',
-      location: (json['location'])?.toString() ?? '',
-      maxParticipants: json['max_partic'] as int? ?? 0,
-      isRegOpen: json['is_reg_open'] as bool? ?? false,
+      hasEvent: json['has_event'] as bool? ?? false,
+      eventId: (json['event_id'])?.toString(),
+      hasTopic: json['has_topic'] as bool? ?? false,
+      topicId: (json['topic_id'])?.toString(),
+      anon: json['anon'] as bool? ?? false,
     );
   }
 }

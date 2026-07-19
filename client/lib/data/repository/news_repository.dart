@@ -41,7 +41,9 @@ class NewsRepository {
   Future<NewsModel> createNews({
     required String title,
     required String content,
-    bool isEvent = false,
+    bool hasEvent = false,
+    bool hasTopic = false,
+    bool anon = false,
     String? eventStatus,
     String? eventStart,
     String? eventEnd,
@@ -57,19 +59,27 @@ class NewsRepository {
         throw Exception('Не удалось получить токен после регистрации');
       }
 
-      final formData = FormData.fromMap({
-        "request": jsonEncode({
-          "title": title,
-          "content": content,
-          "is_event": isEvent,
-          "event_status": eventStatus,
-          "event_start": eventStart,
-          "event_end": eventEnd,
-          "location": location,
-          "max_partic": maxParticipants,
-          "is_reg_open": isRegOpen,
-        }),
-      });
+      final Map<String, dynamic> requestData = {
+        "title": title,
+        "content": content,
+        "has_event": hasEvent,
+        "has_topic": hasTopic,
+        "anon": anon,
+        "event_status": eventStatus,
+        "event_start": eventStart,
+        "event_end": eventEnd,
+        "location": location,
+        "max_partic": maxParticipants,
+        "is_reg_open": isRegOpen,
+      };
+      final formData = FormData();
+      formData.files.add(MapEntry(
+        "request",
+        MultipartFile.fromString(
+          jsonEncode(requestData),
+          contentType: MediaType('application', 'json'),
+        ),
+      ));
 
       if (imageFile != null) {
         formData.files.add(MapEntry(
