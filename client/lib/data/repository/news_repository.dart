@@ -42,7 +42,12 @@ class NewsRepository {
     required String title,
     required String content,
     bool isEvent = false,
-    String? eventId,
+    String? eventStatus,
+    String? eventStart,
+    String? eventEnd,
+    String? location,
+    int? maxParticipants,
+    bool? isRegOpen,
     File? imageFile,
   }) async {
     try {
@@ -52,19 +57,19 @@ class NewsRepository {
         throw Exception('Не удалось получить токен после регистрации');
       }
 
-      final formData = FormData();
-      formData.files.add(MapEntry(
-        "request",
-        Multipartfile.fromBytes(
-          utf8.encode(jsonEncode({
-            "title": title,
-            "content": content,
-            "is_event": isEvent,
-            "event_id": eventId,
-          })),
-          contentType: MediaType('application', 'json'),
-        ),
-      ));
+      final formData = FormData.fromMap({
+        "request": jsonEncode({
+          "title": title,
+          "content": content,
+          "is_event": isEvent,
+          "event_status": eventStatus,
+          "event_start": eventStart,
+          "event_end": eventEnd,
+          "location": location,
+          "max_partic": maxParticipants,
+          "is_reg_open": isRegOpen,
+        }),
+      });
 
       if (imageFile != null) {
         formData.files.add(MapEntry(

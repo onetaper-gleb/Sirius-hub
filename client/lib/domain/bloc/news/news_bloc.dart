@@ -33,8 +33,13 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
         title: event.title,
         content: event.content,
         isEvent: event.isEvent,
-        eventId: event.eventId,
         imageFile: event.imageFile,
+        eventStatus: event.eventStatus,
+        eventStart: event.eventStart,
+        eventEnd: event.eventEnd,
+        location: event.location,
+        maxParticipants: event.maxParticipants,
+        isRegOpen: event.isRegOpen,
       );
       emit(NewsCreateSuccess());
       add(FetchNews());

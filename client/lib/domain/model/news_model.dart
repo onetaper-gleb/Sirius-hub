@@ -9,6 +9,12 @@ class NewsModel {
   final DateTime createdAt;
   final String? topicId;
   final bool isEvent;
+  final String? eventStatus;
+  final String? eventStart;
+  final String? eventEnd;
+  final String? location;
+  final int? maxParticipants;
+  final bool? isRegOpen;
   final String? eventId;
 
   NewsModel({
@@ -20,6 +26,12 @@ class NewsModel {
     required this.createdAt,
     required this.isEvent,
     this.eventId,
+    this.eventStatus,
+    this.eventStart,
+    this.eventEnd,
+    this.location,
+    this.maxParticipants,
+    this.isRegOpen,
     this.topicId,
   });
 
@@ -39,9 +51,15 @@ class NewsModel {
       createdAt:
           DateTime.tryParse(createdAtRaw?.toString() ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
-      topicId: json['topic_id'] as String?,
+      topicId: (json['topic_id'])?.toString() ?? '',
       isEvent: json['is_event'] as bool? ?? false,
       eventId: (json['event_id'])?.toString() ?? '',
+      eventStatus: (json['event_status'])?.toString() ?? '',
+      eventStart: (json['event_start'])?.toString() ?? '',
+      eventEnd: (json['event_end'])?.toString() ?? '',
+      location: (json['location'])?.toString() ?? '',
+      maxParticipants: json['max_partic'] as int? ?? 0,
+      isRegOpen: json['is_reg_open'] as bool? ?? false,
     );
   }
 }
