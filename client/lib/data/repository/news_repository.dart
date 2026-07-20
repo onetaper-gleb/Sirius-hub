@@ -73,22 +73,26 @@ class NewsRepository {
         "is_reg_open": isRegOpen,
       };
       final formData = FormData();
-      formData.files.add(MapEntry(
-        "request",
-        MultipartFile.fromString(
-          jsonEncode(requestData),
-          contentType: MediaType('application', 'json'),
+      formData.files.add(
+        MapEntry(
+          "request",
+          MultipartFile.fromString(
+            jsonEncode(requestData),
+            contentType: MediaType('application', 'json'),
+          ),
         ),
-      ));
+      );
 
       if (imageFile != null) {
-        formData.files.add(MapEntry(
-          "image",
-          await MultipartFile.fromFile(
-            imageFile.path,
-            filename: imageFile.path.split('/').last,
+        formData.files.add(
+          MapEntry(
+            "image",
+            await MultipartFile.fromFile(
+              imageFile.path,
+              filename: imageFile.path.split('/').last,
+            ),
           ),
-        ));
+        );
       }
 
       final response = await _dio.post(
