@@ -5,7 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from auth.auth_routes import get_current_user, require_role
+from auth.auth_routes import get_current_user, require_council_role
 from database.database import get_db
 from database.models import Comments, Topics
 
@@ -43,7 +43,7 @@ async def get_topics(
 @forum_router.post("/topics", response_model=TopicScheme)
 async def create_topic(
     request: CreateTopicRequest,
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     title = request.title.strip()

@@ -1,4 +1,5 @@
-﻿import io
+﻿import base64
+import io
 import os
 import uuid
 from typing import List, Optional
@@ -8,7 +9,7 @@ from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from auth.auth_routes import get_current_user, require_role
+from auth.auth_routes import get_current_user, require_council_role
 from database.database import get_db
 from database.models import Events, EventStatus, News, Registrations, RegStatus, Topics
 
@@ -34,7 +35,8 @@ class NotFound(Exception):
 async def process_image(image: UploadFile | None):
     if not image:
         return None
-    contents = await image.read()
+    # contents = await image.read()
+    contents = base64.b64decode(image)
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(400, "Размер файла не должен превышать 2 МБ")
 
@@ -50,7 +52,8 @@ async def process_image(image: UploadFile | None):
         img.save(file_path, format="WEBP", quality=75)
 
         return f"/static/{file_name}"
-
+    except base64.binascii.Error:
+        raise HTTPException(400, "Неверный формат base64")
     except Exception:
         raise HTTPException(400, "Неверный формат изображения или файл поврежден")
 
@@ -138,11 +141,11 @@ async def validate_event_data(request: NewsEventsRequest, db: AsyncSession):
 @router.post("/", response_model=NewsResponse)
 async def create_news(
     request: NewsEventsRequest,
-    image: UploadFile = File(None),
-    user: dict = Depends(require_role),
+    # image: UploadFile = File(None),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    image_url = await process_image(image)
+    image_url = await process_image(request.image)
 
     new_news = News(
         title=request.title,
@@ -202,8 +205,8 @@ async def create_news(
 async def update_news(
     news_id: str,
     request: NewsEventsRequest,
-    image: UploadFile = File(None),
-    user: dict = Depends(require_role),
+    # image: UploadFile = File(None),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     news = await get_news_or_404(db, news_id)
@@ -212,9 +215,9 @@ async def update_news(
     if role in ["student", "council"]:  # news.author_id != user.get("uid")
         raise HTTPException(status_code=403, detail="Нет прав на редактирование")
 
-    if image:
+    if request.image:
         await delete_old_image(news.image_url)
-        news.image_url = await process_image(image)
+        news.image_url = await process_image(request.image)
 
     if request.title is not None:
         news.title = request.title
@@ -311,10 +314,18 @@ async def get_news(
     return await get_news_or_404(db, news_id)
 
 
+@router.get("/{event_id}", response_model=EventResponse)
+async def get_event(
+    event_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    return await get_event_or_404(db, event_id)
+
+
 @router.delete("/{news_id}")
 async def delete_news(
     news_id: str,
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     news_item = await get_news_or_404(db, news_id)
@@ -364,7 +375,7 @@ async def get_all_news(
 async def update_event_status(
     event_id: str,
     status: str = Form(...),
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     event = await get_event_or_404(db, event_id)
@@ -389,7 +400,7 @@ async def update_event_status(
 async def create_reg(
     event_id: str,
     comment: Optional[str] = Form(default=None),
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     event = await get_event_or_404(db, event_id)
@@ -428,7 +439,7 @@ async def create_reg(
 @router.delete("/events/{event_id}/register")
 async def delete_reg(
     event_id: str,
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -453,7 +464,7 @@ async def delete_reg(
 @router.get("/events/{event_id}", response_model=List[RegistrationResponse])
 async def get_all_part(
     event_id: str,
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     event = await get_event_or_404(db, event_id)
@@ -477,7 +488,7 @@ async def update_part_status(
     event_id: str,
     user_id: str,
     status: str = Form(...),
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     event = await get_event_or_404(db, event_id)

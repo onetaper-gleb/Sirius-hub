@@ -23,7 +23,7 @@ class _AppShellState extends State<AppShell> {
     Navigator(
       key: const ValueKey('forum_navigator'),
       onGenerateRoute: (settings) =>
-        MaterialPageRoute(builder: (context) => const ForumScreen()),
+          MaterialPageRoute(builder: (context) => const ForumScreen()),
     ),
     const ScheduleScreen(),
     const ProfileScreen(),
@@ -32,7 +32,8 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_titles[_index]),
+      appBar: AppBar(
+        title: Text(_titles[_index]),
         actions: [
           if (_index == 2)
             Padding(
@@ -42,7 +43,7 @@ class _AppShellState extends State<AppShell> {
                   backgroundColor: Colors.white,
                   foregroundColor: Colors.blue,
                   elevation: 0,
-                  side: const BorderSide(color: Colors.blue, width: 1)
+                  side: const BorderSide(color: Colors.blue, width: 1),
                 ),
                 onPressed: () {
                   showDialog(
@@ -53,10 +54,7 @@ class _AppShellState extends State<AppShell> {
                 icon: const Icon(Icons.manage_search, size: 20),
                 label: const Text(
                   'Свободные ауд.',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                 ),
               ),
             ),

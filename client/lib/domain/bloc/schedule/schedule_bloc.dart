@@ -8,17 +8,17 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
   final ScheduleRepository _scheduleRepository;
 
   ScheduleBloc({required ScheduleRepository scheduleRepository})
-      : _scheduleRepository = scheduleRepository,
-        super(ScheduleInitial()) {
+    : _scheduleRepository = scheduleRepository,
+      super(ScheduleInitial()) {
     on<ScheduleGetWeek>(_getWeek);
     on<ScheduleGetFreeRooms>(_getFreeRooms);
     on<ScheduleResetFreeRooms>(_resetFreeRooms);
   }
 
   Future<void> _getWeek(
-      ScheduleGetWeek event,
-      Emitter<ScheduleState> emit,
-      ) async {
+    ScheduleGetWeek event,
+    Emitter<ScheduleState> emit,
+  ) async {
     emit(ScheduleWeekPending());
     try {
       final week = await _scheduleRepository.getSchedule(
@@ -34,9 +34,9 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
   }
 
   Future<void> _getFreeRooms(
-      ScheduleGetFreeRooms event,
-      Emitter<ScheduleState> emit,
-      ) async {
+    ScheduleGetFreeRooms event,
+    Emitter<ScheduleState> emit,
+  ) async {
     emit(ScheduleFreeRoomsPending());
     try {
       final List<String> freeRooms = await _scheduleRepository.getFreeRooms(
@@ -53,9 +53,9 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
   }
 
   void _resetFreeRooms(
-      ScheduleResetFreeRooms event,
-      Emitter<ScheduleState> emit,
-      ) {
+    ScheduleResetFreeRooms event,
+    Emitter<ScheduleState> emit,
+  ) {
     emit(ScheduleInitial());
   }
 }
