@@ -40,7 +40,7 @@ async def get_comments(
 ):
     topic = await _get_db_topic(db, topic_id)
     if topic is None:
-        raise HTTPException(status_code=400, detail="Topic does not exist")
+        raise HTTPException(status_code=404, detail="Topic does not exist")
 
     comments_schemas = await db.execute(
         select(Comments)
@@ -90,14 +90,14 @@ async def create_comment(
 
     topic = await _get_db_topic(db, request.topic_id)
     if topic is None:
-        raise HTTPException(status_code=400, detail="Topic does not exist")
+        raise HTTPException(status_code=404, detail="Topic does not exist")
 
     reply_to_author = None
     if request.parent_comment_id:
         parent_comment = await _get_db_comment(db, request.parent_comment_id)
 
         if parent_comment is None:
-            raise HTTPException(status_code=400, detail="Parent comment not found")
+            raise HTTPException(status_code=404, detail="Parent comment not found")
 
         if parent_comment.topic_id != request.topic_id:
             raise HTTPException(
@@ -128,3 +128,26 @@ async def create_comment(
         "parent_comment_id": new_comment.parent_comment_id,
         "reply_to_author": reply_to_author,
     }
+
+@topic_router.delete("/comments{comment_id}")
+async def delete_comment(
+    comment_id: str,
+    user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    user = await _get_db_user(db, user.get("uid"))
+    if not user:
+        raise HTTPException(status_code=400, detail="User not found")
+    
+    if user.role not in ["council", "admin"]:
+        raise HTTPException(status_code=403, detail="No permissions to delete")
+    
+    comment = await _get_db_comment(db, comment_id)
+
+    if comment is None:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    
+    await db.delete(comment)
+    await db.commit()
+
+    return {"message": "Comment deleted successfully"}
