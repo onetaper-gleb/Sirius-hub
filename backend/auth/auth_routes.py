@@ -40,7 +40,7 @@ async def require_council_role(
     result = await db.execute(stmt)
     role = result.scalar()
 
-    if role == "student":
+    if role not in ["council", "admin"]:
         raise HTTPException(
             status_code=403, detail="Только студсовет и администраторы имеют доступ."
         )
