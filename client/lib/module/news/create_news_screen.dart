@@ -58,22 +58,24 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
       return;
     }
 
-    if (_hasEvent){
+    if (_hasEvent) {
       if (_eventStartController.text.trim().isEmpty ||
-        _eventEndController.text.trim().isEmpty ||
-        _eventStatus == null ||
-        _locationController.text.trim().isEmpty ||
-        _maxParticController.text.trim().isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Заполните все поля события')),
-          );
-          return;
+          _eventEndController.text.trim().isEmpty ||
+          _eventStatus == null ||
+          _locationController.text.trim().isEmpty ||
+          _maxParticController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Заполните все поля события')),
+        );
+        return;
       }
 
       final maxPartic = int.tryParse(_maxParticController.text.trim());
       if (maxPartic == null || maxPartic < 1) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Макс. кол-во участников должно быть больше 0')),
+          const SnackBar(
+            content: Text('Макс. кол-во участников должно быть больше 0'),
+          ),
         );
         return;
       }
@@ -264,7 +266,7 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
     );
   }
 
-  Widget _buildEventMenu(){
+  Widget _buildEventMenu() {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
@@ -324,11 +326,10 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
               ),
               value: _eventStatus,
               items: _eventStatuses.entries
-                .map((e) => DropdownMenuItem(
-                value: e.key,
-                child: Text(e.value),
-                  ))
-                .toList(),
+                  .map(
+                    (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
+                  )
+                  .toList(),
               onChanged: (value) {
                 setState(() {
                   _eventStatus = value;

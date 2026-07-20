@@ -1,9 +1,8 @@
-﻿import io
+﻿import base64
+import io
 import os
 import uuid
 from typing import List, Optional
-from PIL import Image
-import base64
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from PIL import Image
@@ -36,7 +35,7 @@ class NotFound(Exception):
 async def process_image(image: UploadFile | None):
     if not image:
         return None
-    #contents = await image.read()
+    # contents = await image.read()
     contents = base64.b64decode(image)
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(400, "Размер файла не должен превышать 2 МБ")
@@ -142,7 +141,7 @@ async def validate_event_data(request: NewsEventsRequest, db: AsyncSession):
 @router.post("/", response_model=NewsResponse)
 async def create_news(
     request: NewsEventsRequest,
-    #image: UploadFile = File(None),
+    # image: UploadFile = File(None),
     user: dict = Depends(require_role),
     db: AsyncSession = Depends(get_db),
 ):
@@ -206,7 +205,7 @@ async def create_news(
 async def update_news(
     news_id: str,
     request: NewsEventsRequest,
-    #image: UploadFile = File(None),
+    # image: UploadFile = File(None),
     user: dict = Depends(require_role),
     db: AsyncSession = Depends(get_db),
 ):
@@ -313,6 +312,7 @@ async def get_news(
     db: AsyncSession = Depends(get_db),
 ):
     return await get_news_or_404(db, news_id)
+
 
 @router.get("/{event_id}", response_model=EventResponse)
 async def get_event(
