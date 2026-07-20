@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:convert';
+import 'package:http_parser/http_parser.dart';
 import 'package:dio/dio.dart';
 import 'package:client/domain/model/model.dart';
 import 'package:client/data/source/source.dart';
@@ -39,6 +41,15 @@ class NewsRepository {
   Future<NewsModel> createNews({
     required String title,
     required String content,
+    bool hasEvent = false,
+    bool hasTopic = false,
+    bool anon = false,
+    String? eventStatus,
+    String? eventStart,
+    String? eventEnd,
+    String? location,
+    int? maxParticipants,
+    bool? isRegOpen,
     File? imageFile,
   }) async {
     try {
@@ -47,18 +58,37 @@ class NewsRepository {
         await _authDataSource.deleteCurrentUser();
         throw Exception('Не удалось получить токен после регистрации');
       }
-      final formData = FormData.fromMap({"title": title, "content": content});
+
+      final Map<String, dynamic> requestData = {
+        "title": title,
+        "content": content,
+        "has_event": hasEvent,
+        "has_topic": hasTopic,
+        "anon": anon,
+        "event_status": eventStatus,
+        "event_start": eventStart,
+        "event_end": eventEnd,
+        "location": location,
+        "max_partic": maxParticipants,
+        "is_reg_open": isRegOpen,
+      };
+      final formData = FormData();
+      formData.files.add(MapEntry(
+        "request",
+        MultipartFile.fromString(
+          jsonEncode(requestData),
+          contentType: MediaType('application', 'json'),
+        ),
+      ));
 
       if (imageFile != null) {
-        formData.files.add(
-          MapEntry(
-            "image",
-            await MultipartFile.fromFile(
-              imageFile.path,
-              filename: imageFile.path.split('/').last,
-            ),
+        formData.files.add(MapEntry(
+          "image",
+          await MultipartFile.fromFile(
+            imageFile.path,
+            filename: imageFile.path.split('/').last,
           ),
-        );
+        ));
       }
 
       final response = await _dio.post(
