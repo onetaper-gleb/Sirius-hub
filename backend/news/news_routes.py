@@ -10,7 +10,7 @@ from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from auth.auth_routes import get_current_user, require_role
+from auth.auth_routes import get_current_user, require_council_role
 from database.database import get_db
 from database.models import Events, EventStatus, News, Registrations, RegStatus, Topics
 
@@ -143,7 +143,7 @@ async def validate_event_data(request: NewsEventsRequest, db: AsyncSession):
 async def create_news(
     request: NewsEventsRequest,
     #image: UploadFile = File(None),
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     image_url = await process_image(request.image)
@@ -207,7 +207,7 @@ async def update_news(
     news_id: str,
     request: NewsEventsRequest,
     #image: UploadFile = File(None),
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     news = await get_news_or_404(db, news_id)
@@ -325,7 +325,7 @@ async def get_event(
 @router.delete("/{news_id}")
 async def delete_news(
     news_id: str,
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     news_item = await get_news_or_404(db, news_id)
@@ -375,7 +375,7 @@ async def get_all_news(
 async def update_event_status(
     event_id: str,
     status: str = Form(...),
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     event = await get_event_or_404(db, event_id)
@@ -400,7 +400,7 @@ async def update_event_status(
 async def create_reg(
     event_id: str,
     comment: Optional[str] = Form(default=None),
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     event = await get_event_or_404(db, event_id)
@@ -439,7 +439,7 @@ async def create_reg(
 @router.delete("/events/{event_id}/register")
 async def delete_reg(
     event_id: str,
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -464,7 +464,7 @@ async def delete_reg(
 @router.get("/events/{event_id}", response_model=List[RegistrationResponse])
 async def get_all_part(
     event_id: str,
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     event = await get_event_or_404(db, event_id)
@@ -488,7 +488,7 @@ async def update_part_status(
     event_id: str,
     user_id: str,
     status: str = Form(...),
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     event = await get_event_or_404(db, event_id)

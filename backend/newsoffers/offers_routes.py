@@ -9,7 +9,7 @@ from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from auth.auth_routes import get_current_user, require_role
+from auth.auth_routes import get_current_user, require_council_role
 from database.database import get_db
 from database.models import (
     Events,
@@ -158,7 +158,7 @@ async def get_offer_topic_or_404(db: AsyncSession, offer_topic_id: str):
 async def create_offer(
     request: OfferNewsEventsRequest,
     image: UploadFile = File(None),
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     image_url = await process_image(image)
@@ -268,7 +268,7 @@ async def update_offer(
     news_id: str,
     request: OfferNewsEventsRequest,
     image: UploadFile = File(None),
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     offer = await get_offer_or_404(db, news_id)
@@ -341,7 +341,7 @@ async def submit_for_moderation(
 async def moderate_offer(
     offer_id: str,
     request: AdminModRequest,
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     offer = await get_offer_or_404(db, offer_id)
@@ -415,7 +415,7 @@ async def moderate_offer(
 @router.delete("/offers/{offer_id}")
 async def delete_offer(
     news_id: str,
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     news_item = await get_offer_or_404(db, news_id)
