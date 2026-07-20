@@ -210,10 +210,6 @@ async def update_news(
     db: AsyncSession = Depends(get_db),
 ):
     news = await get_news_or_404(db, news_id)
-    role = user.get("role", "student")
-
-    if role in ["student", "council"]:  # news.author_id != user.get("uid")
-        raise HTTPException(status_code=403, detail="Нет прав на редактирование")
 
     if request.image:
         await delete_old_image(news.image_url)
@@ -331,7 +327,7 @@ async def delete_news(
     news_item = await get_news_or_404(db, news_id)
     role = user.get("role", "student")
 
-    if news_item.author_id != user.get("uid") and role in ["student", "council"]:
+    if news_item.author_id != user.get("uid") and role not in ["admin", "council"]:
         raise HTTPException(status_code=403, detail="Нет прав на удаление")
 
     try:
@@ -379,13 +375,6 @@ async def update_event_status(
     db: AsyncSession = Depends(get_db),
 ):
     event = await get_event_or_404(db, event_id)
-    news = await get_news_or_404(db, event.news_id)
-    role = user.get("role", "student")
-
-    if role in ["student", "council"]:  # news.author_id != user.get("uid")
-        raise HTTPException(
-            status_code=403, detail="Нет прав на изменение статуса события"
-        )
 
     validate_event_status(status)
 
@@ -467,11 +456,7 @@ async def get_all_part(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    event = await get_event_or_404(db, event_id)
-    role = user.get("role", "student")
 
-    if role in ["student", "council"]:
-        raise HTTPException(status_code=403, detail="Нет прав на просмотр")
 
     result = await db.execute(
         select(Registrations)
@@ -495,11 +480,6 @@ async def update_part_status(
     news = await get_news_or_404(db, event.news_id)
     role = user.get("role", "student")
 
-    if role in ["student", "council"]:  # news.author_id != user.get("uid")
-        raise HTTPException(
-            status_code=403,
-            detail="Только автор события может менять статусы участников",
-        )
     if not news:
         raise HTTPException(status_code=404, detail="Новость не найдена")
 
