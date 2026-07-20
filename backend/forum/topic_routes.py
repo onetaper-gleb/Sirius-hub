@@ -129,6 +129,7 @@ async def create_comment(
         "reply_to_author": reply_to_author,
     }
 
+
 @topic_router.delete("/comments{comment_id}")
 async def delete_comment(
     comment_id: str,
@@ -138,15 +139,15 @@ async def delete_comment(
     user = await _get_db_user(db, user.get("uid"))
     if not user:
         raise HTTPException(status_code=400, detail="User not found")
-    
+
     if user.role not in ["council", "admin"]:
         raise HTTPException(status_code=403, detail="No permissions to delete")
-    
+
     comment = await _get_db_comment(db, comment_id)
 
     if comment is None:
         raise HTTPException(status_code=404, detail="Comment not found")
-    
+
     await db.delete(comment)
     await db.commit()
 
