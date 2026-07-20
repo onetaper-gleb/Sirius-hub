@@ -141,7 +141,7 @@ async def validate_event_data(request: NewsEventsRequest, db: AsyncSession):
 @router.post("/", response_model=NewsResponse)
 async def create_news(
     request: NewsEventsRequest,
-    #image: UploadFile = File(None),
+    # image: UploadFile = File(None),
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
@@ -205,7 +205,7 @@ async def create_news(
 async def update_news(
     news_id: str,
     request: NewsEventsRequest,
-    #image: UploadFile = File(None),
+    # image: UploadFile = File(None),
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
