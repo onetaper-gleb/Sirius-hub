@@ -2,6 +2,8 @@
 import os
 import uuid
 from typing import List, Optional
+from PIL import Image
+import base64
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from PIL import Image
@@ -34,7 +36,8 @@ class NotFound(Exception):
 async def process_image(image: UploadFile | None):
     if not image:
         return None
-    contents = await image.read()
+    #contents = await image.read()
+    contents = base64.b64decode(image)
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(400, "Размер файла не должен превышать 2 МБ")
 
@@ -50,7 +53,8 @@ async def process_image(image: UploadFile | None):
         img.save(file_path, format="WEBP", quality=75)
 
         return f"/static/{file_name}"
-
+    except base64.binascii.Error:
+        raise HTTPException(400, "Неверный формат base64")
     except Exception:
         raise HTTPException(400, "Неверный формат изображения или файл поврежден")
 
@@ -138,11 +142,11 @@ async def validate_event_data(request: NewsEventsRequest, db: AsyncSession):
 @router.post("/", response_model=NewsResponse)
 async def create_news(
     request: NewsEventsRequest,
-    image: UploadFile = File(None),
+    #image: UploadFile = File(None),
     user: dict = Depends(require_role),
     db: AsyncSession = Depends(get_db),
 ):
-    image_url = await process_image(image)
+    image_url = await process_image(request.image)
 
     new_news = News(
         title=request.title,
@@ -202,7 +206,7 @@ async def create_news(
 async def update_news(
     news_id: str,
     request: NewsEventsRequest,
-    image: UploadFile = File(None),
+    #image: UploadFile = File(None),
     user: dict = Depends(require_role),
     db: AsyncSession = Depends(get_db),
 ):
@@ -212,9 +216,9 @@ async def update_news(
     if role in ["student", "council"]:  # news.author_id != user.get("uid")
         raise HTTPException(status_code=403, detail="Нет прав на редактирование")
 
-    if image:
+    if request.image:
         await delete_old_image(news.image_url)
-        news.image_url = await process_image(image)
+        news.image_url = await process_image(request.image)
 
     if request.title is not None:
         news.title = request.title
@@ -309,6 +313,13 @@ async def get_news(
     db: AsyncSession = Depends(get_db),
 ):
     return await get_news_or_404(db, news_id)
+
+@router.get("/{event_id}", response_model=EventResponse)
+async def get_event(
+    event_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    return await get_event_or_404(db, event_id)
 
 
 @router.delete("/{news_id}")

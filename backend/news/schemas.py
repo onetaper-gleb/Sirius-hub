@@ -57,4 +57,5 @@ class NewsEventsRequest(BaseModel):
     location: Optional[str] = None
     max_partic: Optional[int] = None
     is_reg_open: bool = False
-    anon = bool = False
+    anon: bool = False
+    image: Optional[str] = None
