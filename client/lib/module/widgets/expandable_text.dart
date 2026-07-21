@@ -51,10 +51,10 @@ class _ExpandableTextState extends State<ExpandableText> {
                 widget.text,
                 style: widget.style,
                 textAlign: widget.textAlign,
-                maxLines: _expanded ? null :widget.lines,
+                maxLines: _expanded ? null : widget.lines,
                 overflow: _expanded
-                  ? TextOverflow.visible
-                  : TextOverflow.ellipsis,
+                    ? TextOverflow.visible
+                    : TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(height: 4),

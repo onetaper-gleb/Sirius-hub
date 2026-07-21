@@ -140,7 +140,7 @@ async def delete_comment(
 
     if comment is None:
         raise HTTPException(status_code=404, detail="Comment not found")
-    
+
     await db.delete(comment)
     await db.commit()
 
