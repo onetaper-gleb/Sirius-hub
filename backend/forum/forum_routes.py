@@ -14,7 +14,7 @@ from .schemas import Topic as TopicScheme
 
 forum_router = APIRouter(
     prefix="/forum",
-    tags=["forum"],
+    tags=["Forum"],
 )
 
 

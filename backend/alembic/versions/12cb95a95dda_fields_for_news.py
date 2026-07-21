@@ -71,8 +71,22 @@ def upgrade() -> None:
         batch_op.create_index(batch_op.f("ix_offertopics_id"), ["id"], unique=False)
 
     with op.batch_alter_table("news", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("has_event", sa.Boolean(), nullable=False, server_default=sa.text('false')))
-        batch_op.add_column(sa.Column("has_topic", sa.Boolean(), nullable=False, server_default=sa.text('false')))
+        batch_op.add_column(
+            sa.Column(
+                "has_event",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.text("false"),
+            )
+        )
+        batch_op.add_column(
+            sa.Column(
+                "has_topic",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.text("false"),
+            )
+        )
         batch_op.add_column(sa.Column("topic_id", sa.String(), nullable=True))
         batch_op.drop_column("is_event")
 
