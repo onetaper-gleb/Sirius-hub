@@ -94,4 +94,25 @@ class TopicRepository {
       throw Exception("Ошибка создания комментария: $errorDetail");
     }
   }
+
+Future<void> deleteComment(String commentId) async {
+  try {
+    final rawToken = await _authDataSource.getToken();
+    if (rawToken == null) {
+      await _authDataSource.deleteCurrentUser();
+      throw Exception('Не удалось получить токен');
+    }
+
+    await _dio.delete(
+      '/topic/comments/$commentId',
+      options: Options(headers: {'Authorization': 'Bearer $rawToken'}),
+    );
+  } on DioException catch (e) {
+    final data = e.response?.data;
+    final errorDetail =
+        (data is Map ? data['detail'] : data)?.toString() ?? e.message;
+    print(errorDetail);
+    throw Exception("Ошибка удаления комментария: $errorDetail");
+  }
+}
 }
