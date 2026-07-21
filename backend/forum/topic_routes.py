@@ -13,7 +13,7 @@ from .schemas import CreateCommentRequest
 
 topic_router = APIRouter(
     prefix="/topic",
-    tags=["comments inside topic"],
+    tags=["Comments"],
 )
 
 
