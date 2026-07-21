@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from auth.auth_routes import get_current_user, require_role
+from auth.auth_routes import get_current_user, require_council_role
 from database.database import get_db
 from database.models import Comments, Topics, User
 
@@ -133,7 +133,7 @@ async def create_comment(
 @topic_router.delete("/comments/{comment_id}")
 async def delete_comment(
     comment_id: str,
-    user: dict = Depends(require_role),
+    user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
 
