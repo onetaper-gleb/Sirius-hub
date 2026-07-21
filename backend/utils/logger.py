@@ -1,4 +1,5 @@
 import logging
+import os
 
 def set_logger():
 
@@ -12,11 +13,15 @@ def set_logger():
 
     # Файл (Архив)
     file_handler = logging.FileHandler("app_detailed.log", encoding='utf-8')
-    file_handler.setLevel(logging.DEBUG) # В файл пишем даже мелочи
+    file_handler.setLevel(logging.INFO)
 
     # Консоль (Экран)
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.WARNING) # На экран выводим только важное, чтобы не мусорить
+    LOGGING_LEVEL = os.getenv("LOGGING_LEVEL")
+    if LOGGING_LEVEL:
+        console_handler.setLevel(logging.DEBUG)
+    else:
+        console_handler.setLevel(logging.WARNING)
 
     # Форматирование
     detailed_format = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
