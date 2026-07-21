@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from auth.auth_routes import get_current_user
+from auth.auth_routes import get_current_user, require_role
 from database.database import get_db
 from database.models import Comments, Topics, User
 
@@ -129,18 +129,12 @@ async def create_comment(
         "reply_to_author": reply_to_author,
     }
 
-@topic_router.delete("/comments{comment_id}")
+@topic_router.delete("/comments/{comment_id}")
 async def delete_comment(
     comment_id: str,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role),
     db: AsyncSession = Depends(get_db),
 ):
-    user = await _get_db_user(db, user.get("uid"))
-    if not user:
-        raise HTTPException(status_code=400, detail="User not found")
-    
-    if user.role not in ["council", "admin"]:
-        raise HTTPException(status_code=403, detail="No permissions to delete")
     
     comment = await _get_db_comment(db, comment_id)
 
