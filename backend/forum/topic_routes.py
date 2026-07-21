@@ -129,13 +129,14 @@ async def create_comment(
         "reply_to_author": reply_to_author,
     }
 
+
 @topic_router.delete("/comments/{comment_id}")
 async def delete_comment(
     comment_id: str,
     user: dict = Depends(require_role),
     db: AsyncSession = Depends(get_db),
 ):
-    
+
     comment = await _get_db_comment(db, comment_id)
 
     if comment is None:

@@ -457,7 +457,6 @@ async def get_all_part(
     db: AsyncSession = Depends(get_db),
 ):
 
-
     result = await db.execute(
         select(Registrations)
         .where(Registrations.event_id == event_id)
