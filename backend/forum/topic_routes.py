@@ -1,5 +1,5 @@
-from typing import List
 import logging
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import delete
@@ -19,7 +19,7 @@ topic_router = APIRouter(
     tags=["Comments"],
 )
 
-logger = logging.getLogger('logs')
+logger = logging.getLogger("logs")
 
 
 async def _get_db_user(db: AsyncSession, uid: str) -> User | None:
