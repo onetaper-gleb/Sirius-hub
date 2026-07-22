@@ -114,23 +114,25 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            set -e
+
             mkdir -p ~/app
             cd ~/app
-            
+
             if [ ! -d ".git" ]; then
               git clone https://github.com/${{ github.repository }}.git .
             fi
-            
+
             git fetch origin
             git checkout main
-            git pull origin main
-            
+            git reset --hard origin/main
+
             cd backend
 
             touch .env
-            
+
             sed -i '/FIREBASE_CONFIG_BASE64/d' .env
-            
+
             echo "FIREBASE_CONFIG_BASE64='${{ secrets.FIREBASE_CONFIG_BASE64 }}'" > .env
             echo "DB_USER='${{ secrets.DB_USER }}'" >> .env
             echo "DB_PASSWORD='${{ secrets.DB_PASSWORD }}'" >> .env

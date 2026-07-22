@@ -3,6 +3,7 @@ import io
 import os
 import uuid
 from typing import List, Optional
+import logging
 
 from fastapi import APIRouter, Depends, Form, HTTPException
 from PIL import Image
@@ -515,7 +516,6 @@ async def get_all_part(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-
 
     result = await db.execute(
         select(Registrations)
