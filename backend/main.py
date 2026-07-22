@@ -10,6 +10,7 @@ load_dotenv()
 
 from database.database import engine, Base
 from database import models
+from utils.logger import set_logger
 
 import firebase_admin
 from firebase_admin import credentials
@@ -28,6 +29,7 @@ def init_firebase():
         firebase_admin.initialize_app(cred)
 
 init_firebase()
+set_logger()
 
 import schedule
 import auth

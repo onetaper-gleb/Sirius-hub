@@ -4,7 +4,7 @@ import os
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
 from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -32,13 +32,13 @@ class NotFound(Exception):
     pass
 
 
-async def process_image(image: UploadFile | None):
+async def process_image(image: str | None):
     if not image:
         return None
-    # contents = await image.read()
+
     contents = base64.b64decode(image)
     if len(contents) > MAX_FILE_SIZE:
-        raise HTTPException(400, "Размер файла не должен превышать 2 МБ")
+        raise HTTPException(400, "Размер файла не должен превышать 4 МБ")
 
     try:
         img = Image.open(io.BytesIO(contents))
