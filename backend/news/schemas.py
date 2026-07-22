@@ -17,7 +17,6 @@ class NewsResponse(BaseModel):
     event_id: Optional[str] = None
     has_topic: bool
     topic_id: Optional[str] = None
-    anon: bool
 
     class Config:
         from_attributes = True
@@ -57,5 +56,5 @@ class NewsEventsRequest(BaseModel):
     location: Optional[str] = None
     max_partic: Optional[int] = None
     is_reg_open: bool = False
-    anon: bool = False
+    anon: Optional[str] = None
     image: Optional[str] = None

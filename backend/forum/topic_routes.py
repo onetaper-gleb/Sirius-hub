@@ -1,3 +1,4 @@
+import logging
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -18,7 +19,7 @@ topic_router = APIRouter(
     tags=["Comments"],
 )
 
-logger = set_logger()
+logger = logging.getLogger("logs")
 
 
 async def _get_db_user(db: AsyncSession, uid: str) -> User | None:
