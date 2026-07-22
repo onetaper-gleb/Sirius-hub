@@ -1,17 +1,19 @@
-﻿import datetime
+﻿import base64
 import io
+import logging
 import os
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException
 from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from auth.auth_routes import get_current_user, require_council_role
 from database.database import get_db
-from database.models import Events, EventStatus, News, Registrations, RegStatus
+from database.models import Events, EventStatus, News, Registrations, RegStatus, Topics
+from utils.logger import set_logger
 
 from .schemas import (
     EventResponse,
@@ -25,6 +27,8 @@ router = APIRouter(
     tags=["News"],
 )
 
+logger = logging.getLogger("logs")
+
 MAX_FILE_SIZE = 4 * 1024 * 1024
 
 
@@ -32,12 +36,21 @@ class NotFound(Exception):
     pass
 
 
-async def process_image(image: UploadFile | None):
+async def process_image(image: str | None):
     if not image:
+
+        logger.debug("Image not found")
         return None
-    contents = await image.read()
+
+    contents = base64.b64decode(image)
     if len(contents) > MAX_FILE_SIZE:
-        raise HTTPException(400, "Размер файла не должен превышать 2 МБ")
+
+        logger.warning(
+            f"The file size: {len(contents)}. The file size must not exceed 4 MB"
+        )
+        raise HTTPException(
+            400, f"The file size: {len(contents)}. The file size must not exceed 4 MB."
+        )
 
     try:
         img = Image.open(io.BytesIO(contents))
@@ -46,23 +59,36 @@ async def process_image(image: UploadFile | None):
 
         img.thumbnail((800, 800))
 
+        logger.info("image opened, converted to RGB if needed, and resized")
+
         file_name = f"{uuid.uuid4()}.webp"
         file_path = f"uploads/{file_name}"
         img.save(file_path, format="WEBP", quality=75)
 
-        return f"/static/{file_name}"
+        logger.info(f"Image saved successfully: {file_path}")
 
+        return f"/static/{file_name}"
+    except base64.binascii.Error:
+
+        logger.warning("Invalid base64 format")
+        raise HTTPException(400, "Invalid base64 format")
     except Exception:
-        raise HTTPException(400, "Неверный формат изображения или файл поврежден")
+
+        logger.warning("Invalid image format or file corrupted")
+        raise HTTPException(400, "Invalid image format or file corrupted")
 
 
 async def delete_old_image(image_url: str | None) -> None:
     if not image_url:
+
+        logger.debug("Image not found")
         return
 
     old_file_path = image_url.replace("/static/", "uploads/")
     if os.path.exists(old_file_path):
+
         os.remove(old_file_path)
+        logger.info("Successful image deletion")
 
 
 async def get_news_or_404(db: AsyncSession, news_id: str):
@@ -87,6 +113,14 @@ async def get_registration_or_404(db: AsyncSession, reg_id: str):
     if not reg:
         raise NotFound(status_code=404, detail="Событие не найдено")
     return reg
+
+
+async def get_topic_or_404(db: AsyncSession, topic_id: str):
+    result = await db.execute(select(Topics).where(Topics.id == topic_id))
+    topic = result.scalar_one_or_none()
+    if not topic:
+        raise NotFound(status_code=404, detail="Топик не найден")
+    return topic
 
 
 def validate_event_status(status: str):
@@ -131,26 +165,30 @@ async def validate_event_data(request: NewsEventsRequest, db: AsyncSession):
 @router.post("/", response_model=NewsResponse)
 async def create_news(
     request: NewsEventsRequest,
-    image: UploadFile = File(None),
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    image_url = await process_image(image)
+    image_url = await process_image(request.image)
+    logger.debug("Processing image from request")
 
     new_news = News(
         title=request.title,
         content=request.content,
         image_url=image_url,
         author_id=user.get("uid"),
-        is_event=request.is_event,
+        has_event=request.has_event,
         event_id=None,
+        has_topic=request.has_topic,
+        topic_id=None,
     )
 
     db.add(new_news)
+    logger.debug("Adding new news record to database session")
     await db.flush()
 
-    if request.is_event:
+    if request.has_event:
         await validate_event_data(request, db)
+        logger.debug("Validating event data")
 
         new_event = Events(
             status=request.event_status,
@@ -164,14 +202,44 @@ async def create_news(
         )
 
         db.add(new_event)
+        logger.debug("Adding new event record to database session")
         await db.flush()
+
         new_news.event_id = new_event.id
+        logger.debug("Linking event ID to news record")
+
+        db.add(new_news)
+
+    if request.has_topic:
+        new_topic = Topics(
+            title=request.title,
+            anon=request.anon,
+            news_id=new_news.id,
+        )
+
+        db.add(new_topic)
+        logger.debug("Adding new topic record to database session")
+
+        await db.flush()
+        new_news.topic_id = new_topic.id
+        logger.debug("Linking topic ID to news record")
+
         db.add(new_news)
 
     await db.commit()
+    logger.info(
+        "Transaction committed successfully: news created. title: {new_news.title}"
+    )
+
     await db.refresh(new_news)
-    if request.is_event:
+    logger.debug("Refreshing news object")
+
+    if request.has_event:
         await db.refresh(new_event)
+        logger.debug("Refreshing event object")
+    if request.has_topic:
+        await db.refresh(new_topic)
+        logger.debug("Refreshing topic object")
 
     return new_news
 
@@ -180,32 +248,61 @@ async def create_news(
 async def update_news(
     news_id: str,
     request: NewsEventsRequest,
-    image: UploadFile = File(None),
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     news = await get_news_or_404(db, news_id)
-    role = user.get("role", "student")
+    logger.debug("Fetching news by ID")
 
-    if news.author_id != user.get("uid") and role in ["student", "council"]:
-        raise HTTPException(status_code=403, detail="Нет прав на редактирование")
-
-    if image:
+    if request.image:
         await delete_old_image(news.image_url)
-        news.image_url = await process_image(image)
+        news.image_url = await process_image(request.image)
+        logger.debug("Image updated")
 
     if request.title is not None:
         news.title = request.title
+        logger.debug("Title updated")
     if request.content is not None:
         news.content = request.content
-    if request.is_event is not None:
-        news.is_event = request.is_event
+        logger.debug("Content updated")
+    if request.has_event is not None:
+        news.has_event = request.has_event
+        logger.debug("Field 'has_event' updated")
+    if request.has_topic is not None:
+        news.has_topic = request.has_topic
+        logger.debug("Field 'has_topic' updated")
 
-    if news.is_event:
-        result = await db.execute(select(Events).where(Events.news_id == news.id))
-        event = result.scalar_one_or_none()
-        if not event:
+    if request.has_event:
+        if news.event_id:
+            event = await get_event_or_404(db, news.event_id)
+            logger.debug("Fetching event by ID")
+
+            if request.event_status is not None:
+                validate_event_status(request.event_status)
+                event.status = request.event_status
+                logger.debug("Status updated")
+            if request.event_start is not None:
+                event.event_start = request.event_start
+                logger.debug("Event_start updated")
+            if request.event_end is not None:
+                event.event_end = request.event_end
+                logger.debug("Event_end updated")
+            if request.location is not None:
+                event.location = request.location
+                logger.debug("Location updated")
+            if request.max_partic is not None:
+                if request.max_partic < 1:
+                    await db.rollback()
+                    raise HTTPException(400, "max_partic должно быть больше 0")
+                event.max_partic = request.max_partic
+                logger.debug("Maximum number of participants updated")
+            if request.is_reg_open is not None:
+                event.is_reg_open = request.is_reg_open
+                logger.debug("Field 'is_reg_open' updated")
+
+        else:
             await validate_event_data(request, db)
+            logger.debug("Validating event data")
 
             new_event = Events(
                 status=request.event_status,
@@ -218,36 +315,54 @@ async def update_news(
                 news_id=news.id,
             )
             db.add(new_event)
+            logger.debug("Adding event record to database session")
+
             await db.flush()
             news.event_id = new_event.id
 
-        else:
-            if request.event_status is not None:
-                validate_event_status(request.event_status)
-                event.status = request.event_status
-
-            if request.event_start is not None:
-                event.event_start = request.event_start
-            if request.event_end is not None:
-                event.event_end = request.event_end
-            if request.location is not None:
-                event.location = request.location
-            if request.max_partic is not None:
-                if request.max_partic < 1:
-                    await db.rollback()
-                    raise HTTPException(400, "max_partic должно быть больше 0")
-                event.max_partic = request.max_partic
-            if request.is_reg_open is not None:
-                event.is_reg_open = request.is_reg_open
-
-    elif request.is_event is False and news.event_id:
+    elif request.has_event is False and news.event_id:
         event = await get_event_or_404(db, news.event_id)
+        logger.debug("Fetching event by ID")
+
         if event:
             await db.delete(event)
             news.event_id = None
+            logger.debug("The existing event has been deleted.")
+
+    if request.has_topic:
+        if news.topic_id:
+            topic = await get_topic_or_404(db, news.topic_id)
+            logger.debug("Fetching topic by ID")
+            if request.title is not None:
+                topic.title = request.title
+                logger.debug("Title updated")
+            if request.anon is not None:
+                topic.anon = request.anon
+                logger.debug("Anon status updated")
+
+        else:
+            new_topic = Topics(
+                title=request.title,
+                anon=request.anon,
+                news_id=news.id,
+            )
+            db.add(new_topic)
+            logger.debug("Adding topic record to database session")
+            await db.flush()
+            news.topic_id = new_topic.id
+
+    elif request.has_topic is False and news.topic_id:
+        topic = await get_topic_or_404(db, news.topic_id)
+        logger.debug("Fetching topic by ID")
+
+        if topic:
+            await db.delete(topic)
+            news.topic_id = None
+            logger.debug("The existing topic has been deleted.")
 
     await db.commit()
     await db.refresh(news)
+    logger.info("Transaction committed: news updated successfully")
 
     return news
 
@@ -260,6 +375,14 @@ async def get_news(
     return await get_news_or_404(db, news_id)
 
 
+@router.get("/{event_id}", response_model=EventResponse)
+async def get_event(
+    event_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    return await get_event_or_404(db, event_id)
+
+
 @router.delete("/{news_id}")
 async def delete_news(
     news_id: str,
@@ -269,15 +392,18 @@ async def delete_news(
     news_item = await get_news_or_404(db, news_id)
     role = user.get("role", "student")
 
-    if news_item.author_id != user.get("uid") and role in ["student", "council"]:
+    if news_item.author_id != user.get("uid") and role not in ["admin", "council"]:
         raise HTTPException(status_code=403, detail="Нет прав на удаление")
 
     try:
         if news_item.image_url:
             await delete_old_image(news_item.image_url)
         event = await get_event_or_404(db, news_item.event_id)
+        topic = await get_topic_or_404(db, news_item.topic_id)
         if event:
             await db.delete(event)
+        if topic:
+            await db.delete(topic)
 
         await db.delete(news_item)
         await db.commit()
@@ -314,13 +440,6 @@ async def update_event_status(
     db: AsyncSession = Depends(get_db),
 ):
     event = await get_event_or_404(db, event_id)
-    news = await get_news_or_404(db, event.news_id)
-    role = user.get("role", "student")
-
-    if news.author_id != user.get("uid") and role in ["student", "council"]:
-        raise HTTPException(
-            status_code=403, detail="Нет прав на изменение статуса события"
-        )
 
     validate_event_status(status)
 
@@ -402,11 +521,6 @@ async def get_all_part(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    event = await get_event_or_404(db, event_id)
-    role = user.get("role", "student")
-
-    if role in ["student", "council"]:
-        raise HTTPException(status_code=403, detail="Нет прав на просмотр")
 
     result = await db.execute(
         select(Registrations)
@@ -430,11 +544,6 @@ async def update_part_status(
     news = await get_news_or_404(db, event.news_id)
     role = user.get("role", "student")
 
-    if news.author_id != user.get("uid") and role in ["student", "council"]:
-        raise HTTPException(
-            status_code=403,
-            detail="Только автор события может менять статусы участников",
-        )
     if not news:
         raise HTTPException(status_code=404, detail="Новость не найдена")
 

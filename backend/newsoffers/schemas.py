@@ -3,10 +3,10 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from database.models import EventStatus, RegStatus
+from database.models import EventStatus, ModerationStatus
 
 
-class NewsResponse(BaseModel):
+class OfferNewsResponse(BaseModel):
     id: str
     title: str
     content: str
@@ -17,12 +17,16 @@ class NewsResponse(BaseModel):
     event_id: Optional[str] = None
     has_topic: bool
     topic_id: Optional[str] = None
+    admin_id: Optional[str] = None
+    comment_admin: Optional[str] = None
+    status_mod: ModerationStatus
+    contacts_author: str
 
     class Config:
         from_attributes = True
 
 
-class EventResponse(BaseModel):
+class OfferEventResponse(BaseModel):
     id: str
     status: EventStatus
     news_id: str
@@ -37,24 +41,21 @@ class EventResponse(BaseModel):
         from_attributes = True
 
 
-class RegistrationResponse(BaseModel):
-    id: str
-    event_id: str
-    user_id: str
-    status: RegStatus
-    comment: str
-
-
-class NewsEventsRequest(BaseModel):
+class OfferNewsEventsRequest(BaseModel):
     title: str
     content: str
     has_event: bool = False
-    event_status: Optional[str] = None
     has_topic: bool = False
+    event_status: Optional[str] = None
     event_start: Optional[str] = None
     event_end: Optional[str] = None
     location: Optional[str] = None
     max_partic: Optional[int] = None
     is_reg_open: bool = False
-    anon: Optional[str] = None
-    image: Optional[str] = None
+    contacts_author: str
+
+
+class AdminModRequest(BaseModel):
+    offer_id: str
+    action: ModerationStatus
+    comment_admin: Optional[str] = None

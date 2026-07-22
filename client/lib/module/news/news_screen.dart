@@ -9,7 +9,10 @@ import '../../domain/bloc/news/news_event.dart';
 import '../../domain/bloc/news/news_state.dart';
 import '../widgets/admin_fab.dart';
 import '../widgets/button_notifier.dart';
+import '../widgets/expandable_text.dart';
 import 'create_news_screen.dart';
+import '../forum/topic_screen.dart';
+import '../../domain/model/news_model.dart';
 
 class NewsScreen extends StatefulWidget {
   const NewsScreen({super.key});
@@ -58,6 +61,27 @@ class _NewsScreenState extends State<NewsScreen> {
           );
     final local = utc.toLocal();
     return '${local.day.toString().padLeft(2, '0')}.${local.month.toString().padLeft(2, '0')}.${local.year} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+  }
+
+  void _openTopic(BuildContext context, NewsModel news) {
+    final topicId = news.topicId?.trim();
+    if (topicId == null || topicId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Комментарии пока что недоступны")),
+      );
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TopicScreen(
+          topicId: topicId,
+          title: news.title,
+          isAnonymous: false,
+          attachedNews: news,
+        ),
+      ),
+    );
   }
 
   @override
@@ -166,8 +190,8 @@ class _NewsScreenState extends State<NewsScreen> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              Text(
-                                news.content,
+                              ExpandableText(
+                                text: news.content,
                                 textAlign: TextAlign.justify,
                                 style: const TextStyle(fontSize: 15),
                               ),
@@ -180,6 +204,15 @@ class _NewsScreenState extends State<NewsScreen> {
                                     fontSize: 12,
                                     color: Colors.grey[600],
                                   ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextButton.icon(
+                                onPressed: () => _openTopic(context, news),
+                                icon: const Icon(Icons.forum_outlined),
+                                label: const Text("Прокомментировать"),
+                                style: TextButton.styleFrom(
+                                  alignment: Alignment.centerLeft,
                                 ),
                               ),
                             ],

@@ -40,6 +40,7 @@ class _TopicScreenState extends State<TopicScreen> {
     _inputFocusNode.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     final topicRepository = context.dependencies.topicRepository;
@@ -63,13 +64,15 @@ class _TopicScreenState extends State<TopicScreen> {
                     _replyingToComment = comment;
                   });
                   _inputFocusNode.requestFocus();
-                }
+                },
               ),
             ),
             Builder(
               builder: (context) => _CommentInputField(
                 focusNode: _inputFocusNode,
-                hintText: _replyingToComment != null ? 'Ваш ответ...': 'Ваш комментарий...',
+                hintText: _replyingToComment != null
+                    ? 'Ваш ответ...'
+                    : 'Ваш комментарий...',
                 onSubmit: (content) {
                   context.read<TopicBloc>().add(
                     TopicCreateCommentRequested(
@@ -152,7 +155,13 @@ class _CommentInputFieldState extends State<_CommentInputField> {
                     vertical: 10,
                   ),
                 ),
-                buildCounter: (context, {required currentLength, required maxLength, required isFocused}) => null,
+                buildCounter:
+                    (
+                      context, {
+                      required currentLength,
+                      required maxLength,
+                      required isFocused,
+                    }) => null,
               ),
             ),
             const SizedBox(width: 8),
@@ -193,7 +202,6 @@ class _TopicView extends StatelessWidget {
         if (state is TopicInitial || state is TopicLoading) {
           return const Center(child: CircularProgressIndicator());
         } else if (state is TopicLoaded) {
-
           final comments = state.comments;
           final profiles = state.profiles;
           final threadedComments = sortCommentsIntoThreads(comments);
@@ -209,16 +217,22 @@ class _TopicView extends StatelessWidget {
               );
             },
             child: ListView.builder(
-              itemCount: attachedNews != null ? threadedComments.length+1: threadedComments.length,
+              itemCount: attachedNews != null
+                  ? threadedComments.length + 1
+                  : threadedComments.length,
               itemBuilder: (context, index) {
                 if (attachedNews != null && index == 0) {
-                  return Padding(padding: const EdgeInsets.all(16.0),
+                  return Padding(
+                    padding: const EdgeInsets.all(16.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           attachedNews!.title,
-                          style:const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -232,7 +246,7 @@ class _TopicView extends StatelessWidget {
                   );
                 }
 
-                final commentIndex = attachedNews != null ? index - 1: index;
+                final commentIndex = attachedNews != null ? index - 1 : index;
                 final threadedItem = threadedComments[commentIndex];
                 final comment = threadedItem.comment;
                 final profile = profiles[comment.author_id];
@@ -298,34 +312,40 @@ class _Comment extends StatelessWidget {
     String displayText = comment.content;
     if (isReply && comment.parentCommentId != null) {
       try {
-        final parentComment = allComments.firstWhere((c) => c.id == comment.parentCommentId);
+        final parentComment = allComments.firstWhere(
+          (c) => c.id == comment.parentCommentId,
+        );
 
         String parentDisplayName;
         if (isAnonymousTopic) {
           parentDisplayName = 'Аноним';
         } else {
           final parentProfile = profiles[parentComment.author_id];
-          parentDisplayName = parentProfile?.displayName ?? parentComment.author_id;
+          parentDisplayName =
+              parentProfile?.displayName ?? parentComment.author_id;
         }
 
         displayText = "@$parentDisplayName, ${comment.content}";
-      } catch (e) {
-      }
+      } catch (e) {}
     }
     return Container(
       margin: EdgeInsets.only(left: leftIndex, right: 16, top: 4, bottom: 4),
       decoration: BoxDecoration(
-        color: isReply ? Colors.transparent: Theme.of(context).cardColor,
+        color: isReply ? Colors.transparent : Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: isReply ? null: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2)
-          )
-        ],
+        boxShadow: isReply
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
         border: isReply
-          ? Border(left: BorderSide(color: Colors.grey.withOpacity(0.5), width: 2))
+            ? Border(
+                left: BorderSide(color: Colors.grey.withOpacity(0.5), width: 2),
+              )
             : null,
       ),
       child: InkWell(
@@ -360,7 +380,9 @@ class _Comment extends StatelessWidget {
                       color: Theme.of(context).colorScheme.primaryContainer,
                     ),
                     child: Text(
-                      displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
+                      displayName.isNotEmpty
+                          ? displayName[0].toUpperCase()
+                          : '?',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -384,7 +406,10 @@ class _Comment extends StatelessWidget {
                   icon: const Icon(Icons.reply, size: 16),
                   label: const Text('Ответить', style: TextStyle(fontSize: 12)),
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
@@ -532,47 +557,46 @@ class _Comment extends StatelessWidget {
   }
 }
 
- class ThreadedComment {
+class ThreadedComment {
   final CommentModel comment;
   final int depth;
 
-  ThreadedComment({
-    required this.comment,
-    required this.depth
- });
- }
+  ThreadedComment({required this.comment, required this.depth});
+}
 
- List<ThreadedComment> sortCommentsIntoThreads(List<CommentModel> comments) {
-   final Map<String, CommentModel> commentMap = {
-     for (var c in comments) c.id: c
-   };
-   final Map<String, List<CommentModel>> childrenMap = {};
-   final List<CommentModel> rootComments = [];
+List<ThreadedComment> sortCommentsIntoThreads(List<CommentModel> comments) {
+  final Map<String, CommentModel> commentMap = {
+    for (var c in comments) c.id: c,
+  };
+  final Map<String, List<CommentModel>> childrenMap = {};
+  final List<CommentModel> rootComments = [];
 
-   for (var c in comments) {
-     final parentId = c.parentCommentId;
-     if (parentId == null || parentId.isEmpty || !commentMap.containsKey(parentId)) {
-       rootComments.add(c);
-     } else {
-       childrenMap.putIfAbsent(parentId, () => []).add(c);
-     }
-   }
+  for (var c in comments) {
+    final parentId = c.parentCommentId;
+    if (parentId == null ||
+        parentId.isEmpty ||
+        !commentMap.containsKey(parentId)) {
+      rootComments.add(c);
+    } else {
+      childrenMap.putIfAbsent(parentId, () => []).add(c);
+    }
+  }
 
-   final List<ThreadedComment> result = [];
+  final List<ThreadedComment> result = [];
 
-   void traverse(CommentModel current, int depth) {
-     result.add(ThreadedComment(comment: current, depth: depth));
-     final children = childrenMap[current.id];
-     if (children != null) {
-       for (var child in children) {
-         traverse(child, depth + 1);
-       }
-     }
-   }
+  void traverse(CommentModel current, int depth) {
+    result.add(ThreadedComment(comment: current, depth: depth));
+    final children = childrenMap[current.id];
+    if (children != null) {
+      for (var child in children) {
+        traverse(child, depth + 1);
+      }
+    }
+  }
 
-   for (var root in rootComments) {
-     traverse(root, 0);
-   }
+  for (var root in rootComments) {
+    traverse(root, 0);
+  }
 
-   return result;
- }
+  return result;
+}

@@ -4,6 +4,7 @@ import 'forum/forum_screen.dart';
 import 'news/news_screen.dart';
 import 'profile/profile_screen.dart';
 import 'schedule/schedule_screen.dart';
+import 'schedule/widgets/free_room_dialog.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -17,7 +18,7 @@ class _AppShellState extends State<AppShell> {
 
   static const _titles = ['Новости', 'Форум', 'Расписание', 'Профиль'];
 
-  List<Widget> get _pages => [
+  late final List<Widget> _pages = [
     const NewsScreen(),
     Navigator(
       key: const ValueKey('forum_navigator'),
@@ -31,7 +32,34 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_titles[_index])),
+      appBar: AppBar(
+        title: Text(_titles[_index]),
+        actions: [
+          if (_index == 2)
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.blue,
+                  elevation: 0,
+                  side: const BorderSide(color: Colors.blue, width: 1),
+                ),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => const FreeRoomDialog(),
+                  );
+                },
+                icon: const Icon(Icons.manage_search, size: 20),
+                label: const Text(
+                  'Свободные ауд.',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+              ),
+            ),
+        ],
+      ),
       body: IndexedStack(index: _index, children: _pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
