@@ -11,6 +11,7 @@ import '../widgets/admin_fab.dart';
 import '../widgets/button_notifier.dart';
 import '../widgets/expandable_text.dart';
 import 'create_news_screen.dart';
+import 'news_detail_screen.dart';
 import '../forum/topic_screen.dart';
 import '../../domain/model/news_model.dart';
 
@@ -77,7 +78,7 @@ class _NewsScreenState extends State<NewsScreen> {
         builder: (_) => TopicScreen(
           topicId: topicId,
           title: news.title,
-          isAnonymous: false,
+          isAnonymous: news.anon,
           attachedNews: news,
         ),
       ),
@@ -96,9 +97,9 @@ class _NewsScreenState extends State<NewsScreen> {
         },
         listener: (context, state) {
           if (state is NewsError) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
+            ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.message))
+            );
           }
         },
         builder: (context, state) {
@@ -147,7 +148,15 @@ class _NewsScreenState extends State<NewsScreen> {
                   shadowColor: Colors.transparent,
                   surfaceTintColor: Colors.transparent,
                   clipBehavior: Clip.antiAlias,
-                  child: GestureDetector(
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => NewsDetailScreen(news: news),
+                        ),
+                      );
+                    },
                     onLongPress: () {
                       final isAdmin =
                           context.read<AuthBloc>().state is AuthAuthenticated &&
@@ -171,11 +180,6 @@ class _NewsScreenState extends State<NewsScreen> {
                               aspectRatio: 16 / 9,
                               child: Center(child: CircularProgressIndicator()),
                             ),
-                            errorWidget: (context, url, error) =>
-                                const AspectRatio(
-                                  aspectRatio: 16 / 9,
-                                  child: Icon(Icons.broken_image, size: 80),
-                                ),
                           ),
                         Padding(
                           padding: const EdgeInsets.all(16),
@@ -204,15 +208,6 @@ class _NewsScreenState extends State<NewsScreen> {
                                     fontSize: 12,
                                     color: Colors.grey[600],
                                   ),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextButton.icon(
-                                onPressed: () => _openTopic(context, news),
-                                icon: const Icon(Icons.forum_outlined),
-                                label: const Text("Прокомментировать"),
-                                style: TextButton.styleFrom(
-                                  alignment: Alignment.centerLeft,
                                 ),
                               ),
                             ],

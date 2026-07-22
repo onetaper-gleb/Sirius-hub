@@ -14,6 +14,7 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
     on<FetchNews>(_onFetchNews);
     on<CreateNews>(_onCreateNews);
     on<DeleteNews>(_onDeleteNews);
+    on<RegisterForEvent>(_onRegisterForEvent);
   }
 
   Future<void> _onFetchNews(FetchNews event, Emitter<NewsState> emit) async {
@@ -57,6 +58,29 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
       add(FetchNews());
     } catch (e) {
       emit(NewsError(message: e.toString(), previousNewsList: _lastNewsList));
+    }
+  }
+
+  Future<void> _onRegisterForEvent(RegisterForEvent event, Emitter<NewsState> emit) async {
+    emit(EventRegistrationLoading());
+    try {
+      final registration = await _repository.registerForEvent(
+        eventId: event.eventId,
+        comment: event.comment,
+      );
+      emit(EventRegistrationSuccess(registration));
+    } catch (e) {
+      emit(NewsError(message: e.toString(), previousNewsList: _lastNewsList));
+    }
+  }
+
+  Future<void> _onFetchEvent(FetchEvent event, Emitter<NewsState> emit) async {
+    emit(EventLoading());
+    try {
+      final eventInfo = await _repository.getEvent(event.eventId);
+      emit(EventSuccess(eventInfo));
+    } catch (e) {
+      emit(NewsError(message: e.toString(),previousNewsList: _lastNewsList));
     }
   }
 }

@@ -1,4 +1,6 @@
 import 'dart:io';
+import '../../model/event_model.dart';
+import '../../model/event_registration_model.dart';
 
 abstract class NewsEvent {}
 
@@ -12,7 +14,7 @@ class CreateNews extends NewsEvent {
   final String? eventId;
   final bool hasTopic;
   final String? topicId;
-  final String? eventStatus;
+  final EventStatus? eventStatus;
   final String? eventStart;
   final String? eventEnd;
   final String? location;
@@ -41,4 +43,19 @@ class CreateNews extends NewsEvent {
 class DeleteNews extends NewsEvent {
   final String id;
   DeleteNews(this.id);
+}
+
+class RegisterForEvent extends NewsEvent {
+  final String eventId;
+  final String? comment;
+
+  RegisterForEvent({
+    required this.eventId,
+    this.comment,
+  });
+}
+
+class FetchEvent extends NewsEvent {
+  final String eventId;
+  FetchEvent(this.eventId);
 }
