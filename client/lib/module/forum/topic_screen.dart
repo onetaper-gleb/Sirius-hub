@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:client/domain/bloc/topic/topic_event.dart';
 import 'package:client/domain/bloc/topic/topic_state.dart';
 import 'package:client/domain/bloc/topic/topic_controller.dart';
+import 'package:client/domain/bloc/auth/auth_bloc.dart';
+import 'package:client/domain/bloc/auth/auth_state.dart';
 
 import '../../core/dependencies.dart';
 import '../../domain/model/forum_models/comment_model.dart';
@@ -250,6 +252,7 @@ class _TopicView extends StatelessWidget {
                 final profile = profiles[comment.author_id];
 
                 return _Comment(
+                  topicId: topicId,
                   comment: comment,
                   profile: profile,
                   profiles: profiles,
@@ -277,6 +280,7 @@ class _TopicView extends StatelessWidget {
 }
 
 class _Comment extends StatelessWidget {
+  final String topicId;
   final CommentModel comment;
   final RegistrationProfileData? profile;
   final List<CommentModel> allComments;
@@ -286,6 +290,7 @@ class _Comment extends StatelessWidget {
   final VoidCallback onReplyTap;
 
   const _Comment({
+    required this.topicId,
     required this.comment,
     required this.profile,
     required this.allComments,
@@ -350,6 +355,14 @@ class _Comment extends StatelessWidget {
                 profile != null)
             ? () => _showProfileDialog(context, profile!)
             : null,
+        onLongPress:() {
+          final authState = context.read<AuthBloc>().state as AuthAuthenticated;
+          final role = authState.profileModel.userModel.role.toString().toLowerCase();
+
+          if (role.contains('admin') || role.contains('council') || authState.profileModel.userModel.id==comment.author_id) {
+            _showCommentActionsBottonsSheet(context);
+          }
+        },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -405,6 +418,65 @@ class _Comment extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showCommentActionsBottonsSheet(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                  _showDeleteConfirmationDialog(context);
+                },
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                label: const Text(
+                  'Удалить комментарий',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDeleteConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Удаление комментария'),
+        content: const Text('Вы уверены, что хотите удалить этот комментарий?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              context.read<TopicBloc>().add(
+                TopicDeleteCommentEvent(
+                  topicId: topicId,
+                  commentId: comment.id,
+                ),
+              );
+            },
+            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }
