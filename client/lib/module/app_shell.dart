@@ -5,6 +5,7 @@ import 'news/news_screen.dart';
 import 'profile/profile_screen.dart';
 import 'schedule/schedule_screen.dart';
 import 'schedule/widgets/free_room_dialog.dart';
+import 'widgets/theme_button.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -58,6 +59,7 @@ class _AppShellState extends State<AppShell> {
                 ),
               ),
             ),
+          const ThemeButton(),
         ],
       ),
       body: IndexedStack(index: _index, children: _pages),

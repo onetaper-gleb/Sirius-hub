@@ -10,6 +10,7 @@ import '../../domain/bloc/news/news_state.dart';
 import '../widgets/admin_fab.dart';
 import '../widgets/button_notifier.dart';
 import '../widgets/expandable_text.dart';
+import '../widgets/theme_button.dart';
 import 'create_news_screen.dart';
 import 'news_detail_screen.dart';
 import '../forum/topic_screen.dart';
@@ -62,27 +63,6 @@ class _NewsScreenState extends State<NewsScreen> {
           );
     final local = utc.toLocal();
     return '${local.day.toString().padLeft(2, '0')}.${local.month.toString().padLeft(2, '0')}.${local.year} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
-  }
-
-  void _openTopic(BuildContext context, NewsModel news) {
-    final topicId = news.topicId?.trim();
-    if (topicId == null || topicId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Комментарии пока что недоступны")),
-      );
-      return;
-    }
-
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => TopicScreen(
-          topicId: topicId,
-          title: news.title,
-          isAnonymous: news.anon,
-          attachedNews: news,
-        ),
-      ),
-    );
   }
 
   @override
