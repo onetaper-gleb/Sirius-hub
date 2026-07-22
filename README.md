@@ -1,10 +1,12 @@
-### CampusHub
+### SiriusHub
 
-CampusHub — мобильное приложение и backend-сервис для кампуса/университета: **новости**, **расписание**, **профили**, **форум/темы/комментарии**.  
+SiriusHub — мобильное приложение и backend-сервис для кампуса/университета: **новости**, **расписание**, **профили**, **форум/темы/комментарии**.  
 Репозиторий содержит два основных модуля:
 
-- **`client/`**: Flutter-приложение (BLoC + Dio + Firebase Auth/Firestore)
+- **`client/`**: Flutter-приложение SiriusHub (BLoC + Dio + Firebase Auth)
 - **`backend/`**: FastAPI API-сервис (PostgreSQL + SQLAlchemy async + Firebase Admin)
+
+**Документация frontend (разработчик + пользователь):** [`client/README.md`](client/README.md)
 
 ---
 
@@ -12,10 +14,12 @@ CampusHub — мобильное приложение и backend-сервис д
 
 **Client (Flutter)**:
 
-- Авторизация через **Firebase Auth**
-- Работа с данными через слой **Repository** и **BLoC**
-- HTTP-запросы в backend через **Dio**
-- Базовый URL backend задаётся в `client/lib/core/api_config.dart`
+- Авторизация через **Firebase Auth** (email/password); вход в UI через `AuthGate`
+- Слои: `module` (UI) → `domain` (BLoC/модели) → `data` (Repository + Firebase DataSource) → `network` (Dio)
+- DI через `DependenciesScope` (`client/lib/core/dependencies.dart`)
+- HTTP к backend с заголовком `Authorization: Bearer <Firebase ID Token>`
+- Базовый URL backend: `client/lib/core/api_config.dart`
+- Роли в UI: `student` (базовый доступ) и `council` (создание новостей и тем форума)
 
 **Backend (FastAPI)**:
 
@@ -33,7 +37,7 @@ CampusHub — мобильное приложение и backend-сервис д
 
 ### Стек
 
-- **Mobile**: Flutter, Dart, bloc/flutter_bloc, dio, shared_preferences, firebase_core, firebase_auth, cloud_firestore
+- **Mobile (client)**: Flutter, Dart `^3.11`, bloc/flutter_bloc, dio, shared_preferences, firebase_core, firebase_auth, image_picker, cached_network_image, flutter_native_splash
 - **Backend**: FastAPI, Uvicorn, SQLAlchemy 2 (async), asyncpg, Alembic (зависимость есть), firebase-admin, python-dotenv, pytest, Pillow
 - **DB**: PostgreSQL 15
 
@@ -124,7 +128,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 ### Запуск client (Flutter)
 
-Требования: Flutter SDK (stable), настроенная платформа (Android Studio/Xcode), и Firebase-конфигурация проекта.
+Требования: Flutter SDK (stable), Dart `^3.11`, настроенная платформа (Android Studio/Xcode), Firebase-конфиг в репозитории.
 
 ```bash
 cd client
@@ -132,7 +136,18 @@ flutter pub get
 flutter run
 ```
 
-Backend URL задаётся в `client/lib/core/api_config.dart` (по умолчанию там указан домен деплоя).
+Backend URL задаётся в `client/lib/core/api_config.dart` (по умолчанию — адрес деплоя).
+
+Полные инструкции (документация разработчика и пользователя frontend): [`client/README.md`](client/README.md).
+
+---
+
+### Документация frontend (кратко)
+
+| Тип | Где | Содержание |
+|-----|-----|------------|
+| **Пользовательская** | [`client/README.md`](client/README.md) → «Документация пользователя» | Роли, регистрация/вход, вкладки (новости, форум, расписание, профиль), типичные сценарии |
+| **Разработчика** | [`client/README.md`](client/README.md) → «Документация разработчика» | Стек, архитектура слоёв, структура `lib/`, Firebase, URL API, запуск, тесты, сборка, troubleshooting |
 
 ---
 
@@ -143,6 +158,7 @@ Backend URL задаётся в `client/lib/core/api_config.dart` (по умол
 ```bash
 cd client
 dart format lib test
+flutter analyze
 flutter test
 ```
 
@@ -172,8 +188,14 @@ Workflow `.github/workflows/deploy.yml` делает:
 
 ### Структура репозитория
 
-- **`client/`** — Flutter-приложение
-  - `lib/` — код приложения (domain/data/module/network и т.п.)
+- **`client/`** — Flutter-приложение SiriusHub
+  - `README.md` — документация разработчика и пользователя (frontend)
+  - `lib/main.dart` — точка входа
+  - `lib/module/` — UI: auth, news, forum, schedule, profile
+  - `lib/domain/` — BLoC и модели
+  - `lib/data/` — repositories и Firebase Auth data source
+  - `lib/network/`, `lib/core/` — Dio и конфиг API
+  - `test/` — unit/widget-тесты
 - **`backend/`** — FastAPI backend
   - `main.py` — точка входа приложения, подключение роутеров
   - `auth/`, `profiles/`, `news/`, `schedule/`, `forum/` — доменные модули/роуты
@@ -187,4 +209,5 @@ Workflow `.github/workflows/deploy.yml` делает:
 - **401 Unauthorized**: проверьте что запросы идут с `Authorization: Bearer <Firebase ID Token>`.
 - **Профиль не найден** на `GET /profile/me`: сначала вызовите `POST /auth/init`.
 - **Firebase Admin**: если не используете `FIREBASE_CONFIG_BASE64`, положите `firebase-adminsdk.json` рядом с `backend/main.py`.
+- **Client не достучится до API**: проверьте `client/lib/core/api_config.dart` и сеть устройства/эмулятора (см. [`client/README.md`](client/README.md)).
 
