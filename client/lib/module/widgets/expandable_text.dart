@@ -64,7 +64,10 @@ class _ExpandableTextState extends State<ExpandableText> {
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(
                   _expanded ? "Свернуть" : "Читать далее",
-                  style: const TextStyle(fontSize: 14),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
+                  ),
                 ),
               ),
             ),

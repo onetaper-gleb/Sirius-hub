@@ -117,6 +117,7 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Создание новости'),
@@ -145,9 +146,9 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
                       width: double.infinity,
                       height: 200,
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: colors.surfaceContainer,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade400),
+                        border: Border.all(color: colors.outlineVariant),
                       ),
                       child: _selectedImage != null
                           ? ClipRRect(
@@ -163,12 +164,12 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
                                 Icon(
                                   Icons.add_photo_alternate,
                                   size: 48,
-                                  color: Colors.grey[600],
+                                  color: colors.onSurface,
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
                                   'Загрузить фото',
-                                  style: TextStyle(color: Colors.grey[600]),
+                                  style: TextStyle(color: colors.onSurface),
                                 ),
                               ],
                             ),
@@ -239,7 +240,7 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
             ),
             if (_isLoading)
               Container(
-                color: Colors.black54,
+                color: colors.onSurface,
                 child: const Center(child: CircularProgressIndicator()),
               ),
           ],

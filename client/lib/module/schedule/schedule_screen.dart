@@ -179,6 +179,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildDayItem(int index) {
+    final colors = Theme.of(context).colorScheme;
     final isToday = index == _currentDay && _currentWeek == 0;
     final isSelected = index == _selectedDay;
     final day = _days[index];
@@ -190,28 +191,28 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     FontWeight dayNumWeight;
 
     if (isSelected && isToday) {
-      circleColor = Colors.blue;
-      circleBorder = Colors.blue;
-      dayNumColor = Colors.white;
-      dayNameColor = Colors.blue;
+      circleColor = colors.primary;
+      circleBorder = colors.primary;
+      dayNumColor = colors.onPrimary;
+      dayNameColor = colors.primary;
       dayNumWeight = FontWeight.bold;
     } else if (isSelected) {
-      circleColor = Colors.blue.withOpacity(0.15);
-      circleBorder = Colors.blue;
-      dayNumColor = Colors.blue;
-      dayNameColor = Colors.blue;
+      circleColor = colors.primary.withOpacity(0.15);
+      circleBorder = colors.primary;
+      dayNumColor = colors.primary;
+      dayNameColor = colors.primary;
       dayNumWeight = FontWeight.bold;
     } else if (isToday) {
       circleColor = Colors.transparent;
-      circleBorder = Colors.blue.withOpacity(0.5);
-      dayNumColor = Colors.blue;
-      dayNameColor = Colors.blue.withOpacity(0.7);
+      circleBorder = colors.primary.withOpacity(0.5);
+      dayNumColor = colors.primary;
+      dayNameColor = colors.primary.withOpacity(0.7);
       dayNumWeight = FontWeight.w600;
     } else {
       circleColor = Colors.transparent;
       circleBorder = Colors.transparent;
-      dayNumColor = Colors.grey.shade700;
-      dayNameColor = Colors.grey.shade500;
+      dayNumColor = colors.onSurface.withOpacity(0.7);
+      dayNameColor = colors.onSurface.withOpacity(0.5);
       dayNumWeight = FontWeight.normal;
     }
 
@@ -259,9 +260,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               duration: const Duration(milliseconds: 200),
               width: isSelected ? 4 : 0,
               height: isSelected ? 4 : 0,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.blue,
+                color: colors.primary,
               ),
             ),
           ],
@@ -274,6 +275,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     required IconData icon,
     required VoidCallback onTap,
   }) {
+    final colors = Theme.of(context).colorScheme;
     final isLoading = context.read<ScheduleBloc>().state is ScheduleWeekPending;
 
     return GestureDetector(
@@ -283,7 +285,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 18),
         child: Icon(
           icon,
-          color: isLoading ? Colors.grey : Colors.blue,
+          color: isLoading
+            ? colors.onSurface.withOpacity(0.3)
+            : colors.primary,
           size: 24,
         ),
       ),
@@ -359,6 +363,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildLessonCard(int number, LessonModel lesson) {
+    final colors = Theme.of(context).colorScheme;
     final color = lesson.lessonType.color;
     final bgColor = color.withOpacity(0.06);
 
@@ -410,13 +415,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             Icon(
                               Icons.access_time_rounded,
                               size: 13,
-                              color: Colors.grey.shade500,
+                              color: colors.onSurface.withOpacity(0.5),
                             ),
                             const SizedBox(width: 4),
                             Text(
                               '${lesson.startTime} – ${lesson.endTime}',
                               style: TextStyle(
-                                color: Colors.grey.shade600,
+                                color: colors.onSurface.withOpacity(0.6),
                                 fontSize: 13,
                               ),
                             ),
@@ -429,8 +434,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
                     Text(
                       lesson.discipline,
-                      style: const TextStyle(
-                        color: Color(0xFF1A1A2E),
+                      style: TextStyle(
+                        color: colors.onSurface,
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
@@ -452,7 +457,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           child: Text(
                             lesson.name,
                             style: TextStyle(
-                              color: Colors.grey.shade700,
+                              color: colors.onSurface.withOpacity(0.7),
                               fontSize: 13,
                             ),
                           ),
@@ -473,7 +478,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         Text(
                           lesson.classroom,
                           style: TextStyle(
-                            color: Colors.grey.shade700,
+                            color: colors.onSurface.withOpacity(0.7),
                             fontSize: 13,
                           ),
                         ),
@@ -498,6 +503,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildMultipleLessonsCard(LessonGroupModel group) {
+    final colors = Theme.of(context).colorScheme;
     final groupColor = group.lessons.first.lessonType.color;
 
     return Container(
@@ -529,13 +535,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     Icon(
                       Icons.access_time_rounded,
                       size: 13,
-                      color: Colors.grey.shade500,
+                      color: colors.onSurface.withOpacity(0.5),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       '${group.startTime} – ${group.endTime}',
                       style: TextStyle(
-                        color: Colors.grey.shade600,
+                        color: colors.onSurface.withOpacity(0.6),
                         fontSize: 12,
                       ),
                     ),
@@ -589,8 +595,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                               const SizedBox(height: 8),
                               Text(
                                 lesson.discipline,
-                                style: const TextStyle(
-                                  color: Color(0xFF1A1A2E),
+                                style: TextStyle(
+                                  color: colors.onSurface,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -608,7 +614,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                     child: Text(
                                       lesson.name,
                                       style: TextStyle(
-                                        color: Colors.grey.shade700,
+                                        color: colors.onSurface.withOpacity(0.7),
                                         fontSize: 12,
                                       ),
                                     ),
@@ -627,7 +633,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                   Text(
                                     lesson.classroom,
                                     style: TextStyle(
-                                      color: Colors.grey.shade700,
+                                      color: colors.onSurface.withOpacity(0.7),
                                       fontSize: 12,
                                     ),
                                   ),
@@ -683,6 +689,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildBreakCard(BreakModel breakModel) {
+    final colors = Theme.of(context).colorScheme;
     final (
       Color bgColor,
       Color borderColor,
@@ -746,7 +753,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               const SizedBox(height: 2),
               Text(
                 '${breakModel.startTime} – ${breakModel.endTime} · $duration мин',
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                style: TextStyle(
+                    color: colors.onSurface.withOpacity(0.6),
+                    fontSize: 12
+                ),
               ),
             ],
           ),

@@ -38,13 +38,16 @@ class _AppShellState extends State<AppShell> {
         actions: [
           if (_index == 2)
             Padding(
-              padding: const EdgeInsets.only(right: 16.0),
+              padding: const EdgeInsets.only(right: 8),
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.blue,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  foregroundColor: Theme.of(context).colorScheme.primary,
                   elevation: 0,
-                  side: const BorderSide(color: Colors.blue, width: 1),
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 1
+                  ),
                 ),
                 onPressed: () {
                   showDialog(
