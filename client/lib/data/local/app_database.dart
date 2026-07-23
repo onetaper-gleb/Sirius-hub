@@ -36,12 +36,16 @@ class TeacherListConverter extends TypeConverter<List<Teacher>, String> {
   @override
   List<Teacher> fromSql(String fromDb) {
     final List<dynamic> decoded = json.decode(fromDb);
-    return decoded.map((e) => Teacher.fromJson(e as Map<String, dynamic>)).toList();
+    return decoded
+        .map((e) => Teacher.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   @override
   String toSql(List<Teacher> value) {
-    final List<Map<String, dynamic>> encoded = value.map((e) => e.toJson()).toList();
+    final List<Map<String, dynamic>> encoded = value
+        .map((e) => e.toJson())
+        .toList();
     return json.encode(encoded);
   }
 }
@@ -71,6 +75,7 @@ class ScheduleEvents extends Table {
 
   TextColumn get teachers => text().map(const TeacherListConverter())();
 }
+
 @DriftDatabase(tables: [ScheduleEvents])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -79,11 +84,15 @@ class AppDatabase extends _$AppDatabase {
   int get schemaVersion => 1;
 
   Future<void> clearGroupSchedule(String groupName) {
-    return (delete(scheduleEvents)..where((tbl) => tbl.groupName.equals(groupName))).go();
+    return (delete(
+      scheduleEvents,
+    )..where((tbl) => tbl.groupName.equals(groupName))).go();
   }
 
   Future<List<ScheduleDbEntity>> getCachedSchedule(String groupName) {
-    return (select(scheduleEvents)..where((tbl) => tbl.groupName.equals(groupName))).get();
+    return (select(
+      scheduleEvents,
+    )..where((tbl) => tbl.groupName.equals(groupName))).get();
   }
 
   Future<void> insertSchedule(List<ScheduleEventsCompanion> events) async {

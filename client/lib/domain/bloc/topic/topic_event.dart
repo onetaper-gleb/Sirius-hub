@@ -21,8 +21,5 @@ class TopicDeleteCommentEvent extends TopicEvent {
   final String topicId;
   final String commentId;
 
-  TopicDeleteCommentEvent({
-    required this.topicId,
-    required this.commentId,
-});
+  TopicDeleteCommentEvent({required this.topicId, required this.commentId});
 }

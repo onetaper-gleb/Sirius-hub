@@ -14,14 +14,15 @@ class ScheduleRepository {
     required Dio dio,
     required AppDatabase db,
     required LocalSettings localSettings,
-  })  : _dio = dio,
-        _db = db,
-        _localSettings = localSettings;
+  }) : _dio = dio,
+       _db = db,
+       _localSettings = localSettings;
 
   Future<WeekScheduleModel> getSchedule(String group, int weekOffset) async {
     if (weekOffset != 0) {
       try {
-        String url = '${ApiConfig.baseUrl}/schedule/?group=$group&week_offset=$weekOffset';
+        String url =
+            '${ApiConfig.baseUrl}/schedule/?group=$group&week_offset=$weekOffset';
         var response = await _dio.get(url);
 
         if (response.statusCode == 200) {
@@ -35,7 +36,9 @@ class ScheduleRepository {
       } catch (e) {
         String errorText = e.toString().toLowerCase();
         if (errorText.contains('connection') || errorText.contains('socket')) {
-          throw Exception('Нет подключения к интернету 🌐\nКэш работает только для текущей недели.');
+          throw Exception(
+            'Нет подключения к интернету 🌐\nКэш работает только для текущей недели.',
+          );
         }
 
         print('Ошибка при загрузке другой недели: $e');
@@ -56,7 +59,8 @@ class ScheduleRepository {
     }
 
     try {
-      String url = '${ApiConfig.baseUrl}/schedule/?group=$group&week_offset=$weekOffset';
+      String url =
+          '${ApiConfig.baseUrl}/schedule/?group=$group&week_offset=$weekOffset';
       var response = await _dio.get(url);
 
       if (response.statusCode == 200) {
@@ -116,7 +120,10 @@ class ScheduleRepository {
     }
   }
 
-  List<ScheduleEventsCompanion> _mapModelToCompanions(WeekScheduleModel weekSchedule, String groupName) {
+  List<ScheduleEventsCompanion> _mapModelToCompanions(
+    WeekScheduleModel weekSchedule,
+    String groupName,
+  ) {
     List<ScheduleEventsCompanion> companions = [];
 
     for (int i = 0; i < weekSchedule.lessonModel.length; i++) {
@@ -167,23 +174,28 @@ class ScheduleRepository {
           teacherName = e.teachers[0].fio!;
         }
 
-        lessons.add(LessonModel(
-          name: teacherName,
-          classroom: e.classroom ?? 'Универ',
-          lessonType: LessonType.fromString(e.groupType ?? '') ?? LessonType.other,
-          endTime: e.endTime,
-          startTime: e.startTime,
-          discipline: e.discipline,
-          numberPair: e.numberPair,
-        ));
+        lessons.add(
+          LessonModel(
+            name: teacherName,
+            classroom: e.classroom ?? 'Универ',
+            lessonType:
+                LessonType.fromString(e.groupType ?? '') ?? LessonType.other,
+            endTime: e.endTime,
+            startTime: e.startTime,
+            discipline: e.discipline,
+            numberPair: e.numberPair,
+          ),
+        );
       }
 
-      days.add(DayScheduleModel(
-        lessons: lessons,
-        date: date,
-        dayWeek: events[0].dayWeek,
-        len: lessons.length,
-      ));
+      days.add(
+        DayScheduleModel(
+          lessons: lessons,
+          date: date,
+          dayWeek: events[0].dayWeek,
+          len: lessons.length,
+        ),
+      );
     });
 
     return WeekScheduleModel(lessonModel: days, days: days.length);

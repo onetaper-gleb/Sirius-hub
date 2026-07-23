@@ -355,11 +355,15 @@ class _Comment extends StatelessWidget {
                 profile != null)
             ? () => _showProfileDialog(context, profile!)
             : null,
-        onLongPress:() {
+        onLongPress: () {
           final authState = context.read<AuthBloc>().state as AuthAuthenticated;
-          final role = authState.profileModel.userModel.role.toString().toLowerCase();
+          final role = authState.profileModel.userModel.role
+              .toString()
+              .toLowerCase();
 
-          if (role.contains('admin') || role.contains('council') || authState.profileModel.userModel.id==comment.author_id) {
+          if (role.contains('admin') ||
+              role.contains('council') ||
+              authState.profileModel.userModel.id == comment.author_id) {
             _showCommentActionsBottonsSheet(context);
           }
         },
@@ -427,7 +431,10 @@ class _Comment extends StatelessWidget {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 16,
+            horizontal: 24,
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

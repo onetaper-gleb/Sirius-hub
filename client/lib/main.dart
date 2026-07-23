@@ -54,7 +54,6 @@ void main() async {
     authDataSource: authDataSource,
   );
 
-
   final prefs = await SharedPreferences.getInstance();
 
   final scheduleRepository = ScheduleRepository(

@@ -307,8 +307,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Widget _buildScheduleToday() {
     final targetDate = _days[_selectedDay];
 
-    String d = targetDate.day < 10 ? '0${targetDate.day}' : targetDate.day.toString();
-    String m = targetDate.month < 10 ? '0${targetDate.month}' : targetDate.month.toString();
+    String d = targetDate.day < 10
+        ? '0${targetDate.day}'
+        : targetDate.day.toString();
+    String m = targetDate.month < 10
+        ? '0${targetDate.month}'
+        : targetDate.month.toString();
     String y = targetDate.year.toString();
 
     String searchIso = '$y-$m-$d';
@@ -316,10 +320,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
     DayScheduleModel? currentDay;
 
-    if (_weekScheduleModel != null && _weekScheduleModel!.lessonModel.isNotEmpty) {
+    if (_weekScheduleModel != null &&
+        _weekScheduleModel!.lessonModel.isNotEmpty) {
       for (int i = 0; i < _weekScheduleModel!.lessonModel.length; i++) {
         var day = _weekScheduleModel!.lessonModel[i];
-        if (day.date == searchIso || day.date == searchRu || day.date.contains(searchRu)) {
+        if (day.date == searchIso ||
+            day.date == searchRu ||
+            day.date.contains(searchRu)) {
           currentDay = day;
           break;
         }
