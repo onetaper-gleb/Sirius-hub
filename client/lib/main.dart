@@ -17,6 +17,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:client/data/local/app_database.dart';
+import 'package:client/data/local/local_settings.dart';
 
 // Screens
 import 'module/auth/auth_gate.dart';
@@ -51,7 +54,14 @@ void main() async {
     authDataSource: authDataSource,
   );
 
-  final scheduleRepository = ScheduleRepository(dio: dio);
+
+  final prefs = await SharedPreferences.getInstance();
+
+  final scheduleRepository = ScheduleRepository(
+    dio: dio,
+    db: AppDatabase(),
+    localSettings: LocalSettings(prefs),
+  );
 
   final topicRepository = TopicRepository(
     dio: dio,
