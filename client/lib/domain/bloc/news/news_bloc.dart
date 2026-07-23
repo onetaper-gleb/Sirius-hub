@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:client/data/repository/repository.dart';
-import 'package:client/domain/model/news_model.dart';
+import 'package:client/domain/model/model.dart';
 import 'news_event.dart';
 import 'news_state.dart';
 
@@ -32,7 +32,16 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
       await _repository.createNews(
         title: event.title,
         content: event.content,
+        hasEvent: event.hasEvent,
+        hasTopic: event.hasTopic,
+        anon: event.anon,
         imageFile: event.imageFile,
+        eventStatus: event.eventStatus,
+        eventStart: event.eventStart,
+        eventEnd: event.eventEnd,
+        location: event.location,
+        maxParticipants: event.maxParticipants,
+        isRegOpen: event.isRegOpen,
       );
       emit(NewsCreateSuccess());
       add(FetchNews());

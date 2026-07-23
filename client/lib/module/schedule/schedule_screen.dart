@@ -735,28 +735,28 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   Widget _buildBreakCard(BreakModel breakModel) {
     final (
-    Color bgColor,
-    Color borderColor,
-    Color iconColor,
-    IconData icon,
+      Color bgColor,
+      Color borderColor,
+      Color iconColor,
+      IconData icon,
     ) = switch (breakModel.type) {
       BreakType.lunch => (
-      Colors.orange.withOpacity(0.07),
-      Colors.orange.withOpacity(0.3),
-      Colors.orange.shade700,
-      Icons.restaurant_rounded,
+        Colors.orange.withOpacity(0.07),
+        Colors.orange.withOpacity(0.3),
+        Colors.orange.shade700,
+        Icons.restaurant_rounded,
       ),
       BreakType.window => (
-      Colors.purple.withOpacity(0.07),
-      Colors.purple.withOpacity(0.3),
-      Colors.purple.shade700,
-      Icons.access_time_rounded,
+        Colors.purple.withOpacity(0.07),
+        Colors.purple.withOpacity(0.3),
+        Colors.purple.shade700,
+        Icons.access_time_rounded,
       ),
       BreakType.rest => (
-      Colors.blue.withOpacity(0.07),
-      Colors.blue.withOpacity(0.3),
-      Colors.blue.shade700,
-      Icons.coffee_rounded,
+        Colors.blue.withOpacity(0.07),
+        Colors.blue.withOpacity(0.3),
+        Colors.blue.shade700,
+        Icons.coffee_rounded,
       ),
     };
 

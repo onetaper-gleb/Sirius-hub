@@ -69,8 +69,13 @@ class TopicRepository {
       throw Exception("Неизвестная ошибка: $e");
     }
   }
+
   // Future<void> createComment(String content, String topicId) async {
-  Future<void> createComment(String content, String topicId, String? parentCommentId) async {
+  Future<void> createComment(
+    String content,
+    String topicId,
+    String? parentCommentId,
+  ) async {
     try {
       final rawToken = await _authDataSource.getToken();
       if (rawToken == null) {
@@ -79,7 +84,11 @@ class TopicRepository {
       }
 
       // final data = {"topic_id": topicId, "content": content};
-      final data = {"topic_id": topicId, "content": content, "parent_comment_id": parentCommentId};
+      final data = {
+        "topic_id": topicId,
+        "content": content,
+        "parent_comment_id": parentCommentId,
+      };
 
       await _dio.post(
         '/topic/comments',
@@ -94,4 +103,25 @@ class TopicRepository {
       throw Exception("Ошибка создания комментария: $errorDetail");
     }
   }
+
+Future<void> deleteComment(String commentId) async {
+  try {
+    final rawToken = await _authDataSource.getToken();
+    if (rawToken == null) {
+      await _authDataSource.deleteCurrentUser();
+      throw Exception('Не удалось получить токен');
+    }
+
+    await _dio.delete(
+      '/topic/comments/$commentId',
+      options: Options(headers: {'Authorization': 'Bearer $rawToken'}),
+    );
+  } on DioException catch (e) {
+    final data = e.response?.data;
+    final errorDetail =
+        (data is Map ? data['detail'] : data)?.toString() ?? e.message;
+    print(errorDetail);
+    throw Exception("Ошибка удаления комментария: $errorDetail");
+  }
+}
 }

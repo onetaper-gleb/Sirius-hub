@@ -30,7 +30,9 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
 
     final now = DateTime.now();
     _weekDays = _getWeekDays(now);
-    _currentDayIndex = (now.weekday >= 1 && now.weekday <= 6) ? now.weekday - 1 : 0;
+    _currentDayIndex = (now.weekday >= 1 && now.weekday <= 6)
+        ? now.weekday - 1
+        : 0;
     _selectedDayIndex = _currentDayIndex;
 
     _startController = TextEditingController();
@@ -51,7 +53,10 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
     return List.generate(6, (index) => monday.add(Duration(days: index)));
   }
 
-  Future<void> _selectTime(BuildContext context, TextEditingController controller) async {
+  Future<void> _selectTime(
+    BuildContext context,
+    TextEditingController controller,
+  ) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: const TimeOfDay(hour: 9, minute: 0),
@@ -123,7 +128,11 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
         const Text(
           'Ошибка',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1A1A2E),
+          ),
         ),
         const SizedBox(height: 16),
         Text(
@@ -149,13 +158,20 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
         const Text(
           'Свободные аудитории',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1A1A2E),
+          ),
         ),
         const SizedBox(height: 16),
         if (rooms.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
-            child: Text('Нет свободных аудиторий на это время', textAlign: TextAlign.center),
+            child: Text(
+              'Нет свободных аудиторий на это время',
+              textAlign: TextAlign.center,
+            ),
           )
         else
           ConstrainedBox(
@@ -174,7 +190,10 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.meeting_room_outlined, color: Colors.blue),
+                      const Icon(
+                        Icons.meeting_room_outlined,
+                        color: Colors.blue,
+                      ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Text(
@@ -187,7 +206,7 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
                         ),
                       ),
                     ],
-                  )
+                  ),
                 );
               },
             ),
@@ -210,7 +229,11 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
         const Text(
           'Поиск свободной аудитории',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1A1A2E),
+          ),
         ),
         const SizedBox(height: 24),
         _buildDaysRow(),
@@ -218,14 +241,28 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
         const Text(
           'Выберите время:',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Color(0xFF1A1A2E)),
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF1A1A2E),
+          ),
         ),
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildTimeInputField(label: 'С:', controller: _startController)),
+            Expanded(
+              child: _buildTimeInputField(
+                label: 'С:',
+                controller: _startController,
+              ),
+            ),
             const SizedBox(width: 16),
-            Expanded(child: _buildTimeInputField(label: 'По:', controller: _endController)),
+            Expanded(
+              child: _buildTimeInputField(
+                label: 'По:',
+                controller: _endController,
+              ),
+            ),
           ],
         ),
         if (_errorMessage != null) ...[
@@ -233,7 +270,11 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
           Text(
             _errorMessage!,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.w500),
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 16),
         ] else ...[
@@ -253,12 +294,18 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
                 final end = _timeToMinutes(_endController.text);
 
                 if (start == null || end == null) {
-                  setState(() => _errorMessage = 'Пожалуйста, укажите время начала и окончания');
+                  setState(
+                    () => _errorMessage =
+                        'Пожалуйста, укажите время начала и окончания',
+                  );
                   return;
                 }
 
                 if (start >= end) {
-                  setState(() => _errorMessage = 'Время начала должно быть раньше времени окончания');
+                  setState(
+                    () => _errorMessage =
+                        'Время начала должно быть раньше времени окончания',
+                  );
                   return;
                 }
 
@@ -274,10 +321,18 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
               },
               style: FilledButton.styleFrom(
                 backgroundColor: Colors.blue,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 12,
+                ),
               ),
-              child: const Text('Найти', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              child: const Text(
+                'Найти',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
             ),
           ],
         ),
@@ -343,7 +398,11 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
                 alignment: Alignment.center,
                 child: Text(
                   date.day.toString(),
-                  style: TextStyle(color: dayNumColor, fontWeight: dayNumWeight, fontSize: 15),
+                  style: TextStyle(
+                    color: dayNumColor,
+                    fontWeight: dayNumWeight,
+                    fontSize: 15,
+                  ),
                 ),
               ),
               const SizedBox(height: 4),
@@ -360,7 +419,10 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
                 duration: const Duration(milliseconds: 200),
                 width: isSelected ? 4 : 0,
                 height: isSelected ? 4 : 0,
-                decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.blue),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.blue,
+                ),
               ),
             ],
           ),
@@ -369,11 +431,17 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
     );
   }
 
-  Widget _buildTimeInputField({required String label, required TextEditingController controller}) {
+  Widget _buildTimeInputField({
+    required String label,
+    required TextEditingController controller,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+        ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
@@ -392,8 +460,15 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
               letterSpacing: 1.5,
             ),
             decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              suffixIcon: Icon(Icons.access_time, color: Colors.blue.shade400, size: 20),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
+              suffixIcon: Icon(
+                Icons.access_time,
+                color: Colors.blue.shade400,
+                size: 20,
+              ),
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,

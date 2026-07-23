@@ -10,6 +10,19 @@ class TopicCreateCommentRequested extends TopicEvent {
   final String topicId;
   final String? parentCommentId;
 
-  TopicCreateCommentRequested({required this.content, required this.topicId, this.parentCommentId});
+  TopicCreateCommentRequested({
+    required this.content,
+    required this.topicId,
+    this.parentCommentId,
+  });
+}
 
+class TopicDeleteCommentEvent extends TopicEvent {
+  final String topicId;
+  final String commentId;
+
+  TopicDeleteCommentEvent({
+    required this.topicId,
+    required this.commentId,
+});
 }

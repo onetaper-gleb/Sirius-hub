@@ -9,6 +9,7 @@ class ScheduleHasWeek extends ScheduleState {
 }
 
 class ScheduleWeekPending extends ScheduleState {}
+
 class ScheduleFreeRoomsPending extends ScheduleState {}
 
 class ScheduleInitial extends ScheduleState {}
@@ -18,6 +19,7 @@ class ScheduleError extends ScheduleState {
 
   ScheduleError({required this.error});
 }
+
 class ScheduleHasFreeRooms extends ScheduleState {
   final List<String> freeRooms;
 
