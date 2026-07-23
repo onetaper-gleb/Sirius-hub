@@ -1,9 +1,9 @@
 ﻿import base64
 import io
+import logging
 import os
 import uuid
 from typing import List, Optional
-import logging
 
 from fastapi import APIRouter, Depends, Form, HTTPException
 from PIL import Image
@@ -27,7 +27,7 @@ router = APIRouter(
     tags=["News"],
 )
 
-logger = logging.getLogger('logs')
+logger = logging.getLogger("logs")
 
 MAX_FILE_SIZE = 4 * 1024 * 1024
 
@@ -39,14 +39,18 @@ class NotFound(Exception):
 async def process_image(image: str | None):
     if not image:
 
-        logger.debug("Image not found")  
+        logger.debug("Image not found")
         return None
 
     contents = base64.b64decode(image)
     if len(contents) > MAX_FILE_SIZE:
 
-        logger.warning(f"The file size: {len(contents)}. The file size must not exceed 4 MB") 
-        raise HTTPException(400, f"The file size: {len(contents)}. The file size must not exceed 4 MB.")
+        logger.warning(
+            f"The file size: {len(contents)}. The file size must not exceed 4 MB"
+        )
+        raise HTTPException(
+            400, f"The file size: {len(contents)}. The file size must not exceed 4 MB."
+        )
 
     try:
         img = Image.open(io.BytesIO(contents))
@@ -167,7 +171,6 @@ async def create_news(
     image_url = await process_image(request.image)
     logger.debug("Processing image from request")
 
-
     new_news = News(
         title=request.title,
         content=request.content,
@@ -224,7 +227,9 @@ async def create_news(
         db.add(new_news)
 
     await db.commit()
-    logger.info("Transaction committed successfully: news created. title: {new_news.title}")
+    logger.info(
+        "Transaction committed successfully: news created. title: {new_news.title}"
+    )
 
     await db.refresh(new_news)
     logger.debug("Refreshing news object")
