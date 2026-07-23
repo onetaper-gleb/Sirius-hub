@@ -68,15 +68,14 @@ class TopicBloc extends Bloc<TopicEvent, TopicState> {
   }
 
   Future<void> _onDeleteComment(
-      TopicDeleteCommentEvent event,
-      Emitter<TopicState> emit,
-      ) async {
-        try{
-          await _topicRepository.deleteComment(event.commentId);
-          add(TopicLoadRequested(topicId: event.topicId));
-        }
-        catch (e) {
-          emit(TopicError(error: e.toString()));
-        }
+    TopicDeleteCommentEvent event,
+    Emitter<TopicState> emit,
+  ) async {
+    try {
+      await _topicRepository.deleteComment(event.commentId);
+      add(TopicLoadRequested(topicId: event.topicId));
+    } catch (e) {
+      emit(TopicError(error: e.toString()));
+    }
   }
 }

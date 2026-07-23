@@ -5,6 +5,7 @@ import 'package:client/domain/bloc/schedule/schedule_state.dart';
 import 'package:flutter/material.dart';
 import 'package:client/domain/model/model.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/bloc/schedule/schedule_event.dart';
 import '../../domain/model/schedule_models/lesson_group.dart';
@@ -33,6 +34,18 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final weekday = DateTime.now().weekday;
     _currentDay = (weekday >= 1 && weekday <= 6) ? weekday - 1 : 0;
     _selectedDay = _currentDay;
+    _loadCachedGroup();
+  }
+
+  Future<void> _loadCachedGroup() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedGroup = prefs.getString('selected_group');
+    if (savedGroup != null && _group == null) {
+      setState(() {
+        _group = savedGroup;
+      });
+      _getWeek();
+    }
   }
 
   @override
@@ -110,7 +123,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         if (state is AuthAuthenticated) {
           final groupCode =
               state.profileModel.registrationProfileData.groupCode;
-          if (groupCode != null) {
+
+          if (groupCode != null && _group != groupCode) {
             _group = groupCode;
             _currentWeek = 0;
             _getWeek();
@@ -291,8 +305,52 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildScheduleToday() {
-    final day = _weekScheduleModel!.lessonModel[_selectedDay];
-    final groups = _groupLessons(day);
+    final targetDate = _days[_selectedDay];
+
+    String d = targetDate.day < 10
+        ? '0${targetDate.day}'
+        : targetDate.day.toString();
+    String m = targetDate.month < 10
+        ? '0${targetDate.month}'
+        : targetDate.month.toString();
+    String y = targetDate.year.toString();
+
+    String searchIso = '$y-$m-$d';
+    String searchRu = '$d.$m.$y';
+
+    DayScheduleModel? currentDay;
+
+    if (_weekScheduleModel != null &&
+        _weekScheduleModel!.lessonModel.isNotEmpty) {
+      for (int i = 0; i < _weekScheduleModel!.lessonModel.length; i++) {
+        var day = _weekScheduleModel!.lessonModel[i];
+        if (day.date == searchIso ||
+            day.date == searchRu ||
+            day.date.contains(searchRu)) {
+          currentDay = day;
+          break;
+        }
+      }
+    }
+
+    if (currentDay == null || currentDay.lessons.isEmpty) {
+      return const Expanded(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(height: 16),
+              Text(
+                'На этот день пар нет!',
+                style: TextStyle(color: Colors.grey, fontSize: 16),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final groups = _groupLessons(currentDay);
     final breaks = _calculateBreaksFromGroups(groups);
 
     final items = <dynamic>[];
