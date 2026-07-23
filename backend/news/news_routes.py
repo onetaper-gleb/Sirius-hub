@@ -393,12 +393,15 @@ async def delete_news(
     try:
         if news_item.image_url:
             await delete_old_image(news_item.image_url)
-        event = await get_event_or_404(db, news_item.event_id)
-        topic = await get_topic_or_404(db, news_item.topic_id)
-        if event:
-            await db.delete(event)
-        if topic:
-            await db.delete(topic)
+        if news_item.event_id:
+            event = await get_event_or_404(db, news_item.event_id)
+            if event:
+                await db.delete(event)
+        if news_item.topic_id:
+            topic = await get_topic_or_404(db, news_item.topic_id)
+            if topic:
+                await db.delete(topic)
+
 
         await db.delete(news_item)
         await db.commit()
