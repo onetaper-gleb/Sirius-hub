@@ -49,10 +49,7 @@ class RegisterForEvent extends NewsEvent {
   final String eventId;
   final String? comment;
 
-  RegisterForEvent({
-    required this.eventId,
-    this.comment,
-  });
+  RegisterForEvent({required this.eventId, this.comment});
 }
 
 class FetchEvent extends NewsEvent {

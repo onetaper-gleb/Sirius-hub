@@ -24,16 +24,16 @@ class ThemeButton extends StatelessWidget {
               label: "Системная",
             ),
             _buildMenuItem(
-                mode: ThemeMode.light,
-                currentMode: currentMode,
-                icon: Icons.light_mode,
-                label: "Светлая",
+              mode: ThemeMode.light,
+              currentMode: currentMode,
+              icon: Icons.light_mode,
+              label: "Светлая",
             ),
             _buildMenuItem(
-                mode: ThemeMode.dark,
-                currentMode: currentMode,
-                icon: Icons.dark_mode,
-                label: "Тёмная",
+              mode: ThemeMode.dark,
+              currentMode: currentMode,
+              icon: Icons.dark_mode,
+              label: "Тёмная",
             ),
           ],
         );
@@ -67,8 +67,7 @@ class ThemeButton extends StatelessWidget {
           const SizedBox(width: 12),
           Text(label),
           const Spacer(),
-          if (isSelected)
-            const Icon(Icons.check, size: 18, color: Colors.blue),
+          if (isSelected) const Icon(Icons.check, size: 18, color: Colors.blue),
         ],
       ),
     );

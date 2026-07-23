@@ -97,9 +97,7 @@ void main() async {
                 ForumBloc(repository: dependencies.forumRepository)
                   ..add(ForumLoadRequested()),
           ),
-          BlocProvider(
-            create: (_) => ThemeBloc()..add(LoadTheme()),
-          ),
+          BlocProvider(create: (_) => ThemeBloc()..add(LoadTheme())),
         ],
         child: MyApp(),
       ),

@@ -6,7 +6,7 @@ import 'theme_event.dart';
 class ThemeBloc extends Bloc<ThemeEvent, ThemeMode> {
   static const _prefsKey = 'theme_mode';
 
-  ThemeBloc(): super(ThemeMode.system) {
+  ThemeBloc() : super(ThemeMode.system) {
     on<LoadTheme>(_onLoad);
     on<ChangeTheme>(_onChange);
   }

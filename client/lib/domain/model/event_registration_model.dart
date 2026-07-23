@@ -1,6 +1,6 @@
 import 'package:client/core/api_config.dart';
 
-class RegistrationModel{
+class RegistrationModel {
   final String id;
   final String eventId;
   final String userId;

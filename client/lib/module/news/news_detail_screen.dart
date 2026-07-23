@@ -30,9 +30,9 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
   void _openTopic(BuildContext context, NewsModel news) {
     final topicId = news.topicId?.trim();
     if (topicId == null || topicId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Комментарии недоступны")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Комментарии недоступны")));
       return;
     }
 
@@ -52,11 +52,8 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
   Widget build(BuildContext context) {
     final news = widget.news;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Новость"),
-        leading: const BackButton(),
-      ),
-      body: BlocListener <NewsBloc, NewsState>(
+      appBar: AppBar(title: const Text("Новость"), leading: const BackButton()),
+      body: BlocListener<NewsBloc, NewsState>(
         listener: (context, state) {
           if (state is EventSuccess) {
             setState(() => _event = state.event);
@@ -81,8 +78,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (news.fullImageUrl != null &&
-                  news.fullImageUrl!.isNotEmpty)
+              if (news.fullImageUrl != null && news.fullImageUrl!.isNotEmpty)
                 CachedNetworkImage(
                   imageUrl: news.fullImageUrl!,
                   width: double.infinity,
@@ -115,7 +111,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
                   onPressed: () => _openTopic(context, news),
                   icon: const Icon(Icons.forum_outlined),
                   label: const Text("Прокомментировать"),
-                  style: TextButton.styleFrom(alignment: Alignment.centerLeft,),
+                  style: TextButton.styleFrom(alignment: Alignment.centerLeft),
                 ),
             ],
           ),
@@ -134,10 +130,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
           children: [
             const Text(
               "Событие",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              )
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
 
@@ -158,9 +151,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
                 onPressed: () => _showRegisterMenu(context, event.id),
                 icon: const Icon(Icons.event_available),
                 label: const Text("Зарегистрироваться"),
-                style: TextButton.styleFrom(
-                  alignment: Alignment.centerLeft,
-                ),
+                style: TextButton.styleFrom(alignment: Alignment.centerLeft),
               )
             else
               const Text(
@@ -192,7 +183,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text("Отмена")
+            child: const Text("Отмена"),
           ),
           TextButton(
             onPressed: () {
@@ -200,14 +191,14 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
               context.read<NewsBloc>().add(
                 RegisterForEvent(
                   eventId: eventId,
-                  comment: comment.isEmpty? null : comment,
+                  comment: comment.isEmpty ? null : comment,
                 ),
               );
               Navigator.pop(dialogContext);
             },
             child: const Text("Записаться"),
           ),
-        ]
+        ],
       ),
     );
   }

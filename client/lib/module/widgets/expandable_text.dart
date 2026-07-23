@@ -66,7 +66,9 @@ class _ExpandableTextState extends State<ExpandableText> {
                   _expanded ? "Свернуть" : "Читать далее",
                   style: TextStyle(
                     fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.5),
                   ),
                 ),
               ),

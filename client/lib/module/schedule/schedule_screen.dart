@@ -285,9 +285,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 18),
         child: Icon(
           icon,
-          color: isLoading
-            ? colors.onSurface.withOpacity(0.3)
-            : colors.primary,
+          color: isLoading ? colors.onSurface.withOpacity(0.3) : colors.primary,
           size: 24,
         ),
       ),
@@ -614,7 +612,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                     child: Text(
                                       lesson.name,
                                       style: TextStyle(
-                                        color: colors.onSurface.withOpacity(0.7),
+                                        color: colors.onSurface.withOpacity(
+                                          0.7,
+                                        ),
                                         fontSize: 12,
                                       ),
                                     ),
@@ -754,8 +754,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               Text(
                 '${breakModel.startTime} – ${breakModel.endTime} · $duration мин',
                 style: TextStyle(
-                    color: colors.onSurface.withOpacity(0.6),
-                    fontSize: 12
+                  color: colors.onSurface.withOpacity(0.6),
+                  fontSize: 12,
                 ),
               ),
             ],

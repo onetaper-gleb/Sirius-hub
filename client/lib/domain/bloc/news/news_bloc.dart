@@ -61,7 +61,10 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
     }
   }
 
-  Future<void> _onRegisterForEvent(RegisterForEvent event, Emitter<NewsState> emit) async {
+  Future<void> _onRegisterForEvent(
+    RegisterForEvent event,
+    Emitter<NewsState> emit,
+  ) async {
     emit(EventRegistrationLoading());
     try {
       final registration = await _repository.registerForEvent(
@@ -80,7 +83,7 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
       final eventInfo = await _repository.getEvent(event.eventId);
       emit(EventSuccess(eventInfo));
     } catch (e) {
-      emit(NewsError(message: e.toString(),previousNewsList: _lastNewsList));
+      emit(NewsError(message: e.toString(), previousNewsList: _lastNewsList));
     }
   }
 }

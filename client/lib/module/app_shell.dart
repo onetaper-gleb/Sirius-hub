@@ -46,7 +46,7 @@ class _AppShellState extends State<AppShell> {
                   elevation: 0,
                   side: BorderSide(
                     color: Theme.of(context).colorScheme.primary,
-                    width: 1
+                    width: 1,
                   ),
                 ),
                 onPressed: () {

@@ -77,9 +77,9 @@ class _NewsScreenState extends State<NewsScreen> {
         },
         listener: (context, state) {
           if (state is NewsError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message))
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           }
         },
         builder: (context, state) {

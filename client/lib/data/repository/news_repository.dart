@@ -59,7 +59,7 @@ class NewsRepository {
       }
 
       String? imageBytes;
-      if (imageFile != null){
+      if (imageFile != null) {
         final bytes = await imageFile.readAsBytes();
         imageBytes = base64Encode(bytes);
       }
@@ -82,10 +82,12 @@ class NewsRepository {
       final response = await _dio.post(
         '/news/',
         data: requestData,
-        options: Options(headers: {
-          'Authorization': 'Bearer $rawToken',
-          'Content-Type': 'application/json',
-        }),
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $rawToken',
+            'Content-Type': 'application/json',
+          },
+        ),
       );
       return NewsModel.fromJson(response.data);
     } on DioException catch (e) {
@@ -137,19 +139,19 @@ class NewsRepository {
 
       final response = await _dio.post(
         '/news/events/$eventId/register',
-        data: {
-          "comment": comment,
-        },
-        options: Options(headers: {
-          'Authorization': 'Bearer $rawToken',
-          'Content-Type': 'application/json',
-        }),
+        data: {"comment": comment},
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $rawToken',
+            'Content-Type': 'application/json',
+          },
+        ),
       );
 
       return RegistrationModel.fromJson(response.data);
-    } on DioException catch(e) {
+    } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
-        throw Exception("Регистрация закрыта или нет доступа.",);
+        throw Exception("Регистрация закрыта или нет доступа.");
       } else if (e.response?.statusCode == 404) {
         throw Exception("Событие не найдено.");
       } else if (e.response?.statusCode == 409) {

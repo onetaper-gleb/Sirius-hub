@@ -13,9 +13,7 @@ enum EventStatus {
   final String label;
 
   static EventStatus fromValue(String value) {
-    return EventStatus.values.firstWhere(
-        (status) => status.value == value,
-    );
+    return EventStatus.values.firstWhere((status) => status.value == value);
   }
 }
 

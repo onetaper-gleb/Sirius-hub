@@ -331,7 +331,9 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
               items: [EventStatus.draft, EventStatus.published]
                   .map(
                     (status) => DropdownMenuItem<EventStatus>(
-                        value: status, child: Text(status.label)),
+                      value: status,
+                      child: Text(status.label),
+                    ),
                   )
                   .toList(),
               onChanged: (value) {

@@ -191,10 +191,7 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.meeting_room_outlined,
-                        color: colors.primary,
-                      ),
+                      Icon(Icons.meeting_room_outlined, color: colors.primary),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Text(
