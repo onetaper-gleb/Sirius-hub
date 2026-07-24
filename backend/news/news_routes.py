@@ -407,7 +407,6 @@ async def delete_news(
             if topic:
                 await db.delete(topic)
 
-
         await db.delete(news_item)
         await db.commit()
         return {"status": "success", "message": "Успешное удаление"}
