@@ -92,7 +92,7 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -121,29 +121,29 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
   }
 
   Widget _buildErrorView(String error) {
+    final colors = Theme.of(context).colorScheme;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
+        Text(
           'Ошибка',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A2E),
+            color: colors.onSurface,
           ),
         ),
         const SizedBox(height: 16),
         Text(
           error,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.red, fontSize: 14),
+          style: TextStyle(color: colors.error, fontSize: 14),
         ),
         const SizedBox(height: 24),
         FilledButton(
           onPressed: () => _scheduleBloc.add(ScheduleResetFreeRooms()),
-          style: FilledButton.styleFrom(backgroundColor: Colors.blue),
           child: const Text('Назад', style: TextStyle(fontSize: 15)),
         ),
       ],
@@ -151,17 +151,18 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
   }
 
   Widget _buildResultsView(List<String> rooms) {
+    final colors = Theme.of(context).colorScheme;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
+        Text(
           'Свободные аудитории',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A2E),
+            color: colors.onSurface,
           ),
         ),
         const SizedBox(height: 16),
@@ -184,22 +185,19 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
                   margin: const EdgeInsets.symmetric(vertical: 4),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: Colors.blue, width: 1.5),
+                    color: colors.surface,
+                    border: Border.all(color: colors.primary, width: 1.5),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.meeting_room_outlined,
-                        color: Colors.blue,
-                      ),
+                      Icon(Icons.meeting_room_outlined, color: colors.primary),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Text(
                           rooms[index],
-                          style: const TextStyle(
-                            color: Colors.blue,
+                          style: TextStyle(
+                            color: colors.primary,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                           ),
@@ -214,7 +212,6 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
         const SizedBox(height: 24),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(),
-          style: FilledButton.styleFrom(backgroundColor: Colors.blue),
           child: const Text('Закрыть', style: TextStyle(fontSize: 15)),
         ),
       ],
@@ -222,29 +219,30 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
   }
 
   Widget _buildSearchForm() {
+    final colors = Theme.of(context).colorScheme;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
+        Text(
           'Поиск свободной аудитории',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A2E),
+            color: colors.onSurface,
           ),
         ),
         const SizedBox(height: 24),
         _buildDaysRow(),
         const SizedBox(height: 24),
-        const Text(
+        Text(
           'Выберите время:',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w500,
-            color: Color(0xFF1A1A2E),
+            color: colors.onSurface,
           ),
         ),
         const SizedBox(height: 16),
@@ -270,8 +268,8 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
           Text(
             _errorMessage!,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.red,
+            style: TextStyle(
+              color: colors.error,
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
@@ -285,7 +283,6 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
           children: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              style: TextButton.styleFrom(foregroundColor: Colors.blue),
               child: const Text('Отмена', style: TextStyle(fontSize: 15)),
             ),
             FilledButton(
@@ -320,7 +317,6 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
                 );
               },
               style: FilledButton.styleFrom(
-                backgroundColor: Colors.blue,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -341,6 +337,7 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
   }
 
   Widget _buildDaysRow() {
+    final colors = Theme.of(context).colorScheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(6, (index) {
@@ -355,28 +352,28 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
         FontWeight dayNumWeight;
 
         if (isSelected && isToday) {
-          circleColor = Colors.blue;
-          circleBorder = Colors.blue;
-          dayNumColor = Colors.white;
-          dayNameColor = Colors.blue;
+          circleColor = colors.primary;
+          circleBorder = colors.primary;
+          dayNumColor = colors.onPrimary;
+          dayNameColor = colors.primary;
           dayNumWeight = FontWeight.bold;
         } else if (isSelected) {
-          circleColor = Colors.blue.withOpacity(0.15);
-          circleBorder = Colors.blue;
-          dayNumColor = Colors.blue;
-          dayNameColor = Colors.blue;
+          circleColor = colors.primary.withOpacity(0.15);
+          circleBorder = colors.primary;
+          dayNumColor = colors.primary;
+          dayNameColor = colors.primary;
           dayNumWeight = FontWeight.bold;
         } else if (isToday) {
           circleColor = Colors.transparent;
-          circleBorder = Colors.blue.withOpacity(0.5);
-          dayNumColor = Colors.blue;
-          dayNameColor = Colors.blue.withOpacity(0.7);
+          circleBorder = colors.primary.withOpacity(0.5);
+          dayNumColor = colors.primary;
+          dayNameColor = colors.primary.withOpacity(0.7);
           dayNumWeight = FontWeight.w600;
         } else {
           circleColor = Colors.transparent;
           circleBorder = Colors.transparent;
-          dayNumColor = Colors.grey.shade700;
-          dayNameColor = Colors.grey.shade500;
+          dayNumColor = colors.onSurface.withOpacity(0.7);
+          dayNameColor = colors.onSurface.withOpacity(0.5);
           dayNumWeight = FontWeight.normal;
         }
 
@@ -419,9 +416,9 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
                 duration: const Duration(milliseconds: 200),
                 width: isSelected ? 4 : 0,
                 height: isSelected ? 4 : 0,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.blue,
+                  color: colors.primary,
                 ),
               ),
             ],
@@ -435,26 +432,30 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
     required String label,
     required TextEditingController controller,
   }) {
+    final colors = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+          style: TextStyle(
+            fontSize: 13,
+            color: colors.onSurface.withOpacity(0.6),
+          ),
         ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: colors.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.blue, width: 1.5),
+            border: Border.all(color: colors.primary, width: 1.5),
           ),
           child: TextField(
             controller: controller,
             readOnly: true,
             onTap: () => _selectTime(context, controller),
-            style: const TextStyle(
-              color: Colors.blue,
+            style: TextStyle(
+              color: colors.primary,
               fontSize: 16,
               fontWeight: FontWeight.w500,
               letterSpacing: 1.5,
@@ -466,14 +467,14 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
               ),
               suffixIcon: Icon(
                 Icons.access_time,
-                color: Colors.blue.shade400,
+                color: colors.primary.withOpacity(0.4),
                 size: 20,
               ),
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,
               hintText: '00:00',
-              hintStyle: TextStyle(color: Colors.blue.shade200),
+              hintStyle: TextStyle(color: colors.primary.withOpacity(0.2)),
             ),
           ),
         ),

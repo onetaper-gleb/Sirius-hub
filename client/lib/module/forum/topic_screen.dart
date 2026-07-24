@@ -121,9 +121,10 @@ class _CommentInputFieldState extends State<_CommentInputField> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: Colors.grey[300]!)),
+        border: Border(top: BorderSide(color: colors.onSurface)),
       ),
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom + 8,
@@ -133,7 +134,7 @@ class _CommentInputFieldState extends State<_CommentInputField> {
       ),
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(width: 1),
+          border: Border.all(width: 1, color: colors.onSurface),
           borderRadius: BorderRadius.circular(24),
         ),
         child: Row(
@@ -331,7 +332,9 @@ class _Comment extends StatelessWidget {
     return Container(
       margin: EdgeInsets.only(left: leftIndex, right: 16, top: 4, bottom: 4),
       decoration: BoxDecoration(
-        color: isReply ? Colors.transparent : Theme.of(context).cardColor,
+        color: isReply
+            ? Colors.transparent
+            : Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
         boxShadow: isReply
             ? null

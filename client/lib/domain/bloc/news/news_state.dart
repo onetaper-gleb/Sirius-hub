@@ -1,4 +1,4 @@
-import 'package:client/domain/model/news_model.dart';
+import 'package:client/domain/model/model.dart';
 
 abstract class NewsState {}
 
@@ -22,3 +22,17 @@ class NewsError extends NewsState {
 class NewsCreateSuccess extends NewsState {}
 
 class NewsDeleteSuccess extends NewsState {}
+
+class EventRegistrationLoading extends NewsState {}
+
+class EventRegistrationSuccess extends NewsState {
+  final RegistrationModel registration;
+  EventRegistrationSuccess(this.registration);
+}
+
+class EventLoading extends NewsState {}
+
+class EventSuccess extends NewsState {
+  final EventModel event;
+  EventSuccess(this.event);
+}

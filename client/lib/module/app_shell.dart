@@ -5,6 +5,7 @@ import 'news/news_screen.dart';
 import 'profile/profile_screen.dart';
 import 'schedule/schedule_screen.dart';
 import 'schedule/widgets/free_room_dialog.dart';
+import 'widgets/theme_button.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -37,13 +38,16 @@ class _AppShellState extends State<AppShell> {
         actions: [
           if (_index == 2)
             Padding(
-              padding: const EdgeInsets.only(right: 16.0),
+              padding: const EdgeInsets.only(right: 8),
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.blue,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  foregroundColor: Theme.of(context).colorScheme.primary,
                   elevation: 0,
-                  side: const BorderSide(color: Colors.blue, width: 1),
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 1,
+                  ),
                 ),
                 onPressed: () {
                   showDialog(
@@ -58,6 +62,7 @@ class _AppShellState extends State<AppShell> {
                 ),
               ),
             ),
+          const ThemeButton(),
         ],
       ),
       body: IndexedStack(index: _index, children: _pages),

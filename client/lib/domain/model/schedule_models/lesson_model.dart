@@ -69,7 +69,7 @@ extension LessonTypeStyle on LessonType {
     LessonType.practise => const Color(0xFF1565C0),
     LessonType.lab => const Color(0xFF6A1B9A),
     LessonType.exam => const Color(0xFFC62828),
-    LessonType.other => const Color(0xFF37474F),
+    LessonType.other => const Color(0xFF78909C),
   };
 
   String get displayName => switch (this) {

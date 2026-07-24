@@ -9,6 +9,8 @@ import 'domain/bloc/auth/auth_event.dart';
 import 'domain/bloc/forum/forum_event.dart';
 import 'domain/bloc/news/news_bloc.dart';
 import 'domain/bloc/schedule/schedule_bloc.dart';
+import 'domain/bloc/theme/theme_bloc.dart';
+import 'domain/bloc/theme/theme_event.dart';
 import 'network/http_client.dart';
 
 // Internal packages
@@ -104,6 +106,7 @@ void main() async {
                 ForumBloc(repository: dependencies.forumRepository)
                   ..add(ForumLoadRequested()),
           ),
+          BlocProvider(create: (_) => ThemeBloc()..add(LoadTheme())),
         ],
         child: MyApp(),
       ),
@@ -118,11 +121,25 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'CampHub',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorSchemeSeed: Colors.blue, useMaterial3: true),
-      home: const AuthGate(),
+    return BlocBuilder<ThemeBloc, ThemeMode>(
+      builder: (context, mode) {
+        return MaterialApp(
+          title: 'CampHub',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            colorSchemeSeed: Colors.blue,
+            brightness: Brightness.light,
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            colorSchemeSeed: Colors.blue,
+            brightness: Brightness.dark,
+            useMaterial3: true,
+          ),
+          themeMode: mode,
+          home: const AuthGate(),
+        );
+      },
     );
   }
 }

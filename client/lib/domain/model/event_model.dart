@@ -1,8 +1,25 @@
 import 'package:client/core/api_config.dart';
 
+enum EventStatus {
+  draft('draft', 'Черновик'),
+  moderation('moderation', 'Модерация'),
+  published('published', 'Опубликовано'),
+  finished('finished', 'Завершено'),
+  canceled('canceled', 'Отменено'),
+  archived('archived', 'Заархивировано');
+
+  const EventStatus(this.value, this.label);
+  final String value;
+  final String label;
+
+  static EventStatus fromValue(String value) {
+    return EventStatus.values.firstWhere((status) => status.value == value);
+  }
+}
+
 class EventModel {
   final String id;
-  final String status;
+  final EventStatus status;
   final String newsId;
   final String eventStart;
   final String eventEnd;
@@ -26,7 +43,7 @@ class EventModel {
   factory EventModel.fromJson(Map<String, dynamic> json) {
     return EventModel(
       id: (json['id'])?.toString() ?? '',
-      status: (json['status'])?.toString() ?? '',
+      status: EventStatus.fromValue((json['status'])),
       newsId: (json['news_id'])?.toString() ?? '',
       eventStart: (json['event_start'])?.toString() ?? '',
       eventEnd: (json['event_end'])?.toString() ?? '',

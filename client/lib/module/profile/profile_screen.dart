@@ -177,12 +177,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
+                color: theme.colorScheme.errorContainer,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 _error!,
-                style: TextStyle(color: Colors.red.shade700),
+                style: TextStyle(color: theme.colorScheme.error),
               ),
             ),
           ],

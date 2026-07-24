@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../domain/bloc/news/news_bloc.dart';
 import '../../domain/bloc/news/news_event.dart';
 import '../../domain/bloc/news/news_state.dart';
+import '../../domain/model/model.dart';
 
 class CreateNewsScreen extends StatefulWidget {
   const CreateNewsScreen({super.key});
@@ -15,29 +16,32 @@ class CreateNewsScreen extends StatefulWidget {
 }
 
 class _CreateNewsScreenState extends State<CreateNewsScreen> {
-  final _titleController = TextEditingController();
-  final _contentController = TextEditingController();
   File? _selectedImage;
   bool _isLoading = false;
-
   bool _hasEvent = false;
   bool _hasTopic = false;
   bool _anon = false;
   bool _isRegOpen = false;
+  int? maxPartic;
+  EventStatus? _eventStatus;
 
-  final _locationController = TextEditingController();
-  final _maxParticController = TextEditingController();
-  final _eventStartController = TextEditingController();
-  final _eventEndController = TextEditingController();
-  String? _eventStatus;
-  final Map<String, String> _eventStatuses = {
-    "draft": "Черновик",
-    "moderation": "Модерация",
-    "published": "Опубликовано",
-    "finished": "Завершено",
-    "canceled": "Отменено",
-    "archived": "Заархивировано",
-  };
+  late TextEditingController _titleController;
+  late TextEditingController _contentController;
+  late TextEditingController _locationController;
+  late TextEditingController _maxParticController;
+  late TextEditingController _eventStartController;
+  late TextEditingController _eventEndController;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController();
+    _contentController = TextEditingController();
+    _locationController = TextEditingController();
+    _maxParticController = TextEditingController();
+    _eventStartController = TextEditingController();
+    _eventEndController = TextEditingController();
+  }
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -94,10 +98,8 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
         eventStart: _hasEvent ? _eventStartController.text.trim() : null,
         eventEnd: _hasEvent ? _eventEndController.text.trim() : null,
         location: _hasEvent ? _locationController.text.trim() : null,
-        maxParticipants: _hasEvent
-            ? int.tryParse(_maxParticController.text.trim())
-            : null,
-        isRegOpen: _hasEvent ? _isRegOpen : null,
+        maxParticipants: _hasEvent ? maxPartic : null,
+        isRegOpen: _hasEvent ? _isRegOpen : false,
       ),
     );
   }
@@ -115,6 +117,7 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Создание новости'),
@@ -143,9 +146,9 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
                       width: double.infinity,
                       height: 200,
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: colors.surfaceContainer,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade400),
+                        border: Border.all(color: colors.outlineVariant),
                       ),
                       child: _selectedImage != null
                           ? ClipRRect(
@@ -161,12 +164,12 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
                                 Icon(
                                   Icons.add_photo_alternate,
                                   size: 48,
-                                  color: Colors.grey[600],
+                                  color: colors.onSurface,
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
                                   'Загрузить фото',
-                                  style: TextStyle(color: Colors.grey[600]),
+                                  style: TextStyle(color: colors.onSurface),
                                 ),
                               ],
                             ),
@@ -237,7 +240,7 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
             ),
             if (_isLoading)
               Container(
-                color: Colors.black54,
+                color: colors.onSurface,
                 child: const Center(child: CircularProgressIndicator()),
               ),
           ],
@@ -319,15 +322,18 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
             ),
             const SizedBox(height: 8),
 
-            DropdownButtonFormField<String>(
+            DropdownButtonFormField<EventStatus>(
               decoration: const InputDecoration(
                 labelText: "Статус события",
                 border: OutlineInputBorder(),
               ),
               value: _eventStatus,
-              items: _eventStatuses.entries
+              items: [EventStatus.draft, EventStatus.published]
                   .map(
-                    (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
+                    (status) => DropdownMenuItem<EventStatus>(
+                      value: status,
+                      child: Text(status.label),
+                    ),
                   )
                   .toList(),
               onChanged: (value) {
