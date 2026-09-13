@@ -60,3 +60,4 @@ async def create_topic(
         "responses_count": 0,
         "anon": new_topic.anon,
     }
+
