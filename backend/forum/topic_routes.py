@@ -13,6 +13,7 @@ from utils.logger import set_logger
 
 from .schemas import Comment as CommentScheme
 from .schemas import CreateCommentRequest
+from .schemas import UpdateCommentRequest
 
 topic_router = APIRouter(
     prefix="/topic",
@@ -82,7 +83,7 @@ async def get_comments(
                 "content": comment.content,
                 "comment_id": comment.id,
                 "author": (
-                    "" if topic.anon or comment_author is None else comment_author.id
+                    "anon" if topic.anon else '' if comment_author is None else comment_author.id
                 ),
                 "parent_comment_id": comment.parent_comment_id,
                 "reply_to_author": reply_to_author,
@@ -132,7 +133,7 @@ async def create_comment(
 
         parent_author = await _get_db_user(db, parent_comment.user_id)
 
-        if parent_comment and not topic.anon:
+        if parent_comment and not topic.anon and parent_author:
             reply_to_author = parent_author.id
 
     new_comment = Comments(
@@ -155,11 +156,63 @@ async def create_comment(
     return {
         "content": new_comment.content,
         "comment_id": new_comment.id,
-        "author": "" if topic.anon or author is None else author.id,
+        "author": "anon" if topic.anon else '' if author is None else author.id,
         "parent_comment_id": new_comment.parent_comment_id,
         "reply_to_author": reply_to_author,
     }
 
+
+@topic_router.patch('/comments/{comment_id}', response_model=CommentScheme)
+async def update_comment(
+    request: UpdateCommentRequest,
+    comment_id: str,
+    user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    current_user_id = user.get("uid")
+    logger.info(f"User {current_user_id} is trying to edit comment {comment_id}")
+
+    content = request.content.strip()
+    if not (1 < len(content) < 200):
+        logger.warning(f"User tried to update comment with invalid content length")
+        raise HTTPException(status_code=400, detail="Comment content is invalid")
+
+    comment = await _get_db_comment(db, comment_id)
+    if comment is None:
+        logger.warning(f"User tried to edit a non-existent comment {comment_id}")
+        raise HTTPException(status_code=404, detail="Comment not found")
+    
+    if comment.user_id != current_user_id:
+        logger.warning(
+            f"User {current_user_id} unauthorized to edit comment {comment_id}")
+        raise HTTPException(
+            status_code=403, detail="Not authorized to edit this comment")
+
+    comment.content = content
+    await db.commit()
+    await db.refresh(comment)
+
+    topic = await _get_db_topic(db, comment.topic_id)
+    author = await _get_db_user(db, comment.user_id)
+
+    reply_to_author = None
+    if comment.parent_comment_id:
+        parent_comment = await _get_db_comment(db, comment.parent_comment_id)
+        if parent_comment:
+            parent_author = await _get_db_user(db, parent_comment.user_id)
+            if parent_author and topic and not topic.anon:
+                reply_to_author = parent_author.id
+
+    logger.info(f"User successfully updated comment {comment_id}")
+
+    return {
+        "content": comment.content,
+        "comment_id": comment.id,
+        "author": "anon" if (topic and topic.anon) else '' if author is None else author.id,
+        "parent_comment_id": comment.parent_comment_id,
+        "reply_to_author": reply_to_author,
+    }
+    
 
 @topic_router.delete("/comments/{comment_id}")
 async def delete_comment(

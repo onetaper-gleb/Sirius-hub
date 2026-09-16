@@ -1,6 +1,5 @@
 from typing import Optional
-
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Topic(BaseModel):
@@ -20,11 +19,15 @@ class CreateTopicRequest(BaseModel):
 
 
 class CreateCommentRequest(BaseModel):
-    content: str
+    content: str = Field(..., min_length=2, max_length=199)
     topic_id: str
     parent_comment_id: Optional[str] = None
 
 
+class UpdateCommentRequest(BaseModel):
+    content: str = Field(..., min_length=2, max_length=199)
+
+    
 class Comment(BaseModel):
     content: str | None
     comment_id: str | None
