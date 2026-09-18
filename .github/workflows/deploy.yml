@@ -15,6 +15,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Для PR чекаутим именно исходную ветку, а не временный merge commit
+          ref: ${{ github.head_ref }}
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -44,6 +47,10 @@ jobs:
         run: |
           black backend
           isort backend
+
+      # Сбрасываем изменения lock-файла перед коммитом
+      - name: Discard lockfile modifications
+        run: git checkout -- client/pubspec.lock || true
 
       - name: Auto-commit formatting changes
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
