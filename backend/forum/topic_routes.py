@@ -12,8 +12,7 @@ from database.models import Comments, Topics, User
 from utils.logger import set_logger
 
 from .schemas import Comment as CommentScheme
-from .schemas import CreateCommentRequest
-from .schemas import UpdateCommentRequest
+from .schemas import CreateCommentRequest, UpdateCommentRequest
 
 topic_router = APIRouter(
     prefix="/topic",
@@ -21,7 +20,6 @@ topic_router = APIRouter(
 )
 
 logger = logging.getLogger("logs")
-
 
 
 async def _get_db_user(db: AsyncSession, uid: str) -> User | None:
@@ -84,7 +82,9 @@ async def get_comments(
                 "content": comment.content,
                 "comment_id": comment.id,
                 "author": (
-                    "anon" if topic.anon else '' if comment_author is None else comment_author.id
+                    "anon"
+                    if topic.anon
+                    else "" if comment_author is None else comment_author.id
                 ),
                 "parent_comment_id": comment.parent_comment_id,
                 "reply_to_author": reply_to_author,
@@ -157,13 +157,13 @@ async def create_comment(
     return {
         "content": new_comment.content,
         "comment_id": new_comment.id,
-        "author": "anon" if topic.anon else '' if author is None else author.id,
+        "author": "anon" if topic.anon else "" if author is None else author.id,
         "parent_comment_id": new_comment.parent_comment_id,
         "reply_to_author": reply_to_author,
     }
 
 
-@topic_router.patch('/comments/{comment_id}', response_model=CommentScheme)
+@topic_router.patch("/comments/{comment_id}", response_model=CommentScheme)
 async def update_comment(
     request: UpdateCommentRequest,
     comment_id: str,
@@ -182,12 +182,14 @@ async def update_comment(
     if comment is None:
         logger.warning(f"User tried to edit a non-existent comment {comment_id}")
         raise HTTPException(status_code=404, detail="Comment not found")
-    
+
     if comment.user_id != current_user_id:
         logger.warning(
-            f"User {current_user_id} unauthorized to edit comment {comment_id}")
+            f"User {current_user_id} unauthorized to edit comment {comment_id}"
+        )
         raise HTTPException(
-            status_code=403, detail="Not authorized to edit this comment")
+            status_code=403, detail="Not authorized to edit this comment"
+        )
 
     comment.content = content
     await db.commit()
@@ -209,11 +211,13 @@ async def update_comment(
     return {
         "content": comment.content,
         "comment_id": comment.id,
-        "author": "anon" if (topic and topic.anon) else '' if author is None else author.id,
+        "author": (
+            "anon" if (topic and topic.anon) else "" if author is None else author.id
+        ),
         "parent_comment_id": comment.parent_comment_id,
         "reply_to_author": reply_to_author,
     }
-    
+
 
 @topic_router.delete("/comments/{comment_id}")
 async def delete_comment(
