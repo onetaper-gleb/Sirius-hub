@@ -9,7 +9,7 @@ from .database import Base
 USER_AVATAR_EMOJI_MAX_LEN = 16
 USER_DISPLAY_NAME_MAX_LEN = 30
 USER_BIO_MAX_LEN = 200
-USER_TELEGRAM_HANDLE_MAX_LEN = 33
+USER_MESSENGER_HANDLE_MAX_LEN = 33
 USER_GROUP_CODE_MAX_LEN = 20
 USER_COMMENT_MAX = 50
 
@@ -143,7 +143,7 @@ class User(Base):
     display_name = Column(String(USER_DISPLAY_NAME_MAX_LEN), nullable=True)
     group_code = Column(String(USER_GROUP_CODE_MAX_LEN), nullable=True)
     bio = Column(String(USER_BIO_MAX_LEN), nullable=True)
-    telegram_handle = Column(String(USER_TELEGRAM_HANDLE_MAX_LEN), nullable=True)
+    messenger_handle = Column(String(USER_MESSENGER_HANDLE_MAX_LEN), nullable=True)
 
 
 class Topics(Base):

@@ -12,7 +12,7 @@ from database.models import (
     USER_BIO_MAX_LEN,
     USER_DISPLAY_NAME_MAX_LEN,
     USER_GROUP_CODE_MAX_LEN,
-    USER_TELEGRAM_HANDLE_MAX_LEN,
+    USER_MESSENGER_HANDLE_MAX_LEN,
 )
 from database.models import User as DBUser
 
@@ -30,7 +30,7 @@ class ProfileResponse(BaseModel):
     display_name: str | None
     group_code: str | None
     bio: str | None
-    telegram_handle: str | None
+    messenger_handle: str | None
     created_at: datetime.datetime
 
     class Config:
@@ -46,7 +46,7 @@ class PublicProfileResponse(BaseModel):
     display_name: str | None
     group_code: str | None
     bio: str | None
-    telegram_handle: str | None
+    messenger_handle: str | None
     created_at: datetime.datetime
 
     class Config:
@@ -57,8 +57,8 @@ class ProfileUpdateBody(BaseModel):
     display_name: str | None = Field(default=None, max_length=USER_DISPLAY_NAME_MAX_LEN)
     group_code: str | None = Field(default=None, max_length=USER_GROUP_CODE_MAX_LEN)
     bio: str | None = Field(default=None, max_length=USER_BIO_MAX_LEN)
-    telegram_handle: str | None = Field(
-        default=None, max_length=USER_TELEGRAM_HANDLE_MAX_LEN
+    messenger_handle: str | None = Field(
+        default=None, max_length=USER_MESSENGER_HANDLE_MAX_LEN
     )
 
     @field_validator("group_code")
@@ -77,7 +77,7 @@ class ProfileUpdateBody(BaseModel):
         v = v.strip()
         return v or None
 
-    @field_validator("telegram_handle")
+    @field_validator("messenger_handle")
     @classmethod
     def telegram_strip(cls, v: str | None) -> str | None:
         if v is None or v == "":
