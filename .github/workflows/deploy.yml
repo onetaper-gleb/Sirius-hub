@@ -116,8 +116,8 @@ jobs:
           script: |
             set -e
 
-            mkdir -p ~/app
-            cd ~/app
+            mkdir -p ~/app/Sirius-hub
+            cd ~/app/Sirius-hub
 
             if [ ! -d ".git" ]; then
               git clone https://github.com/${{ github.repository }}.git .
@@ -140,3 +140,4 @@ jobs:
 
             docker compose down
             docker compose up -d --build
+            docker exec camphub-fastapi python -m alembic upgrade head
