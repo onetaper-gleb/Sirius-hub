@@ -1,6 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel, Field
-
+from database.constants import USER_COMMENT_MAX_LEN, TITLE_LEN
 
 class Topic(BaseModel):
     title: str | None

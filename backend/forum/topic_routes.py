@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import joinedload
 
 from auth.auth_routes import get_current_user, require_council_role
 from database.database import get_db
@@ -15,6 +16,8 @@ from .schemas import Comment as CommentScheme
 from .schemas import CreateCommentRequest
 from .schemas import UpdateCommentRequest
 
+from database.constants import MIN_LEN, USER_COMMENT_MAX_LEN
+
 topic_router = APIRouter(
     prefix="/topic",
     tags=["Comments"],
@@ -22,7 +25,12 @@ topic_router = APIRouter(
 
 logger = logging.getLogger("logs")
 
-
+def for_author(topic, author):
+    if topic.anon:
+        return "anon"
+    if author is None:
+        return ""
+    return author.id
 
 async def _get_db_user(db: AsyncSession, uid: str) -> User | None:
     result = await db.execute(select(User).where(User.id == uid))
@@ -34,10 +42,25 @@ async def _get_db_topic(db: AsyncSession, uid: str) -> Topics | None:
     return result.scalar_one_or_none()
 
 
-async def _get_db_comment(db: AsyncSession, comment_id: str) -> Comments | None:
-    result = await db.execute(select(Comments).where(Comments.id == comment_id))
+async def _get_db_comment(db: AsyncSession, comment_id: str, for_update: bool = False) -> Comments | None:
+    stmt = (
+        select(Comments).where(Comments.id == comment_id)
+        .options(
+            joinedload(Comments.author),
+            joinedload(Comments.parent_comment).joinedload(Comments.author),))
+
+    if for_update:
+        stmt = stmt.with_for_update()
+
+    result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
+def get_reply_to_author_id(topic: Topics | None, parent_comment: Comments | None) -> str | None:
+    if not parent_comment or not topic or topic.anon:
+        return None
+    if parent_comment.author:
+        return parent_comment.author.id
+    return None
 
 @topic_router.get("/comments", response_model=List[CommentScheme])
 async def get_comments(
@@ -51,43 +74,33 @@ async def get_comments(
     topic = await _get_db_topic(db, topic_id)
 
     if topic is None:
-
         logger.warning(
-            f"User tried to get comments from a non-existent topic {topic_id}"
-        )
+            f"User tried to get comments from a non-existent topic {topic_id}")
         raise HTTPException(status_code=404, detail="Topic does not exist")
 
-    comments_schemas = await db.execute(
+    stmt = (
         select(Comments)
         .where(Comments.topic_id == topic_id)
+        .options(
+            joinedload(Comments.author),
+            joinedload(Comments.parent_comment).joinedload(Comments.author),
+        )
         .order_by(Comments.created_at.desc())
     )
 
-    comments_models = comments_schemas.scalars().all()
+    result = await db.execute(stmt)
+    comments_models = result.scalars().all()
 
     comments_schemas = []
     for comment in comments_models:
-        comment_author = await _get_db_user(db, comment.user_id)
-
-        reply_to_author = None
-        if comment.parent_comment_id:
-            parent_comment = await _get_db_comment(db, comment.parent_comment_id)
-
-            if parent_comment:
-                parent_author = await _get_db_user(db, parent_comment.user_id)
-
-                if parent_author and not topic.anon:
-                    reply_to_author = parent_author.id
 
         comments_schemas.append(
             {
                 "content": comment.content,
                 "comment_id": comment.id,
-                "author": (
-                    "anon" if topic.anon else '' if comment_author is None else comment_author.id
-                ),
+                "author": for_author(topic, comment.author),
                 "parent_comment_id": comment.parent_comment_id,
-                "reply_to_author": reply_to_author,
+                "reply_to_author": get_reply_to_author_id(topic, comment.parent_comment),
             }
         )
 
@@ -105,7 +118,7 @@ async def create_comment(
 
     content = request.content.strip()
 
-    if not 1 < len(content) < 200:
+    if not (MIN_LEN < len(content) < USER_COMMENT_MAX_LEN):
 
         logger.warning(f"User tried to create an invalid comment")
         raise HTTPException(status_code=400, detail="Comment content is invalid")
@@ -118,24 +131,18 @@ async def create_comment(
 
     reply_to_author = None
     if request.parent_comment_id:
-        parent_comment = await _get_db_comment(db, request.parent_comment_id)
+        parent_comment = await _get_db_comment(db, request.parent_comment_id, for_update=True)
 
         if parent_comment is None:
-
             logger.warning(f"User tried to reply to a non-existent comment")
             raise HTTPException(status_code=404, detail="Parent comment not found")
 
         if parent_comment.topic_id != request.topic_id:
-
             logger.warning(f"User tried to reply to a comment from another topic")
-            raise HTTPException(
-                status_code=400, detail="Can not reply to a comment from another topic"
-            )
-
-        parent_author = await _get_db_user(db, parent_comment.user_id)
-
-        if parent_comment and not topic.anon and parent_author:
-            reply_to_author = parent_author.id
+            raise HTTPException(status_code=400, detail="Can not reply to a comment from another topic")
+  
+        if parent_comment and not topic.anon and parent_comment.author:
+            reply_to_author = parent_comment.author.id
 
     new_comment = Comments(
         content=content,
@@ -157,7 +164,7 @@ async def create_comment(
     return {
         "content": new_comment.content,
         "comment_id": new_comment.id,
-        "author": "anon" if topic.anon else '' if author is None else author.id,
+        "author": for_author(topic, author),
         "parent_comment_id": new_comment.parent_comment_id,
         "reply_to_author": reply_to_author,
     }
@@ -174,11 +181,12 @@ async def update_comment(
     logger.info(f"User {current_user_id} is trying to edit comment {comment_id}")
 
     content = request.content.strip()
-    if not (1 < len(content) < 200):
+    if not (MIN_LEN < len(content) < USER_COMMENT_MAX_LEN):
         logger.warning(f"User tried to update comment with invalid content length")
         raise HTTPException(status_code=400, detail="Comment content is invalid")
 
-    comment = await _get_db_comment(db, comment_id)
+    comment = await _get_db_comment(db, comment_id, for_update=True)
+
     if comment is None:
         logger.warning(f"User tried to edit a non-existent comment {comment_id}")
         raise HTTPException(status_code=404, detail="Comment not found")
@@ -189,27 +197,20 @@ async def update_comment(
         raise HTTPException(
             status_code=403, detail="Not authorized to edit this comment")
 
-    comment.content = content
-    await db.commit()
-    await db.refresh(comment)
-
     topic = await _get_db_topic(db, comment.topic_id)
-    author = await _get_db_user(db, comment.user_id)
+    comment.content = content
 
     reply_to_author = None
-    if comment.parent_comment_id:
-        parent_comment = await _get_db_comment(db, comment.parent_comment_id)
-        if parent_comment:
-            parent_author = await _get_db_user(db, parent_comment.user_id)
-            if parent_author and topic and not topic.anon:
-                reply_to_author = parent_author.id
+    if comment.parent_comment and not topic.anon and comment.parent_comment.author:
+        reply_to_author = comment.parent_comment.author.id
 
     logger.info(f"User successfully updated comment {comment_id}")
+    await db.commit()
 
     return {
         "content": comment.content,
         "comment_id": comment.id,
-        "author": "anon" if (topic and topic.anon) else '' if author is None else author.id,
+        "author": for_author(topic, comment.author),
         "parent_comment_id": comment.parent_comment_id,
         "reply_to_author": reply_to_author,
     }
@@ -224,7 +225,7 @@ async def delete_comment(
     id_user = user.get("uid")
     logger.info(f"User is trying to delete a comment {comment_id}")
 
-    comment = await _get_db_comment(db, comment_id)
+    comment = await _get_db_comment(db, comment_id, for_update=True)
 
     if comment is None:
 

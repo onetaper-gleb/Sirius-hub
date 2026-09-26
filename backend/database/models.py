@@ -3,15 +3,11 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
+from sqlalchemy.orm import relationship, foreign
 
 from .database import Base
 
-USER_AVATAR_EMOJI_MAX_LEN = 16
-USER_DISPLAY_NAME_MAX_LEN = 30
-USER_BIO_MAX_LEN = 200
-USER_MESSENGER_HANDLE_MAX_LEN = 33
-USER_GROUP_CODE_MAX_LEN = 20
-USER_COMMENT_MAX = 50
+from database.constants import *
 
 
 def _utc_now_naive() -> datetime:
@@ -23,8 +19,8 @@ class News(Base):
     __tablename__ = "news"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
-    title = Column(String, nullable=False)
-    content = Column(Text, nullable=False)
+    title = Column(String(TITLE_LEN), nullable=False)
+    content = Column(Text(CONTENT_LEN), nullable=False)
     image_url = Column(String, nullable=True)
     author_id = Column(String, nullable=False)
     created_at = Column(DateTime, default=_utc_now_naive)
@@ -42,7 +38,7 @@ class Events(Base):
     news_id = Column(String, nullable=False)
     event_start = Column(String, nullable=False)
     event_end = Column(String, nullable=False)
-    location = Column(String, nullable=False)
+    location = Column(String(EVENT_LOCATION_LEN), nullable=False)
     max_partic = Column(Integer, nullable=False)
     cur_partic = Column(Integer, nullable=False)
     is_reg_open = Column(Boolean, nullable=False, default=False)
@@ -54,24 +50,24 @@ class Registrations(Base):
     event_id = Column(String, nullable=False)
     user_id = Column(String, nullable=False)
     status = Column(String, default="registration open")
-    comment = Column(String(USER_COMMENT_MAX), nullable=True)
+    comment = Column(String(COMMENT_MAX), nullable=True)
 
 
 class OfferNews(Base):
     __tablename__ = "offernews"
     id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
-    title = Column(String, nullable=False)
-    content = Column(Text, nullable=False)
+    title = Column(String(TITLE_LEN), nullable=False)
+    content = Column(Text(CONTENT_LEN), nullable=False)
     image_url = Column(String, nullable=True)
     author_id = Column(String, nullable=False)
-    contacts_author = Column(String, nullable=False)
+    contacts_author = Column(String(COMMENT_MAX), nullable=False)
     has_event = Column(Boolean, default=False)
     event_id = Column(String, nullable=True)
     has_topic = Column(Boolean, default=False)
     topic_id = Column(String, nullable=True)
     status_mod = Column(String, default="draft")
     admin_id = Column(String, nullable=True)
-    comment_admin = Column(Text, nullable=True)
+    comment_admin = Column(Text(COMMENT_MAX), nullable=True)
     created_at = Column(DateTime, default=_utc_now_naive)
 
 
@@ -82,7 +78,7 @@ class OfferEvent(Base):
     news_id = Column(String, nullable=False)
     event_start = Column(String, nullable=False)
     event_end = Column(String, nullable=False)
-    location = Column(String, nullable=False)
+    location = Column(String(EVENT_LOCATION_LEN), nullable=False)
     max_partic = Column(Integer, nullable=False)
     cur_partic = Column(Integer, nullable=False)
     is_reg_open = Column(Boolean, nullable=False, default=False)
@@ -91,7 +87,7 @@ class OfferEvent(Base):
 class OfferTopic(Base):
     __tablename__ = "offertopics"
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
-    title = Column(String(50), nullable=False)
+    title = Column(String(TITLE_LEN), nullable=False)
     anon = Column(Boolean, nullable=False, default=False)
     news_id = Column(String, nullable=True)
 
@@ -135,7 +131,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
+    email = Column(String(USER_EMAIL_LEN), unique=True, index=True)
     role = Column(String, default="student")
     created_at = Column(DateTime, default=_utc_now_naive)
 
@@ -150,7 +146,7 @@ class Topics(Base):
     __tablename__ = "topics"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
-    title = Column(String(50), nullable=False)
+    title = Column(String(TITLE_LEN), nullable=False)
     anon = Column(Boolean, nullable=False, default=False)
     news_id = Column(String, nullable=True)
 
@@ -161,6 +157,22 @@ class Comments(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
     topic_id = Column(String, nullable=False, index=True)
     user_id = Column(String, nullable=False)
-    content = Column(String(200), nullable=False)
+    content = Column(String(USER_COMMENT_MAX_LEN), nullable=False)
     created_at = Column(DateTime, default=_utc_now_naive)
     parent_comment_id = Column(String, nullable=True)
+
+    author = relationship(
+        "User",
+        primaryjoin=lambda: foreign(Comments.user_id) == User.id,
+        foreign_keys=lambda: [Comments.user_id],
+        viewonly=True,
+    )
+
+    parent_comment = relationship(
+        "Comments",
+        primaryjoin=lambda: foreign(Comments.parent_comment_id) == Comments.id,
+        foreign_keys=lambda: [Comments.parent_comment_id],
+        remote_side=lambda: [Comments.id],
+        uselist=False,
+        viewonly=True,
+    )
