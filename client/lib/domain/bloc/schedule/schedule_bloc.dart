@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:client/data/repository/repository.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'schedule_event.dart';
@@ -29,7 +32,14 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
     } catch (e, stacktrace) {
       print(e);
       print(stacktrace);
-      emit(ScheduleError(error: e.toString()));
+      String errorMessage = e.toString();
+      if (e is DioException &&
+          (e.type == DioExceptionType.connectionError ||
+              e.type == DioExceptionType.connectionTimeout ||
+              e.error is SocketException)) {
+        errorMessage = 'Нет подключения к интернету';
+      }
+      emit(ScheduleError(error: errorMessage));
     }
   }
 
@@ -48,7 +58,14 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
     } catch (e, stacktrace) {
       print(e);
       print(stacktrace);
-      emit(ScheduleError(error: e.toString()));
+      String errorMessage = e.toString();
+      if (e is DioException &&
+          (e.type == DioExceptionType.connectionError ||
+              e.type == DioExceptionType.connectionTimeout ||
+              e.error is SocketException)) {
+        errorMessage = 'Нет подключения к интернету';
+      }
+      emit(ScheduleError(error: errorMessage));
     }
   }
 
