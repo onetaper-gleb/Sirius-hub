@@ -1,19 +1,21 @@
-from contextlib import asynccontextmanager
-import fastapi
-from fastapi.staticfiles import StaticFiles
-import os
-import json
 import base64
+import json
+import os
+from contextlib import asynccontextmanager
+
+import fastapi
 from dotenv import load_dotenv
+from fastapi.staticfiles import StaticFiles
 
 load_dotenv()
 
-from database.database import engine, Base
-from database import models
-from utils.logger import set_logger
-
 import firebase_admin
 from firebase_admin import credentials
+
+from database import models
+from database.database import Base, engine
+from utils.logger import set_logger
+
 
 def init_firebase():
     base64_config = os.getenv("FIREBASE_CONFIG_BASE64")
@@ -28,18 +30,20 @@ def init_firebase():
         cred = credentials.Certificate("firebase-adminsdk.json")
         firebase_admin.initialize_app(cred)
 
+
 init_firebase()
 set_logger()
 
-import schedule
 import auth
-import news
-import profiles
 import forum
 import manage_roles
+import news
 import newsoffers
+import profiles
+import schedule
 
 os.makedirs("uploads", exist_ok=True)
+
 
 @asynccontextmanager
 async def lifespan(app: fastapi.FastAPI):
@@ -49,11 +53,8 @@ async def lifespan(app: fastapi.FastAPI):
     print("БД готова!")
     yield
 
-app = fastapi.FastAPI(
-    title="CampusHub",
-    version="0.0.0",
-    lifespan=lifespan
-)
+
+app = fastapi.FastAPI(title="CampusHub", version="0.0.0", lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory="uploads"), name="static")
 app.include_router(auth.router)

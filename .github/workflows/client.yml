@@ -1,0 +1,60 @@
+name: PR Client CI
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths: [ 'client/**' ]
+
+permissions:
+  contents: write
+
+jobs:
+  format-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install client dependencies
+        working-directory: client
+        run: flutter pub get
+
+      - name: Format Dart code
+        working-directory: client
+        run: dart format lib test
+
+      - name: Auto-commit formatting changes
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: auto-format code"
+          file_pattern: "client/**/*.dart"
+
+  client-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run Flutter tests
+        run: flutter test
