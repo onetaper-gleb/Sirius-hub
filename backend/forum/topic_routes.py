@@ -22,8 +22,6 @@ topic_router = APIRouter(
 logger = logging.getLogger("logs")
 
 
-
-
 async def _get_db_user(db: AsyncSession, uid: str) -> User | None:
     result = await db.execute(select(User).where(User.id == uid))
     return result.scalar_one_or_none()
