@@ -525,10 +525,13 @@ async def delete_reg(
 
     event = await get_event_or_404(db, event_id, for_update=True)
     result = await db.execute(
-        select(Registrations).where(
+        select(Registrations)
+        .where(
             Registrations.event_id == event_id, Registrations.user_id == user.get("uid")
-        ).with_for_update())
-    
+        )
+        .with_for_update()
+    )
+
     registration = result.scalar_one_or_none()
     if not registration:
         raise HTTPException(status_code=404, detail="Регистрация не найдена")
@@ -575,10 +578,11 @@ async def update_part_status(
         raise HTTPException(status_code=404, detail="Новость не найдена")
 
     result = await db.execute(
-        select(Registrations).where(
-            Registrations.event_id == event_id, Registrations.user_id == user_id
-        ).with_for_update())
-    
+        select(Registrations)
+        .where(Registrations.event_id == event_id, Registrations.user_id == user_id)
+        .with_for_update()
+    )
+
     registration = result.scalar_one_or_none()
 
     if not registration:

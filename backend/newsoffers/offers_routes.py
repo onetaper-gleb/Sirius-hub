@@ -65,7 +65,9 @@ async def update_offer(
 
     if request.has_event:
         if offer.event_id:
-            offer_event = await get_offer_event_or_404(db, offer.event_id, for_update=True)
+            offer_event = await get_offer_event_or_404(
+                db, offer.event_id, for_update=True
+            )
             if request.event_status is not None:
                 validate_event_status(request.event_status)
                 offer_event.status = request.event_status
@@ -108,7 +110,9 @@ async def update_offer(
 
     if request.has_topic:
         if offer.topic_id:
-            offer_topic = await get_offer_topic_or_404(db, offer.topic_id, for_update=True)
+            offer_topic = await get_offer_topic_or_404(
+                db, offer.topic_id, for_update=True
+            )
             if request.title is not None:
                 offer_topic.title = request.title
             if request.anon is not None:
@@ -143,7 +147,9 @@ async def get_offer_or_404(db: AsyncSession, news_id: str, for_update=False):
     return offer
 
 
-async def get_offer_event_or_404(db: AsyncSession, offer_event_id: str, for_update=False):
+async def get_offer_event_or_404(
+    db: AsyncSession, offer_event_id: str, for_update=False
+):
     stmt = select(OfferEvent).where(OfferEvent.id == offer_event_id)
     if for_update:
         stmt = stmt.with_for_update()
@@ -156,7 +162,9 @@ async def get_offer_event_or_404(db: AsyncSession, offer_event_id: str, for_upda
     return offer_event
 
 
-async def get_offer_topic_or_404(db: AsyncSession, offer_topic_id: str, for_update=False):
+async def get_offer_topic_or_404(
+    db: AsyncSession, offer_topic_id: str, for_update=False
+):
     stmt = select(OfferTopic).where(OfferTopic.id == offer_topic_id)
     if for_update:
         stmt = stmt.with_for_update()
@@ -379,10 +387,14 @@ async def moderate_offer(
             new_news = await create_news(offer, db)
 
             if offer.event_id:
-                offer_event = await get_offer_event_or_404(db, offer.event_id, for_update=True)
+                offer_event = await get_offer_event_or_404(
+                    db, offer.event_id, for_update=True
+                )
                 await db.delete(offer_event)
             if offer.topic_id:
-                offer_topic = await get_offer_topic_or_404(db, offer.topic_id, for_update=True)
+                offer_topic = await get_offer_topic_or_404(
+                    db, offer.topic_id, for_update=True
+                )
                 await db.delete(offer_topic)
             if offer.image_url:
                 await delete_old_image(offer.image_url)
@@ -444,11 +456,15 @@ async def delete_offer(
             await delete_old_image(news_item.image_url)
 
         if news_item.event_id:
-            offer_event = await get_offer_event_or_404(db, news_item.event_id, for_update=True)
+            offer_event = await get_offer_event_or_404(
+                db, news_item.event_id, for_update=True
+            )
             await db.delete(offer_event)
 
         if news_item.topic_id:
-            offer_topic = await get_offer_topic_or_404(db, news_item.topic_id, for_update=True)
+            offer_topic = await get_offer_topic_or_404(
+                db, news_item.topic_id, for_update=True
+            )
             await db.delete(offer_topic)
 
         await db.delete(news_item)

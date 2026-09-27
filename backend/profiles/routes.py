@@ -6,7 +6,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth.auth_routes import get_current_user
-from database.database import get_db
 from database.constants import (
     USER_AVATAR_EMOJI_MAX_LEN,
     USER_BIO_MAX_LEN,
@@ -14,6 +13,7 @@ from database.constants import (
     USER_GROUP_CODE_MAX_LEN,
     USER_MESSENGER_HANDLE_MAX_LEN,
 )
+from database.database import get_db
 from database.models import User as DBUser
 
 router = APIRouter(

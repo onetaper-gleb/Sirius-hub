@@ -3,11 +3,11 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
-from sqlalchemy.orm import relationship, foreign
-
-from .database import Base
+from sqlalchemy.orm import foreign, relationship
 
 from database.constants import *
+
+from .database import Base
 
 
 def _utc_now_naive() -> datetime:
