@@ -104,8 +104,11 @@ class AvatarPatchBody(BaseModel):
         return v
 
 
-async def _get_db_user(db: AsyncSession, uid: str) -> DBUser | None:
-    result = await db.execute(select(DBUser).where(DBUser.id == uid))
+async def _get_db_user(db: AsyncSession, uid: str, for_update=False) -> DBUser | None:
+    stmt = select(DBUser).where(DBUser.id == uid)
+    if for_update:
+        stmt = stmt.with_for_update()
+    result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
 
@@ -146,7 +149,7 @@ async def update_profile(
     user_data: dict = Depends(get_current_user),
 ):
     uid = user_data.get("uid")
-    row = await _get_db_user(db, uid)
+    row = await _get_db_user(db, uid, for_update=True)
     if row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -170,7 +173,7 @@ async def patch_avatar(
     user_data: dict = Depends(get_current_user),
 ):
     uid = user_data.get("uid")
-    row = await _get_db_user(db, uid)
+    row = await _get_db_user(db, uid, for_update=True)
     if row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

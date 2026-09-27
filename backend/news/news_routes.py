@@ -91,33 +91,57 @@ async def delete_old_image(image_url: str | None) -> None:
         logger.info("Successful image deletion")
 
 
-async def get_news_or_404(db: AsyncSession, news_id: str):
-    result = await db.execute(select(News).where(News.id == news_id))
+async def get_news_or_404(db: AsyncSession, news_id: str, for_update=False):
+
+    stmt = select(News).where(News.id == news_id)
+    if for_update:
+        stmt = stmt.with_for_update()
+
+    result = await db.execute(stmt)
     news = result.scalar_one_or_none()
+
     if not news:
         raise NotFound(status_code=404, detail="Новость не найдена")
     return news
 
 
-async def get_event_or_404(db: AsyncSession, event_id: str):
-    result = await db.execute(select(Events).where(Events.id == event_id))
+async def get_event_or_404(db: AsyncSession, event_id: str, for_update=False):
+
+    stmt = select(Events).where(Events.id == event_id)
+    if for_update:
+        stmt = stmt.with_for_update()
+
+    result = await db.execute(stmt)
     event = result.scalar_one_or_none()
+
     if not event:
         raise NotFound(status_code=404, detail="Событие не найдено")
     return event
 
 
-async def get_registration_or_404(db: AsyncSession, reg_id: str):
-    result = await db.execute(select(Registrations).where(Registrations.id == reg_id))
+async def get_registration_or_404(db: AsyncSession, reg_id: str, for_update=False):
+
+    stmt = select(Registrations).where(Registrations.id == reg_id)
+    if for_update:
+        stmt = stmt.with_for_update()
+
+    result = await db.execute(stmt)
     reg = result.scalar_one_or_none()
+
     if not reg:
         raise NotFound(status_code=404, detail="Событие не найдено")
     return reg
 
 
-async def get_topic_or_404(db: AsyncSession, topic_id: str):
-    result = await db.execute(select(Topics).where(Topics.id == topic_id))
+async def get_topic_or_404(db: AsyncSession, topic_id: str, for_update=False):
+
+    stmt = select(Topics).where(Topics.id == topic_id)
+    if for_update:
+        stmt = stmt.with_for_update()
+
+    result = await db.execute(stmt)
     topic = result.scalar_one_or_none()
+
     if not topic:
         raise NotFound(status_code=404, detail="Топик не найден")
     return topic
@@ -251,7 +275,7 @@ async def update_news(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    news = await get_news_or_404(db, news_id)
+    news = await get_news_or_404(db, news_id, for_update=True)
     logger.debug("Fetching news by ID")
 
     if request.image:
@@ -274,7 +298,7 @@ async def update_news(
 
     if request.has_event:
         if news.event_id:
-            event = await get_event_or_404(db, news.event_id)
+            event = await get_event_or_404(db, news.event_id, for_update=True)
             logger.debug("Fetching event by ID")
 
             if request.event_status is not None:
@@ -321,7 +345,7 @@ async def update_news(
             news.event_id = new_event.id
 
     elif request.has_event is False and news.event_id:
-        event = await get_event_or_404(db, news.event_id)
+        event = await get_event_or_404(db, news.event_id, for_update=True)
         logger.debug("Fetching event by ID")
 
         if event:
@@ -331,7 +355,7 @@ async def update_news(
 
     if request.has_topic:
         if news.topic_id:
-            topic = await get_topic_or_404(db, news.topic_id)
+            topic = await get_topic_or_404(db, news.topic_id, for_update=True)
             logger.debug("Fetching topic by ID")
             if request.title is not None:
                 topic.title = request.title
@@ -352,7 +376,7 @@ async def update_news(
             news.topic_id = new_topic.id
 
     elif request.has_topic is False and news.topic_id:
-        topic = await get_topic_or_404(db, news.topic_id)
+        topic = await get_topic_or_404(db, news.topic_id, for_update=True)
         logger.debug("Fetching topic by ID")
 
         if topic:
@@ -389,7 +413,7 @@ async def delete_news(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    news_item = await get_news_or_404(db, news_id)
+    news_item = await get_news_or_404(db, news_id, for_update=True)
     role = user.get("role", "student")
 
     if news_item.author_id != user.get("uid") and role not in ["admin", "council"]:
@@ -399,11 +423,11 @@ async def delete_news(
         if news_item.image_url:
             await delete_old_image(news_item.image_url)
         if news_item.event_id:
-            event = await get_event_or_404(db, news_item.event_id)
+            event = await get_event_or_404(db, news_item.event_id, for_update=True)
             if event:
                 await db.delete(event)
         if news_item.topic_id:
-            topic = await get_topic_or_404(db, news_item.topic_id)
+            topic = await get_topic_or_404(db, news_item.topic_id, for_update=True)
             if topic:
                 await db.delete(topic)
 
@@ -441,7 +465,7 @@ async def update_event_status(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    event = await get_event_or_404(db, event_id)
+    event = await get_event_or_404(db, event_id, for_update=True)
 
     validate_event_status(status)
 
@@ -459,7 +483,7 @@ async def create_reg(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    event = await get_event_or_404(db, event_id)
+    event = await get_event_or_404(db, event_id, for_update=True)
     if not event.is_reg_open:
         raise HTTPException(status_code=400, detail="Регистрация на событие закрыта")
 
@@ -498,16 +522,17 @@ async def delete_reg(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
+
+    event = await get_event_or_404(db, event_id, for_update=True)
     result = await db.execute(
         select(Registrations).where(
             Registrations.event_id == event_id, Registrations.user_id == user.get("uid")
-        )
-    )
+        ).with_for_update())
+    
     registration = result.scalar_one_or_none()
     if not registration:
         raise HTTPException(status_code=404, detail="Регистрация не найдена")
 
-    event = await get_event_or_404(db, event_id)
     await db.delete(registration)
 
     if registration.status != RegStatus.waiting_list.value:
@@ -542,7 +567,7 @@ async def update_part_status(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    event = await get_event_or_404(db, event_id)
+    event = await get_event_or_404(db, event_id, for_update=True)
     news = await get_news_or_404(db, event.news_id)
     role = user.get("role", "student")
 
@@ -552,8 +577,8 @@ async def update_part_status(
     result = await db.execute(
         select(Registrations).where(
             Registrations.event_id == event_id, Registrations.user_id == user_id
-        )
-    )
+        ).with_for_update())
+    
     registration = result.scalar_one_or_none()
 
     if not registration:
