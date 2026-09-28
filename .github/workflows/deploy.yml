@@ -3,6 +3,7 @@ name: Deploy FastAPI
 on:
   push:
     branches: [ main ]
+    paths: [ 'backend/**' ]
 
 jobs:
   deploy:
