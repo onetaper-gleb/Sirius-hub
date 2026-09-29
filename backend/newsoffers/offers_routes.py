@@ -65,7 +65,9 @@ async def update_offer(
 
     if request.has_event:
         if offer.event_id:
-            offer_event = await get_offer_event_or_404(db, offer.event_id)
+            offer_event = await get_offer_event_or_404(
+                db, offer.event_id, for_update=True
+            )
             if request.event_status is not None:
                 validate_event_status(request.event_status)
                 offer_event.status = request.event_status
@@ -101,14 +103,16 @@ async def update_offer(
             offer.event_id = new_event.id
 
     elif request.has_event is False and offer.event_id:
-        offer_event = await get_offer_event_or_404(db, offer.event_id)
+        offer_event = await get_offer_event_or_404(db, offer.event_id, for_update=True)
         if offer_event:
             await db.delete(offer_event)
             offer.event_id = None
 
     if request.has_topic:
         if offer.topic_id:
-            offer_topic = await get_offer_topic_or_404(db, offer.topic_id)
+            offer_topic = await get_offer_topic_or_404(
+                db, offer.topic_id, for_update=True
+            )
             if request.title is not None:
                 offer_topic.title = request.title
             if request.anon is not None:
@@ -125,30 +129,49 @@ async def update_offer(
             offer.topic_id = new_topic.id
 
     elif request.has_topic is False and offer.topic_id:
-        offer_topic = await get_offer_topic_or_404(db, offer.topic_id)
+        offer_topic = await get_offer_topic_or_404(db, offer.topic_id, for_update=True)
         await db.delete(offer_topic)
         offer.topic_id = None
 
 
-async def get_offer_or_404(db: AsyncSession, news_id: str):
-    result = await db.execute(select(OfferNews).where(OfferNews.id == news_id))
+async def get_offer_or_404(db: AsyncSession, news_id: str, for_update=False):
+    stmt = select(OfferNews).where(OfferNews.id == news_id)
+    if for_update:
+        stmt = stmt.with_for_update()
+
+    result = await db.execute(stmt)
     offer = result.scalar_one_or_none()
+
     if not offer:
         raise NotFound(status_code=404, detail="Новость предложки не найдена")
     return offer
 
 
-async def get_offer_event_or_404(db: AsyncSession, offer_event_id: str):
-    result = await db.execute(select(OfferEvent).where(OfferEvent.id == offer_event_id))
+async def get_offer_event_or_404(
+    db: AsyncSession, offer_event_id: str, for_update=False
+):
+    stmt = select(OfferEvent).where(OfferEvent.id == offer_event_id)
+    if for_update:
+        stmt = stmt.with_for_update()
+
+    result = await db.execute(stmt)
     offer_event = result.scalar_one_or_none()
+
     if not offer_event:
         raise NotFound(status_code=404, detail="Событие предложки не найдено")
     return offer_event
 
 
-async def get_offer_topic_or_404(db: AsyncSession, offer_topic_id: str):
-    result = await db.execute(select(OfferTopic).where(OfferTopic.id == offer_topic_id))
+async def get_offer_topic_or_404(
+    db: AsyncSession, offer_topic_id: str, for_update=False
+):
+    stmt = select(OfferTopic).where(OfferTopic.id == offer_topic_id)
+    if for_update:
+        stmt = stmt.with_for_update()
+
+    result = await db.execute(stmt)
     offer_topic = result.scalar_one_or_none()
+
     if not offer_topic:
         raise NotFound(status_code=404, detail="Топик предложки не найден")
     return offer_topic
@@ -264,14 +287,14 @@ async def get_offer(
 
 
 @router.put("/admin/offers/{offer_id}", response_model=OfferNewsResponse)
-async def update_offer(
+async def update_offer_admin(
     news_id: str,
     request: OfferNewsEventsRequest,
     image: UploadFile = File(None),
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    offer = await get_offer_or_404(db, news_id)
+    offer = await get_offer_or_404(db, news_id, for_update=True)
     role = user.get("role", "student")
     aid = user.get("uid")
 
@@ -294,7 +317,7 @@ async def update_my_offer(
     user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    offer = await get_offer_or_404(db, news_id)
+    offer = await get_offer_or_404(db, news_id, for_update=True)
 
     if offer.author_id != user.get("uid"):
         raise HTTPException(status_code=403, detail="Нет прав на редактирование")
@@ -318,7 +341,7 @@ async def submit_for_moderation(
     user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    offer = await get_offer_or_404(db, news_id)
+    offer = await get_offer_or_404(db, news_id, for_update=True)
     if offer.author_id != user.get("uid"):
         raise HTTPException(status_code=403, detail="Нет прав на отправку")
 
@@ -344,7 +367,7 @@ async def moderate_offer(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    offer = await get_offer_or_404(db, offer_id)
+    offer = await get_offer_or_404(db, offer_id, for_update=True)
     if request.comment_admin is not None:
         offer.comment_admin = request.comment_admin
 
@@ -364,10 +387,14 @@ async def moderate_offer(
             new_news = await create_news(offer, db)
 
             if offer.event_id:
-                offer_event = await get_offer_event_or_404(db, offer.event_id)
+                offer_event = await get_offer_event_or_404(
+                    db, offer.event_id, for_update=True
+                )
                 await db.delete(offer_event)
             if offer.topic_id:
-                offer_topic = await get_offer_topic_or_404(db, offer.topic_id)
+                offer_topic = await get_offer_topic_or_404(
+                    db, offer.topic_id, for_update=True
+                )
                 await db.delete(offer_topic)
             if offer.image_url:
                 await delete_old_image(offer.image_url)
@@ -418,7 +445,7 @@ async def delete_offer(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    news_item = await get_offer_or_404(db, news_id)
+    news_item = await get_offer_or_404(db, news_id, for_update=True)
     role = user.get("role", "student")
 
     if news_item.author_id != user.get("uid") and role in ["student", "council"]:
@@ -427,11 +454,17 @@ async def delete_offer(
     try:
         if news_item.image_url:
             await delete_old_image(news_item.image_url)
-        offer_event = await get_offer_event_or_404(db, news_item.event_id)
-        offer_topic = await get_offer_topic_or_404(db, news_item.topic_id)
-        if offer_event:
+
+        if news_item.event_id:
+            offer_event = await get_offer_event_or_404(
+                db, news_item.event_id, for_update=True
+            )
             await db.delete(offer_event)
-        if offer_topic:
+
+        if news_item.topic_id:
+            offer_topic = await get_offer_topic_or_404(
+                db, news_item.topic_id, for_update=True
+            )
             await db.delete(offer_topic)
 
         await db.delete(news_item)

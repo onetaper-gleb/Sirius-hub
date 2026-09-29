@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from auth.auth_routes import get_current_user, require_council_role
+from database.constants import MIN_LEN, TITLE_LEN
 from database.database import get_db
 from database.models import Comments, Topics
 
@@ -47,7 +48,7 @@ async def create_topic(
     db: AsyncSession = Depends(get_db),
 ):
     title = request.title.strip()
-    if not 1 < len(title) < 50:
+    if not MIN_LEN < len(title) < TITLE_LEN:
         raise HTTPException(status_code=400, detail="Title is invalid")
     new_topic = Topics(title=title, anon=request.anon)
     db.add(new_topic)

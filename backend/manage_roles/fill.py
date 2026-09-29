@@ -91,7 +91,7 @@ async def create_firebase_users_and_db():
             "avatar_emoji": "👨‍🎓",
             "group_code": "G001",
             "bio": "Test student bio",
-            "telegram_handle": "@test_student",
+            "messenger_handle": "@test_student",
         },
         {
             "email": "test-council@gmail.com",
@@ -101,7 +101,7 @@ async def create_firebase_users_and_db():
             "avatar_emoji": "👨‍💼",
             "group_code": "G002",
             "bio": "Test council member bio",
-            "telegram_handle": "@test_council",
+            "messenger_handle": "@test_council",
         },
         {
             "email": "test-admin@gmail.com",
@@ -111,7 +111,7 @@ async def create_firebase_users_and_db():
             "avatar_emoji": "👨‍💻",
             "group_code": "G003",
             "bio": "Test admin bio",
-            "telegram_handle": "@test_admin",
+            "messenger_handle": "@test_admin",
         },
         {
             "email": "test-superadmin@gmail.com",
@@ -121,7 +121,7 @@ async def create_firebase_users_and_db():
             "avatar_emoji": "👑",
             "group_code": "G004",
             "bio": "Test super admin bio",
-            "telegram_handle": "@test_admin",
+            "messenger_handle": "@test_admin",
         },
         {
             "email": "new-email1@gmail.com",
@@ -131,7 +131,7 @@ async def create_firebase_users_and_db():
             "avatar_emoji": "👤",
             "group_code": "G005",
             "bio": "New user 1 bio",
-            "telegram_handle": "@new_user1",
+            "messenger_handle": "@new_user1",
         },
         {
             "email": "new-email2@gmail.com",
@@ -141,7 +141,7 @@ async def create_firebase_users_and_db():
             "avatar_emoji": "👤",
             "group_code": "G006",
             "bio": "New user 2 bio",
-            "telegram_handle": "@new_user2",
+            "messenger_handle": "@new_user2",
         },
     ]
 
@@ -209,7 +209,7 @@ async def create_firebase_users_and_db():
                     avatar_emoji=user_data.get("avatar_emoji"),
                     group_code=user_data.get("group_code"),
                     bio=user_data.get("bio"),
-                    telegram_handle=user_data.get("telegram_handle"),
+                    messenger_handle=user_data.get("messenger_handle"),
                     created_at=utc_now_naive(),
                 )
                 session.add(user)
