@@ -79,7 +79,7 @@ class ProfileUpdateBody(BaseModel):
 
     @field_validator("messenger_handle")
     @classmethod
-    def telegram_strip(cls, v: str | None) -> str | None:
+    def messenger_strip(cls, v: str | None) -> str | None:
         if v is None or v == "":
             return None
         v = v.strip()
