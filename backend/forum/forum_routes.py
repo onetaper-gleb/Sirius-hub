@@ -6,9 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from auth.auth_routes import get_current_user, require_council_role
+from database.constants import MIN_LEN, TITLE_LEN
 from database.database import get_db
 from database.models import Comments, Topics
-from database.constants import MIN_LEN, TITLE_LEN
 
 from .schemas import CreateTopicRequest
 from .schemas import Topic as TopicScheme

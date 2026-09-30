@@ -9,6 +9,8 @@ from .database import Base
 
 from database.constants import *
 
+from .database import Base
+
 
 def _utc_now_naive() -> datetime:
     """UTC wall time without tzinfo — matches PostgreSQL TIMESTAMP WITHOUT TIME ZONE + asyncpg."""

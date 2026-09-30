@@ -1,6 +1,9 @@
 from typing import Optional
+
 from pydantic import BaseModel, Field
-from database.constants import USER_COMMENT_MAX_LEN, TITLE_LEN
+
+from database.constants import TITLE_LEN, USER_COMMENT_MAX_LEN
+
 
 class Topic(BaseModel):
     title: str | None
@@ -27,7 +30,7 @@ class CreateCommentRequest(BaseModel):
 class UpdateCommentRequest(BaseModel):
     content: str = Field(..., min_length=2, max_length=199)
 
-    
+
 class Comment(BaseModel):
     content: str | None
     comment_id: str | None

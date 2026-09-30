@@ -7,15 +7,13 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload
 
 from auth.auth_routes import get_current_user, require_council_role
+from database.constants import MIN_LEN, USER_COMMENT_MAX_LEN
 from database.database import get_db
 from database.models import Comments, Topics
 from utils.logger import set_logger
 
 from .schemas import Comment as CommentScheme
-from .schemas import CreateCommentRequest
-from .schemas import UpdateCommentRequest
-
-from database.constants import MIN_LEN, USER_COMMENT_MAX_LEN
+from .schemas import CreateCommentRequest, UpdateCommentRequest
 
 topic_router = APIRouter(
     prefix="/topic",
@@ -49,12 +47,16 @@ async def _get_db_comment(db: AsyncSession, comment_id: str, for_update: bool = 
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
-def get_reply_to_author_id(topic: Topics | None, parent_comment: Comments | None) -> str | None:
+
+def get_reply_to_author_id(
+    topic: Topics | None, parent_comment: Comments | None
+) -> str | None:
     if not parent_comment or not topic or topic.anon:
         return None
     if parent_comment.author:
         return parent_comment.author.id
     return None
+
 
 @topic_router.get("/comments", response_model=List[CommentScheme])
 async def get_comments(
@@ -69,7 +71,8 @@ async def get_comments(
 
     if topic is None:
         logger.warning(
-            f"User tried to get comments from a non-existent topic {topic_id}")
+            f"User tried to get comments from a non-existent topic {topic_id}"
+        )
         raise HTTPException(status_code=404, detail="Topic does not exist")
 
     stmt = (
@@ -93,7 +96,9 @@ async def get_comments(
                 "comment_id": comment.id,
                 "author": for_author(topic, comment.user_id),
                 "parent_comment_id": comment.parent_comment_id,
-                "reply_to_author": get_reply_to_author_id(topic, comment.parent_comment),
+                "reply_to_author": get_reply_to_author_id(
+                    topic, comment.parent_comment
+                ),
             }
         )
 
@@ -124,7 +129,9 @@ async def create_comment(
 
     reply_to_author = None
     if request.parent_comment_id:
-        parent_comment = await _get_db_comment(db, request.parent_comment_id, for_update=True)
+        parent_comment = await _get_db_comment(
+            db, request.parent_comment_id, for_update=True
+        )
 
         if parent_comment is None:
             logger.warning(f"User tried to reply to a non-existent comment")
@@ -132,8 +139,10 @@ async def create_comment(
 
         if parent_comment.topic_id != request.topic_id:
             logger.warning(f"User tried to reply to a comment from another topic")
-            raise HTTPException(status_code=400, detail="Can not reply to a comment from another topic")
-  
+            raise HTTPException(
+                status_code=400, detail="Can not reply to a comment from another topic"
+            )
+
         if parent_comment and not topic.anon and parent_comment.author:
             reply_to_author = parent_comment.author.id
 
@@ -160,7 +169,7 @@ async def create_comment(
     }
 
 
-@topic_router.patch('/comments/{comment_id}', response_model=CommentScheme)
+@topic_router.patch("/comments/{comment_id}", response_model=CommentScheme)
 async def update_comment(
     request: UpdateCommentRequest,
     comment_id: str,
@@ -180,12 +189,14 @@ async def update_comment(
     if comment is None:
         logger.warning(f"User tried to edit a non-existent comment {comment_id}")
         raise HTTPException(status_code=404, detail="Comment not found")
-    
+
     if comment.user_id != current_user_id:
         logger.warning(
-            f"User {current_user_id} unauthorized to edit comment {comment_id}")
+            f"User {current_user_id} unauthorized to edit comment {comment_id}"
+        )
         raise HTTPException(
-            status_code=403, detail="Not authorized to edit this comment")
+            status_code=403, detail="Not authorized to edit this comment"
+        )
 
     topic = await _get_db_topic(db, comment.topic_id)
     if topic is None:
@@ -207,7 +218,7 @@ async def update_comment(
         "parent_comment_id": comment.parent_comment_id,
         "reply_to_author": reply_to_author,
     }
-    
+
 
 @topic_router.delete("/comments/{comment_id}")
 async def delete_comment(
