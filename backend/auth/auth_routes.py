@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from auth.schemas import PromoteRequest
 from auth.schemas import InitUserRequest
 from database.database import get_db
-from database.models import USER_DISPLAY_NAME_MAX_LEN
 from database.models import User as DBUser
 
 security = HTTPBearer()
@@ -23,7 +22,7 @@ def get_current_user(res: HTTPAuthorizationCredentials = Depends(security)):
     token = res.credentials
 
     try:
-        decoded_token = auth.verify_id_token(token)
+        decoded_token = auth.verify_id_token(token)  # replace
         return decoded_token
     except Exception as e:
         raise HTTPException(
@@ -65,7 +64,7 @@ async def init_new_user(
     display_name = _name_from_token(user_data.get("name"))
 
     try:
-        auth.set_custom_user_claims(uid, {"role": "student"})
+        auth.set_custom_user_claims(uid, {"role": "student"})  # replace
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Firebase error: {e}")
 
@@ -95,15 +94,15 @@ async def init_new_user(
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
 
-@router.post("/admin-action")
-async def do_something_secret(user: dict = Depends(get_current_user)):
-    role = user.get("role", "student")
-    if role != "council":
-        raise HTTPException(
-            status_code=403, detail="Доступ запрещен. Только для студсовета."
-        )
+# @router.post("/admin-action")
+# async def do_something_secret(user: dict = Depends(get_current_user)):
+#     role = user.get("role", "student")
+#     if role != "council":
+#         raise HTTPException(
+#             status_code=403, detail="Доступ запрещен. Только для студсовета."
+#         )
 
-    return {"message": "Секретное действие выполнено"}
+#     return {"message": "Секретное действие выполнено"}
 
 
 # TODO УДАЛИТЬ ЭТУ АПИШКУ КОГДА БУДУТ ИТОГОВЫЕ ПОЛЬЗОВАТЕЛИ.
@@ -114,7 +113,7 @@ async def make_me_council(
     uid = user.get("uid")
 
     try:
-        auth.set_custom_user_claims(uid, {"role": "council"})
+        auth.set_custom_user_claims(uid, {"role": "council"})  # replace
 
         stmt = update(DBUser).where(DBUser.id == uid).values(role="council")
         await db_postgres.execute(stmt)

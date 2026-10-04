@@ -6,14 +6,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth.auth_routes import get_current_user
-from database.database import get_db
-from database.models import (
+from database.constants import (
     USER_AVATAR_EMOJI_MAX_LEN,
     USER_BIO_MAX_LEN,
     USER_DISPLAY_NAME_MAX_LEN,
     USER_GROUP_CODE_MAX_LEN,
-    USER_TELEGRAM_HANDLE_MAX_LEN,
+    USER_MESSENGER_HANDLE_MAX_LEN,
 )
+from database.database import get_db
 from database.models import User as DBUser
 from database.models import StudyGroup 
 
@@ -31,7 +31,7 @@ class ProfileResponse(BaseModel):
     display_name: str | None
     group_code: str | None
     bio: str | None
-    telegram_handle: str | None
+    messenger_handle: str | None
     created_at: datetime.datetime
 
     class Config:
@@ -47,7 +47,7 @@ class PublicProfileResponse(BaseModel):
     display_name: str | None
     group_code: str | None
     bio: str | None
-    telegram_handle: str | None
+    messenger_handle: str | None
     created_at: datetime.datetime
 
     class Config:
@@ -66,8 +66,8 @@ class ProfileUpdateBody(BaseModel):
     display_name: str | None = Field(default=None, max_length=USER_DISPLAY_NAME_MAX_LEN)
     group_code: str | None = Field(default=None, max_length=USER_GROUP_CODE_MAX_LEN)
     bio: str | None = Field(default=None, max_length=USER_BIO_MAX_LEN)
-    telegram_handle: str | None = Field(
-        default=None, max_length=USER_TELEGRAM_HANDLE_MAX_LEN
+    messenger_handle: str | None = Field(
+        default=None, max_length=USER_MESSENGER_HANDLE_MAX_LEN
     )
 
     @field_validator("group_code")
@@ -86,7 +86,7 @@ class ProfileUpdateBody(BaseModel):
         v = v.strip()
         return v or None
 
-    @field_validator("telegram_handle")
+    @field_validator("messenger_handle")
     @classmethod
     def telegram_strip(cls, v: str | None) -> str | None:
         if v is None or v == "":
@@ -113,8 +113,11 @@ class AvatarPatchBody(BaseModel):
         return v
 
 
-async def _get_db_user(db: AsyncSession, uid: str) -> DBUser | None:
-    result = await db.execute(select(DBUser).where(DBUser.id == uid))
+async def _get_db_user(db: AsyncSession, uid: str, for_update=False) -> DBUser | None:
+    stmt = select(DBUser).where(DBUser.id == uid)
+    if for_update:
+        stmt = stmt.with_for_update()
+    result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
 
@@ -163,7 +166,7 @@ async def update_profile(
     user_data: dict = Depends(get_current_user),
 ):
     uid = user_data.get("uid")
-    row = await _get_db_user(db, uid)
+    row = await _get_db_user(db, uid, for_update=True)
     if row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -187,7 +190,7 @@ async def patch_avatar(
     user_data: dict = Depends(get_current_user),
 ):
     uid = user_data.get("uid")
-    row = await _get_db_user(db, uid)
+    row = await _get_db_user(db, uid, for_update=True)
     if row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
