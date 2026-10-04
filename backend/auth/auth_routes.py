@@ -5,8 +5,7 @@ from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.schemas import PromoteRequest
-from auth.schemas import InitUserRequest
+from auth.schemas import InitUserRequest, PromoteRequest
 from database.database import get_db
 from database.models import User as DBUser
 
@@ -57,7 +56,8 @@ def _name_from_token(name: object | None) -> str | None:
 @router.post("/init")
 async def init_new_user(
     request: InitUserRequest,
-    db: AsyncSession = Depends(get_db), user_data: dict = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db),
+    user_data: dict = Depends(get_current_user),
 ):
     uid = user_data.get("uid")
     email = user_data.get("email")

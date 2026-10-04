@@ -14,8 +14,8 @@ from database.constants import (
     USER_MESSENGER_HANDLE_MAX_LEN,
 )
 from database.database import get_db
+from database.models import StudyGroup
 from database.models import User as DBUser
-from database.models import StudyGroup 
 
 router = APIRouter(
     prefix="/profile",
@@ -155,7 +155,7 @@ async def get_user_public_profile(
 async def get_study_groups(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(StudyGroup))
     groups = result.scalars().all()
-    
+
     return groups
 
 
