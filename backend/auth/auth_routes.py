@@ -5,7 +5,8 @@ from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.PromoteRequest import PromoteRequest
+from auth.schemas import PromoteRequest
+from auth.schemas import InitUserRequest
 from database.database import get_db
 from database.models import USER_DISPLAY_NAME_MAX_LEN
 from database.models import User as DBUser
@@ -56,6 +57,7 @@ def _name_from_token(name: object | None) -> str | None:
 
 @router.post("/init")
 async def init_new_user(
+    request: InitUserRequest,
     db: AsyncSession = Depends(get_db), user_data: dict = Depends(get_current_user)
 ):
     uid = user_data.get("uid")
@@ -73,12 +75,14 @@ async def init_new_user(
             email=email,
             role="student",
             display_name=display_name,
+            group_code=request.group_code,
         )
 
         stmt = stmt.on_conflict_do_update(
             index_elements=["id"],
             set_={
                 "email": email,
+                "group_code": request.group_code,
             },
         )
 
@@ -130,11 +134,12 @@ async def promote_user(
     current_admin: dict = Depends(require_council_role),
 ):
     target_uid = request.uid
+    target_role = request.role.value
 
     try:
-        auth.set_custom_user_claims(target_uid, {"role": "council"})
+        auth.set_custom_user_claims(target_uid, {"role": target_role})
 
-        stmt = update(DBUser).where(DBUser.id == target_uid).values(role="council")
+        stmt = update(DBUser).where(DBUser.id == target_uid).values(role=target_role)
         result = await db.execute(stmt)
 
         if result.rowcount == 0:
@@ -146,7 +151,7 @@ async def promote_user(
 
         return {
             "status": "success",
-            "message": f"Пользователь {target_uid} теперь в студсовете.",
+            "message": f"Пользователь {target_uid} теперь выдана роль {target_role}.",
         }
 
     except HTTPException:

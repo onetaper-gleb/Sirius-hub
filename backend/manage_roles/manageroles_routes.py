@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth.auth_routes import get_current_user
-from auth.PromoteRequest import PromoteRequest
+from auth.schemas import PromoteRequest
 from database.database import get_db
 from database.models import USER_DISPLAY_NAME_MAX_LEN
 from database.models import User as DBUser

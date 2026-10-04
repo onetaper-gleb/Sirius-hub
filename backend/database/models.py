@@ -146,6 +146,13 @@ class User(Base):
     telegram_handle = Column(String(USER_TELEGRAM_HANDLE_MAX_LEN), nullable=True)
 
 
+class StudyGroup(Base):
+    __tablename__ = "study_groups"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
+    name = Column(String(USER_GROUP_CODE_MAX_LEN), unique=True, nullable=False)
+
+
 class Topics(Base):
     __tablename__ = "topics"
 
