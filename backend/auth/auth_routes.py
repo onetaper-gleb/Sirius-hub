@@ -58,7 +58,8 @@ def _name_from_token(name: object | None) -> str | None:
 @router.post("/init")
 async def init_new_user(
     request: InitUserRequest,
-    db: AsyncSession = Depends(get_db), user_data: dict = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db),
+    user_data: dict = Depends(get_current_user),
 ):
     uid = user_data.get("uid")
     email = user_data.get("email")
