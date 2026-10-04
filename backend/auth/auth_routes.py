@@ -5,9 +5,8 @@ from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.schemas import PromoteRequest
+from auth.schemas import InitUserRequest, PromoteRequest
 from database.constants import USER_DISPLAY_NAME_MAX_LEN
-from auth.schemas import InitUserRequest
 from database.database import get_db
 from database.models import User as DBUser
 
