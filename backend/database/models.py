@@ -9,8 +9,6 @@ from .database import Base
 
 from database.constants import *
 
-from .database import Base
-
 
 def _utc_now_naive() -> datetime:
     """UTC wall time without tzinfo — matches PostgreSQL TIMESTAMP WITHOUT TIME ZONE + asyncpg."""
@@ -116,7 +114,7 @@ class EventStatus(str, enum.Enum):
 class RegStatus(str, enum.Enum):
     r_open = "registration open"
     moderation = "moderation"
-    confimed = "confimed"
+    confirmed = "confirmed"
     waiting_list = "waiting_list"
     canceled_by_user = "canceled_by_user"
     canceled_by_admin = "canceled_by_admin"
@@ -157,16 +155,18 @@ class Comments(Base):
     __tablename__ = "comments"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
-    topic_id = Column(String, nullable=False, index=True)
+    topic_id = Column(String, ForeignKey("topics.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     content = Column(String(USER_COMMENT_MAX_LEN), nullable=False)
     created_at = Column(DateTime, default=_utc_now_naive)
     parent_comment_id = Column(String, ForeignKey("comments.id", ondelete="CASCADE"), nullable=True)
 
     author = relationship("User")
+    topic = relationship("Topics", passive_deletes=True)
 
     parent_comment = relationship(
         "Comments",
         remote_side=lambda: [Comments.id],
-        uselist=False,
+        uselist=False, 
+        passive_deletes=True,
     )

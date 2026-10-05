@@ -39,7 +39,7 @@ async def _get_db_comment(db: AsyncSession, comment_id: str, for_update: bool = 
     stmt = select(Comments).where(Comments.id == comment_id)
     if not for_update:
         stmt = stmt.options(
-            joinedload(Comments.parent_comment).joinedload(Comments.author),)
+            joinedload(Comments.parent_comment))
 
     if for_update:
         stmt = stmt.with_for_update(of=Comments)
@@ -53,9 +53,7 @@ def get_reply_to_author_id(
 ) -> str | None:
     if not parent_comment or not topic or topic.anon:
         return None
-    if parent_comment.author:
-        return parent_comment.author.id
-    return None
+    return parent_comment.user_id
 
 
 @topic_router.get("/comments", response_model=List[CommentScheme])
@@ -79,7 +77,7 @@ async def get_comments(
         select(Comments)
         .where(Comments.topic_id == topic_id)
         .options(
-            joinedload(Comments.parent_comment).joinedload(Comments.author),
+            joinedload(Comments.parent_comment),
         )
         .order_by(Comments.created_at.desc())
     )
@@ -130,8 +128,7 @@ async def create_comment(
     reply_to_author = None
     if request.parent_comment_id:
         parent_comment = await _get_db_comment(
-            db, request.parent_comment_id, for_update=True
-        )
+            db, request.parent_comment_id, for_update=True)
 
         if parent_comment is None:
             logger.warning(f"User tried to reply to a non-existent comment")
@@ -140,11 +137,10 @@ async def create_comment(
         if parent_comment.topic_id != request.topic_id:
             logger.warning(f"User tried to reply to a comment from another topic")
             raise HTTPException(
-                status_code=400, detail="Can not reply to a comment from another topic"
-            )
+                status_code=400, detail="Can not reply to a comment from another topic")
 
-        if parent_comment and not topic.anon and parent_comment.author:
-            reply_to_author = parent_comment.author.id
+        if not topic.anon:
+            reply_to_author = parent_comment.user_id
 
     new_comment = Comments(
         content=content,
@@ -205,8 +201,10 @@ async def update_comment(
     comment.content = content
 
     reply_to_author = None
-    if comment.parent_comment and not topic.anon and comment.parent_comment.author:
-        reply_to_author = comment.parent_comment.author.id
+    if comment.parent_comment_id and not topic.anon:
+        parent = await _get_db_comment(db, comment.parent_comment_id)
+        if parent:
+            reply_to_author = parent.user_id
 
     logger.info(f"User successfully updated comment {comment_id}")
     await db.commit()

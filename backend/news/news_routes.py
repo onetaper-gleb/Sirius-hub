@@ -4,6 +4,7 @@ import logging
 import os
 import uuid
 from typing import List, Optional
+import binascii
 
 from fastapi import APIRouter, Depends, Form, HTTPException
 from PIL import Image
@@ -17,7 +18,8 @@ from utils.logger import set_logger
 
 from .schemas import (
     EventResponse,
-    NewsEventsRequest,
+    NewsCreateRequest,
+    NewsUpdateRequest,
     NewsResponse,
     RegistrationResponse,
 )
@@ -30,10 +32,12 @@ router = APIRouter(
 logger = logging.getLogger("logs")
 
 MAX_FILE_SIZE = 4 * 1024 * 1024
+UPLOAD_DIR = "uploads"
 
 
-class NotFound(Exception):
-    pass
+class NotFound(HTTPException):
+    def __init__(self, status_code: int = 404, detail: str = "Not found"):
+        super().__init__(status_code=status_code, detail=detail)
 
 
 async def process_image(image: str | None):
@@ -42,7 +46,12 @@ async def process_image(image: str | None):
         logger.debug("Image not found")
         return None
 
-    contents = base64.b64decode(image)
+    try:
+        contents = base64.b64decode(image)
+    except (binascii.Error, ValueError):
+        logger.warning("Invalid base64 format")
+        raise HTTPException(400, "Invalid base64 format")
+    
     if len(contents) > MAX_FILE_SIZE:
 
         logger.warning(
@@ -59,6 +68,8 @@ async def process_image(image: str | None):
 
         img.thumbnail((800, 800))
 
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+
         logger.info("image opened, converted to RGB if needed, and resized")
 
         file_name = f"{uuid.uuid4()}.webp"
@@ -68,10 +79,7 @@ async def process_image(image: str | None):
         logger.info(f"Image saved successfully: {file_path}")
 
         return f"/static/{file_name}"
-    except base64.binascii.Error:
 
-        logger.warning("Invalid base64 format")
-        raise HTTPException(400, "Invalid base64 format")
     except Exception:
 
         logger.warning("Invalid image format or file corrupted")
@@ -119,20 +127,6 @@ async def get_event_or_404(db: AsyncSession, event_id: str, for_update=False):
     return event
 
 
-async def get_registration_or_404(db: AsyncSession, reg_id: str, for_update=False):
-
-    stmt = select(Registrations).where(Registrations.id == reg_id)
-    if for_update:
-        stmt = stmt.with_for_update()
-
-    result = await db.execute(stmt)
-    reg = result.scalar_one_or_none()
-
-    if not reg:
-        raise NotFound(status_code=404, detail="Событие не найдено")
-    return reg
-
-
 async def get_topic_or_404(db: AsyncSession, topic_id: str, for_update=False):
 
     stmt = select(Topics).where(Topics.id == topic_id)
@@ -163,7 +157,7 @@ def validate_registration_status(status: str):
         )
 
 
-async def validate_event_data(request: NewsEventsRequest, db: AsyncSession):
+def validate_event_data(request):
     if not all(
         [
             request.event_status,
@@ -173,7 +167,6 @@ async def validate_event_data(request: NewsEventsRequest, db: AsyncSession):
             request.max_partic,
         ]
     ):
-        await db.rollback()
         raise HTTPException(
             status_code=400,
             detail="Для создания события обязательны все поля: event_status, event_start, event_end, location, max_partic",
@@ -182,16 +175,20 @@ async def validate_event_data(request: NewsEventsRequest, db: AsyncSession):
     validate_event_status(request.event_status)
 
     if request.max_partic < 1:
-        await db.rollback()
         raise HTTPException(status_code=400, detail="max_partic должно быть больше 0")
 
 
 @router.post("/", response_model=NewsResponse)
 async def create_news(
-    request: NewsEventsRequest,
+    request: NewsCreateRequest,
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
+    
+    if request.has_event:
+        validate_event_data(request)
+        logger.debug("Validating event data")
+
     image_url = await process_image(request.image)
     logger.debug("Processing image from request")
 
@@ -211,8 +208,6 @@ async def create_news(
     await db.flush()
 
     if request.has_event:
-        await validate_event_data(request, db)
-        logger.debug("Validating event data")
 
         new_event = Events(
             status=request.event_status,
@@ -251,9 +246,7 @@ async def create_news(
         db.add(new_news)
 
     await db.commit()
-    logger.info(
-        "Transaction committed successfully: news created. title: {new_news.title}"
-    )
+    logger.info(f"Transaction committed successfully: news created. title: {new_news.title}")
 
     await db.refresh(new_news)
     logger.debug("Refreshing news object")
@@ -271,17 +264,12 @@ async def create_news(
 @router.put("/{news_id}", response_model=NewsResponse)
 async def update_news(
     news_id: str,
-    request: NewsEventsRequest,
+    request: NewsUpdateRequest,
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
     news = await get_news_or_404(db, news_id, for_update=True)
     logger.debug("Fetching news by ID")
-
-    if request.image:
-        await delete_old_image(news.image_url)
-        news.image_url = await process_image(request.image)
-        logger.debug("Image updated")
 
     if request.title is not None:
         news.title = request.title
@@ -325,7 +313,7 @@ async def update_news(
                 logger.debug("Field 'is_reg_open' updated")
 
         else:
-            await validate_event_data(request, db)
+            validate_event_data(request)
             logger.debug("Validating event data")
 
             new_event = Events(
@@ -349,9 +337,19 @@ async def update_news(
         logger.debug("Fetching event by ID")
 
         if event:
-            await db.delete(event)
             news.event_id = None
+            await db.flush()
+            await db.delete(event)
             logger.debug("The existing event has been deleted.")
+
+    if request.image:
+        new_image_url = await process_image(request.image)
+        old_image_url = news.image_url
+        news.image_url = new_image_url
+        await delete_old_image(old_image_url)
+    
+        logger.debug("Image updated")
+    
 
     if request.has_topic:
         if news.topic_id:
@@ -366,7 +364,7 @@ async def update_news(
 
         else:
             new_topic = Topics(
-                title=request.title,
+                title=request.title or news.title,
                 anon=request.anon,
                 news_id=news.id,
             )
@@ -380,8 +378,9 @@ async def update_news(
         logger.debug("Fetching topic by ID")
 
         if topic:
-            await db.delete(topic)
             news.topic_id = None
+            await db.flush()
+            await db.delete(topic)
             logger.debug("The existing topic has been deleted.")
 
     await db.commit()
@@ -391,15 +390,7 @@ async def update_news(
     return news
 
 
-@router.get("/{news_id}", response_model=NewsResponse)
-async def get_news(
-    news_id: str,
-    db: AsyncSession = Depends(get_db),
-):
-    return await get_news_or_404(db, news_id)
-
-
-@router.get("/{event_id}", response_model=EventResponse)
+@router.get("/events/{event_id}", response_model=EventResponse)
 async def get_event(
     event_id: str,
     db: AsyncSession = Depends(get_db),
@@ -420,18 +411,25 @@ async def delete_news(
         raise HTTPException(status_code=403, detail="Нет прав на удаление")
 
     try:
-        if news_item.image_url:
-            await delete_old_image(news_item.image_url)
+
         if news_item.event_id:
             event = await get_event_or_404(db, news_item.event_id, for_update=True)
             if event:
+                news_item.event_id = None
+                await db.flush()
                 await db.delete(event)
         if news_item.topic_id:
             topic = await get_topic_or_404(db, news_item.topic_id, for_update=True)
             if topic:
+                news_item.topic_id = None
+                await db.flush()
                 await db.delete(topic)
 
+        if news_item.image_url:
+            await delete_old_image(news_item.image_url)
+        
         await db.delete(news_item)
+
         await db.commit()
         return {"status": "success", "message": "Успешное удаление"}
 
@@ -480,7 +478,7 @@ async def update_event_status(
 async def create_reg(
     event_id: str,
     comment: Optional[str] = Form(default=None),
-    user: dict = Depends(require_council_role),
+    user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     event = await get_event_or_404(db, event_id, for_update=True)
@@ -519,7 +517,7 @@ async def create_reg(
 @router.delete("/events/{event_id}/register")
 async def delete_reg(
     event_id: str,
-    user: dict = Depends(require_council_role),
+    user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
 
@@ -545,7 +543,7 @@ async def delete_reg(
     return {"status": "success", "message": "Регистрация успешно отменена"}
 
 
-@router.get("/events/{event_id}", response_model=List[RegistrationResponse])
+@router.get("/events/{event_id}/registrations", response_model=List[RegistrationResponse])
 async def get_all_part(
     event_id: str,
     user: dict = Depends(require_council_role),
@@ -572,7 +570,6 @@ async def update_part_status(
 ):
     event = await get_event_or_404(db, event_id, for_update=True)
     news = await get_news_or_404(db, event.news_id)
-    role = user.get("role", "student")
 
     if not news:
         raise HTTPException(status_code=404, detail="Новость не найдена")
@@ -593,15 +590,14 @@ async def update_part_status(
     old_status = registration.status
     registration.status = status
 
-    if old_status != RegStatus.confimed.value and status == RegStatus.confimed.value:
+    if old_status != RegStatus.confirmed.value and status == RegStatus.confirmed.value:
         if event.cur_partic < event.max_partic:
             event.cur_partic += 1
         else:
-            await db.rollback()
             raise HTTPException(
                 status_code=403, detail="Превышено максимальное количество участников"
             )
-    elif old_status == RegStatus.confimed.value and status != RegStatus.confimed.value:
+    elif old_status == RegStatus.confirmed.value and status != RegStatus.confirmed.value:
         event.cur_partic -= 1
 
     await db.commit()
@@ -609,3 +605,10 @@ async def update_part_status(
     await db.refresh(event)
 
     return registration
+
+@router.get("/{news_id}", response_model=NewsResponse)
+async def get_news(
+    news_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    return await get_news_or_404(db, news_id)
