@@ -2,10 +2,8 @@ import enum
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, ForeignKey
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
-
-from .database import Base
 
 from database.constants import *
 
@@ -159,7 +157,9 @@ class Comments(Base):
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     content = Column(String(USER_COMMENT_MAX_LEN), nullable=False)
     created_at = Column(DateTime, default=_utc_now_naive)
-    parent_comment_id = Column(String, ForeignKey("comments.id", ondelete="CASCADE"), nullable=True)
+    parent_comment_id = Column(
+        String, ForeignKey("comments.id", ondelete="CASCADE"), nullable=True
+    )
 
     author = relationship("User")
     topic = relationship("Topics", passive_deletes=True)

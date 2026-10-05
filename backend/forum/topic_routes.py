@@ -22,6 +22,7 @@ topic_router = APIRouter(
 
 logger = logging.getLogger("logs")
 
+
 def for_author(topic, author_id):
     if topic.anon:
         return "anon"
@@ -35,7 +36,9 @@ async def _get_db_topic(db: AsyncSession, uid: str) -> Topics | None:
     return result.scalar_one_or_none()
 
 
-async def _get_db_comment(db: AsyncSession, comment_id: str, for_update: bool = False) -> Comments | None:
+async def _get_db_comment(
+    db: AsyncSession, comment_id: str, for_update: bool = False
+) -> Comments | None:
     stmt = select(Comments).where(Comments.id == comment_id)
     if not for_update:
         stmt = stmt.options(
@@ -197,7 +200,7 @@ async def update_comment(
     topic = await _get_db_topic(db, comment.topic_id)
     if topic is None:
         raise HTTPException(status_code=404, detail="Topic doesn't exist")
-    
+
     comment.content = content
 
     reply_to_author = None
