@@ -41,8 +41,7 @@ async def _get_db_comment(
 ) -> Comments | None:
     stmt = select(Comments).where(Comments.id == comment_id)
     if not for_update:
-        stmt = stmt.options(
-            joinedload(Comments.parent_comment))
+        stmt = stmt.options(joinedload(Comments.parent_comment))
 
     if for_update:
         stmt = stmt.with_for_update(of=Comments)
@@ -131,7 +130,8 @@ async def create_comment(
     reply_to_author = None
     if request.parent_comment_id:
         parent_comment = await _get_db_comment(
-            db, request.parent_comment_id, for_update=True)
+            db, request.parent_comment_id, for_update=True
+        )
 
         if parent_comment is None:
             logger.warning(f"User tried to reply to a non-existent comment")
@@ -140,7 +140,8 @@ async def create_comment(
         if parent_comment.topic_id != request.topic_id:
             logger.warning(f"User tried to reply to a comment from another topic")
             raise HTTPException(
-                status_code=400, detail="Can not reply to a comment from another topic")
+                status_code=400, detail="Can not reply to a comment from another topic"
+            )
 
         if not topic.anon:
             reply_to_author = parent_comment.user_id

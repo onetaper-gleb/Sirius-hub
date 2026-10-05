@@ -64,6 +64,7 @@ class NewsCreateRequest(BaseModel):
     anon: Optional[bool] = None
     image: Optional[str] = None
 
+
 class NewsUpdateRequest(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
@@ -78,4 +79,4 @@ class NewsUpdateRequest(BaseModel):
     is_reg_open: Optional[bool] = None
 
     anon: Optional[bool] = None
-    image: Optional[str] = None    
+    image: Optional[str] = None

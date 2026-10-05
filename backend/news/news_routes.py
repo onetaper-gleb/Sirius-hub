@@ -1,10 +1,10 @@
 ﻿import base64
+import binascii
 import io
 import logging
 import os
 import uuid
 from typing import List, Optional
-import binascii
 
 from fastapi import APIRouter, Depends, Form, HTTPException
 from PIL import Image
@@ -19,8 +19,8 @@ from utils.logger import set_logger
 from .schemas import (
     EventResponse,
     NewsCreateRequest,
-    NewsUpdateRequest,
     NewsResponse,
+    NewsUpdateRequest,
     RegistrationResponse,
 )
 
@@ -51,7 +51,7 @@ async def process_image(image: str | None):
     except (binascii.Error, ValueError):
         logger.warning("Invalid base64 format")
         raise HTTPException(400, "Invalid base64 format")
-    
+
     if len(contents) > MAX_FILE_SIZE:
 
         logger.warning(
@@ -184,7 +184,7 @@ async def create_news(
     user: dict = Depends(require_council_role),
     db: AsyncSession = Depends(get_db),
 ):
-    
+
     if request.has_event:
         validate_event_data(request)
         logger.debug("Validating event data")
@@ -246,7 +246,9 @@ async def create_news(
         db.add(new_news)
 
     await db.commit()
-    logger.info(f"Transaction committed successfully: news created. title: {new_news.title}")
+    logger.info(
+        f"Transaction committed successfully: news created. title: {new_news.title}"
+    )
 
     await db.refresh(new_news)
     logger.debug("Refreshing news object")
@@ -347,9 +349,8 @@ async def update_news(
         old_image_url = news.image_url
         news.image_url = new_image_url
         await delete_old_image(old_image_url)
-    
+
         logger.debug("Image updated")
-    
 
     if request.has_topic:
         if news.topic_id:
@@ -427,7 +428,7 @@ async def delete_news(
 
         if news_item.image_url:
             await delete_old_image(news_item.image_url)
-        
+
         await db.delete(news_item)
 
         await db.commit()
@@ -543,7 +544,9 @@ async def delete_reg(
     return {"status": "success", "message": "Регистрация успешно отменена"}
 
 
-@router.get("/events/{event_id}/registrations", response_model=List[RegistrationResponse])
+@router.get(
+    "/events/{event_id}/registrations", response_model=List[RegistrationResponse]
+)
 async def get_all_part(
     event_id: str,
     user: dict = Depends(require_council_role),
@@ -597,7 +600,9 @@ async def update_part_status(
             raise HTTPException(
                 status_code=403, detail="Превышено максимальное количество участников"
             )
-    elif old_status == RegStatus.confirmed.value and status != RegStatus.confirmed.value:
+    elif (
+        old_status == RegStatus.confirmed.value and status != RegStatus.confirmed.value
+    ):
         event.cur_partic -= 1
 
     await db.commit()
@@ -605,6 +610,7 @@ async def update_part_status(
     await db.refresh(event)
 
     return registration
+
 
 @router.get("/{news_id}", response_model=NewsResponse)
 async def get_news(
