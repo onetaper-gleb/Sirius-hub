@@ -162,30 +162,54 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildWeekHeader() {
+    final colors = Theme.of(context).colorScheme;
+    String monthName = '';
+    if (_days.isNotEmpty && _selectedDay < _days.length) {
+      final monthIndex = _days[_selectedDay].month - 1;
+      const monthNames = [
+        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+      ];
+      monthName = monthNames[monthIndex];
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
+      child: Column(
         children: [
-          _buildArrowButton(
-            icon: Icons.chevron_left_rounded,
-            onTap: () => _updateWeek('previousWeek'),
-          ),
-          Expanded(
-            child: SizedBox(
-              height: 72,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: 6,
-                padding: EdgeInsets.zero,
-                itemBuilder: (context, index) {
-                  return _buildDayItem(index);
-                },
-              ),
+          Text(
+            monthName,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: colors.onSurface,
             ),
           ),
-          _buildArrowButton(
-            icon: Icons.chevron_right_rounded,
-            onTap: () => _updateWeek('nextWeek'),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _buildArrowButton(
+                icon: Icons.chevron_left_rounded,
+                onTap: () => _updateWeek('previousWeek'),
+              ),
+              Expanded(
+                child: SizedBox(
+                  height: 72,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: 6,
+                    padding: EdgeInsets.zero,
+                    itemBuilder: (context, index) {
+                      return _buildDayItem(index);
+                    },
+                  ),
+                ),
+              ),
+              _buildArrowButton(
+                icon: Icons.chevron_right_rounded,
+                onTap: () => _updateWeek('nextWeek'),
+              ),
+            ],
           ),
         ],
       ),
