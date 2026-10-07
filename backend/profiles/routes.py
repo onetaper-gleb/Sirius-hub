@@ -14,6 +14,7 @@ from database.constants import (
     USER_MESSENGER_HANDLE_MAX_LEN,
 )
 from database.database import get_db
+from database.models import StudyGroup
 from database.models import User as DBUser
 
 router = APIRouter(
@@ -48,6 +49,14 @@ class PublicProfileResponse(BaseModel):
     bio: str | None
     messenger_handle: str | None
     created_at: datetime.datetime
+
+    class Config:
+        from_attributes = True
+
+
+class StudyGroupResponse(BaseModel):
+    id: str
+    name: str
 
     class Config:
         from_attributes = True
@@ -140,6 +149,14 @@ async def get_user_public_profile(
             detail="Пользователь не найден.",
         )
     return row
+
+
+@router.get("/groups", response_model=list[StudyGroupResponse])
+async def get_study_groups(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(StudyGroup))
+    groups = result.scalars().all()
+
+    return groups
 
 
 @router.put("/update", response_model=ProfileResponse)
