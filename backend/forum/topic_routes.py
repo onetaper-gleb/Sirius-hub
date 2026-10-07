@@ -2,7 +2,6 @@ import logging
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload
@@ -10,7 +9,7 @@ from sqlalchemy.orm import joinedload
 from auth.auth_routes import get_current_user, require_council_role
 from database.constants import MIN_LEN, USER_COMMENT_MAX_LEN
 from database.database import get_db
-from database.models import Comments, Topics, User
+from database.models import Comments, Topics
 from utils.logger import set_logger
 
 from .schemas import Comment as CommentScheme
@@ -24,17 +23,12 @@ topic_router = APIRouter(
 logger = logging.getLogger("logs")
 
 
-def for_author(topic, author):
+def for_author(topic, author_id):
     if topic.anon:
         return "anon"
-    if author is None:
+    if author_id is None:
         return ""
-    return author.id
-
-
-async def _get_db_user(db: AsyncSession, uid: str) -> User | None:
-    result = await db.execute(select(User).where(User.id == uid))
-    return result.scalar_one_or_none()
+    return author_id
 
 
 async def _get_db_topic(db: AsyncSession, uid: str) -> Topics | None:
@@ -45,17 +39,12 @@ async def _get_db_topic(db: AsyncSession, uid: str) -> Topics | None:
 async def _get_db_comment(
     db: AsyncSession, comment_id: str, for_update: bool = False
 ) -> Comments | None:
-    stmt = (
-        select(Comments)
-        .where(Comments.id == comment_id)
-        .options(
-            joinedload(Comments.author),
-            joinedload(Comments.parent_comment).joinedload(Comments.author),
-        )
-    )
+    stmt = select(Comments).where(Comments.id == comment_id)
+    if not for_update:
+        stmt = stmt.options(joinedload(Comments.parent_comment))
 
     if for_update:
-        stmt = stmt.with_for_update()
+        stmt = stmt.with_for_update(of=Comments)
 
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
@@ -66,9 +55,7 @@ def get_reply_to_author_id(
 ) -> str | None:
     if not parent_comment or not topic or topic.anon:
         return None
-    if parent_comment.author:
-        return parent_comment.author.id
-    return None
+    return parent_comment.user_id
 
 
 @topic_router.get("/comments", response_model=List[CommentScheme])
@@ -92,8 +79,7 @@ async def get_comments(
         select(Comments)
         .where(Comments.topic_id == topic_id)
         .options(
-            joinedload(Comments.author),
-            joinedload(Comments.parent_comment).joinedload(Comments.author),
+            joinedload(Comments.parent_comment),
         )
         .order_by(Comments.created_at.desc())
     )
@@ -108,7 +94,7 @@ async def get_comments(
             {
                 "content": comment.content,
                 "comment_id": comment.id,
-                "author": for_author(topic, comment.author),
+                "author": for_author(topic, comment.user_id),
                 "parent_comment_id": comment.parent_comment_id,
                 "reply_to_author": get_reply_to_author_id(
                     topic, comment.parent_comment
@@ -157,8 +143,8 @@ async def create_comment(
                 status_code=400, detail="Can not reply to a comment from another topic"
             )
 
-        if parent_comment and not topic.anon and parent_comment.author:
-            reply_to_author = parent_comment.author.id
+        if not topic.anon:
+            reply_to_author = parent_comment.user_id
 
     new_comment = Comments(
         content=content,
@@ -169,9 +155,6 @@ async def create_comment(
 
     db.add(new_comment)
     await db.commit()
-    await db.refresh(new_comment)
-
-    author = await _get_db_user(db, new_comment.user_id)
 
     logger.info(
         f"User successfully created a comment {new_comment.id} in topic {request.topic_id}"
@@ -180,7 +163,7 @@ async def create_comment(
     return {
         "content": new_comment.content,
         "comment_id": new_comment.id,
-        "author": for_author(topic, author),
+        "author": for_author(topic, new_comment.user_id),
         "parent_comment_id": new_comment.parent_comment_id,
         "reply_to_author": reply_to_author,
     }
@@ -216,11 +199,16 @@ async def update_comment(
         )
 
     topic = await _get_db_topic(db, comment.topic_id)
+    if topic is None:
+        raise HTTPException(status_code=404, detail="Topic doesn't exist")
+
     comment.content = content
 
     reply_to_author = None
-    if comment.parent_comment and not topic.anon and comment.parent_comment.author:
-        reply_to_author = comment.parent_comment.author.id
+    if comment.parent_comment_id and not topic.anon:
+        parent = await _get_db_comment(db, comment.parent_comment_id)
+        if parent:
+            reply_to_author = parent.user_id
 
     logger.info(f"User successfully updated comment {comment_id}")
     await db.commit()
@@ -228,7 +216,7 @@ async def update_comment(
     return {
         "content": comment.content,
         "comment_id": comment.id,
-        "author": for_author(topic, comment.author),
+        "author": for_author(topic, comment.user_id),
         "parent_comment_id": comment.parent_comment_id,
         "reply_to_author": reply_to_author,
     }
@@ -252,8 +240,6 @@ async def delete_comment(
 
     if comment.user_id != id_user:
         await require_council_role(db=db, user=user)
-
-    await db.execute(delete(Comments).where(Comments.parent_comment_id == comment_id))
 
     await db.delete(comment)
     await db.commit()
