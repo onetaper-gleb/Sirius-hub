@@ -33,6 +33,7 @@ class TopicScreen extends StatefulWidget {
 
 class _TopicScreenState extends State<TopicScreen> {
   CommentModel? _replyingToComment;
+  CommentModel? _editingComment;
   final FocusNode _inputFocusNode = FocusNode();
 
   @override
@@ -62,6 +63,14 @@ class _TopicScreenState extends State<TopicScreen> {
                 onReplySelect: (comment) {
                   setState(() {
                     _replyingToComment = comment;
+                    _editingComment = null; // Сбрасываем edit
+                  });
+                  _inputFocusNode.requestFocus();
+                },
+                onEditSelect: (comment) {
+                  setState(() {
+                    _editingComment = comment;
+                    _replyingToComment = null; // Сбрасываем reply
                   });
                   _inputFocusNode.requestFocus();
                 },
@@ -70,19 +79,43 @@ class _TopicScreenState extends State<TopicScreen> {
             Builder(
               builder: (context) => _CommentInputField(
                 focusNode: _inputFocusNode,
-                hintText: _replyingToComment != null
+                isEditing: _editingComment != null,
+                isReplying: _replyingToComment != null,
+                initialText: _editingComment?.content,
+                hintText: _editingComment != null
+                    ? 'Редактирование...'
+                    : _replyingToComment != null
                     ? 'Ваш ответ...'
                     : 'Ваш комментарий...',
-                onSubmit: (content) {
-                  context.read<TopicBloc>().add(
-                    TopicCreateCommentRequested(
-                      content: content,
-                      topicId: widget.topicId,
-                      parentCommentId: _replyingToComment?.id,
-                    ),
-                  );
+                onCancel: () {
                   setState(() {
                     _replyingToComment = null;
+                    _editingComment = null;
+                  });
+                  _inputFocusNode.unfocus();
+                },
+                onSubmit: (content) {
+                  if (_editingComment != null) {
+                    context.read<TopicBloc>().add(
+                      TopicUpdateCommentRequested(
+                        topicId: widget.topicId,
+                        commentId: _editingComment!.id,
+                        content: content,
+                      ),
+                    );
+                  } else {
+                    context.read<TopicBloc>().add(
+                      TopicCreateCommentRequested(
+                        content: content,
+                        topicId: widget.topicId,
+                        parentCommentId: _replyingToComment?.id,
+                      ),
+                    );
+                  }
+
+                  setState(() {
+                    _replyingToComment = null;
+                    _editingComment = null;
                   });
                 },
               ),
@@ -96,14 +129,22 @@ class _TopicScreenState extends State<TopicScreen> {
 
 class _CommentInputField extends StatefulWidget {
   final void Function(String content) onSubmit;
+  final VoidCallback onCancel;
   final FocusNode? focusNode;
   final String hintText;
+  final String? initialText;
+  final bool isEditing;
+  final bool isReplying;
 
   const _CommentInputField({
     super.key,
     required this.onSubmit,
+    required this.onCancel,
     this.focusNode,
     this.hintText = 'Ваш комментарий...',
+    this.initialText,
+    this.isEditing = false,
+    this.isReplying = false,
   });
 
   @override
@@ -112,6 +153,14 @@ class _CommentInputField extends StatefulWidget {
 
 class _CommentInputFieldState extends State<_CommentInputField> {
   final _contentController = TextEditingController();
+
+  @override
+  void didUpdateWidget(covariant _CommentInputField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialText != oldWidget.initialText) {
+      _contentController.text = widget.initialText ?? '';
+    }
+  }
 
   @override
   void dispose() {
@@ -132,52 +181,84 @@ class _CommentInputFieldState extends State<_CommentInputField> {
         right: 12,
         top: 8,
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(width: 1, color: colors.onSurface),
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _contentController,
-                focusNode: widget.focusNode,
-                minLines: 1,
-                maxLines: 5,
-                maxLength: 200,
-                maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                decoration: InputDecoration(
-                  hintText: widget.hintText,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.isEditing || widget.isReplying)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: colors.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.isEditing ? 'Редактирование сообщения' : 'Ответ пользователю',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
                   ),
-                ),
-                buildCounter:
-                    (
-                      context, {
-                      required currentLength,
-                      required maxLength,
-                      required isFocused,
-                    }) => null,
+                  GestureDetector(
+                    onTap: () {
+                      _contentController.clear();
+                      widget.onCancel();
+                    },
+                    child: const Icon(Icons.close, size: 18),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.send),
-              onPressed: () {
-                final content = _contentController.text.trim();
-                if (content.isNotEmpty) {
-                  widget.onSubmit(content);
-                  _contentController.clear();
-                }
-              },
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(width: 1, color: colors.onSurface),
+              borderRadius: BorderRadius.circular(24),
             ),
-          ],
-        ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _contentController,
+                    focusNode: widget.focusNode,
+                    minLines: 1,
+                    maxLines: 5,
+                    maxLength: 200,
+                    maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                    decoration: InputDecoration(
+                      hintText: widget.hintText,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                    ),
+                    buildCounter: (
+                        context, {
+                          required currentLength,
+                          required maxLength,
+                          required isFocused,
+                        }) =>
+                    null,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: Icon(widget.isEditing ? Icons.check : Icons.send),
+                  onPressed: () {
+                    final content = _contentController.text.trim();
+                    if (content.isNotEmpty) {
+                      widget.onSubmit(content);
+                      _contentController.clear();
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -188,12 +269,14 @@ class _TopicView extends StatelessWidget {
   final bool isAnonymousTopic;
   final NewsModel? attachedNews;
   final ValueChanged<CommentModel> onReplySelect;
+  final ValueChanged<CommentModel> onEditSelect;
 
   const _TopicView({
     required this.topicId,
     required this.isAnonymousTopic,
     this.attachedNews,
     required this.onReplySelect,
+    required this.onEditSelect,
   });
 
   @override
@@ -261,6 +344,7 @@ class _TopicView extends StatelessWidget {
                   isAnonymousTopic: isAnonymousTopic,
                   depth: threadedItem.depth,
                   onReplyTap: () => onReplySelect(comment),
+                  onEditTap: () => onEditSelect(comment),
                 );
               },
             ),
@@ -289,6 +373,7 @@ class _Comment extends StatelessWidget {
   final int depth;
   final Map<String, RegistrationProfileData> profiles;
   final VoidCallback onReplyTap;
+  final VoidCallback onEditTap;
 
   const _Comment({
     required this.topicId,
@@ -299,6 +384,7 @@ class _Comment extends StatelessWidget {
     required this.depth,
     required this.profiles,
     required this.onReplyTap,
+    required this.onEditTap,
   });
 
   @override
@@ -314,7 +400,7 @@ class _Comment extends StatelessWidget {
     if (isReply && comment.parentCommentId != null) {
       try {
         final parentComment = allComments.firstWhere(
-          (c) => c.id == comment.parentCommentId,
+              (c) => c.id == comment.parentCommentId,
         );
 
         String parentDisplayName;
@@ -339,37 +425,26 @@ class _Comment extends StatelessWidget {
         boxShadow: isReply
             ? null
             : [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
         border: isReply
             ? Border(
-                left: BorderSide(color: Colors.grey.withOpacity(0.5), width: 2),
-              )
+          left: BorderSide(color: Colors.grey.withOpacity(0.5), width: 2),
+        )
             : null,
       ),
       child: InkWell(
         onTap:
-            (!isAnonymousTopic &&
-                comment.author_id.isNotEmpty &&
-                profile != null)
+        (!isAnonymousTopic &&
+            comment.author_id.isNotEmpty &&
+            profile != null)
             ? () => _showProfileDialog(context, profile!)
             : null,
-        onLongPress: () {
-          final authState = context.read<AuthBloc>().state as AuthAuthenticated;
-          final role = authState.profileModel.userModel.role
-              .toString()
-              .toLowerCase();
-
-          if (role.contains('admin') ||
-              role.contains('council') ||
-              authState.profileModel.userModel.id == comment.author_id) {
-            _showCommentActionsBottonsSheet(context);
-          }
-        },
+        onLongPress: () => _showCommentActionsBottonsSheet(context),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -405,6 +480,15 @@ class _Comment extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(displayText),
+
+              if (comment.isEdited) ...[
+                const SizedBox(height: 4),
+                const Text(
+                  'изменено',
+                  style: TextStyle(fontSize: 10, color: Colors.grey),
+                ),
+              ],
+
               const SizedBox(height: 4),
               Align(
                 alignment: Alignment.centerRight,
@@ -430,6 +514,15 @@ class _Comment extends StatelessWidget {
   }
 
   void _showCommentActionsBottonsSheet(BuildContext context) {
+    final authState = context.read<AuthBloc>().state as AuthAuthenticated;
+    final currentUserId = authState.profileModel.userModel.id;
+    final role = authState.profileModel.userModel.role.toString().toLowerCase();
+
+    final isAuthor = currentUserId == comment.author_id;
+    final canDelete = isAuthor || role.contains('admin') || role.contains('council');
+
+    if (!isAuthor && !canDelete) return; // Нет прав ни на что
+
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -440,22 +533,46 @@ class _Comment extends StatelessWidget {
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextButton.icon(
-                onPressed: () {
-                  Navigator.of(dialogContext).pop();
-                  _showDeleteConfirmationDialog(context);
-                },
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
-                label: const Text(
-                  'Удалить комментарий',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+              if (isAuthor)
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    onEditTap();
+                  },
+                  icon: const Icon(Icons.edit_outlined, color: Colors.blue),
+                  label: const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Редактировать',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              if (canDelete)
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    _showDeleteConfirmationDialog(context);
+                  },
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  label: const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Удалить комментарий',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         );
@@ -492,9 +609,9 @@ class _Comment extends StatelessWidget {
   }
 
   void _showProfileDialog(
-    BuildContext context,
-    RegistrationProfileData profile,
-  ) {
+      BuildContext context,
+      RegistrationProfileData profile,
+      ) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(

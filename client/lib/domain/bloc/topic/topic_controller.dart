@@ -20,6 +20,7 @@ class TopicBloc extends Bloc<TopicEvent, TopicState> {
     on<TopicLoadRequested>(_onLoadComments);
     on<TopicCreateCommentRequested>(_onCreateComment);
     on<TopicDeleteCommentEvent>(_onDeleteComment);
+    on<TopicUpdateCommentRequested>(_onUpdateComment);
   }
 
   Future<void> _onLoadComments(
@@ -74,6 +75,42 @@ class TopicBloc extends Bloc<TopicEvent, TopicState> {
     try {
       await _topicRepository.deleteComment(event.commentId);
       add(TopicLoadRequested(topicId: event.topicId));
+    } catch (e) {
+      emit(TopicError(error: e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateComment(
+      TopicUpdateCommentRequested event,
+      Emitter<TopicState> emit,
+      ) async {
+    // Если стейт не загружен, то нам негде обновлять список, поэтому тихо выходим
+    if (state is! TopicLoaded) return;
+
+    final currentState = state as TopicLoaded;
+
+    try {
+      await _topicRepository.updateComment(
+        commentId: event.commentId,
+        content: event.content,
+      );
+
+      // Проходим по текущему списку комментариев и заменяем измененный через copyWith
+      final updatedComments = currentState.comments.map((comment) {
+        if (comment.id == event.commentId) {
+          return comment.copyWith(
+            content: event.content,
+            isEdited: true, // Локально помечаем комментарий как отредактированный
+          );
+        }
+        return comment;
+      }).toList();
+
+      // Эмитим обновленный стейт с тем же словарем профилей
+      emit(TopicLoaded(
+        comments: updatedComments,
+        profiles: currentState.profiles,
+      ));
     } catch (e) {
       emit(TopicError(error: e.toString()));
     }

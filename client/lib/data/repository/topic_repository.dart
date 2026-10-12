@@ -124,4 +124,41 @@ class TopicRepository {
       throw Exception("Ошибка удаления комментария: $errorDetail");
     }
   }
+
+  Future<void> updateComment({
+    required String commentId,
+    required String content,
+  }) async {
+    try {
+      final rawToken = await _authDataSource.getToken();
+      if (rawToken == null) {
+        throw Exception('Не удалось получить токен');
+      }
+
+      final trimmedContent = content.trim();
+
+      if (trimmedContent.isEmpty) {
+        throw Exception('Комментарий не может быть пустым');
+      }
+      if (trimmedContent.length > 500) {
+        throw Exception('Длина комментария не должна превышать 500 символов');
+      }
+
+
+      await _dio.patch(
+        '/topic/comments/$commentId',
+        data: {"content": trimmedContent},
+        options: Options(headers: {'Authorization': 'Bearer $rawToken'}),
+      );
+
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final errorDetail =
+          (data is Map ? data['detail'] : data)?.toString() ?? e.message;
+      print(errorDetail);
+      throw Exception("Ошибка обновления комментария: $errorDetail");
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
 }
