@@ -84,7 +84,6 @@ class TopicBloc extends Bloc<TopicEvent, TopicState> {
       TopicUpdateCommentRequested event,
       Emitter<TopicState> emit,
       ) async {
-    // Если стейт не загружен, то нам негде обновлять список, поэтому тихо выходим
     if (state is! TopicLoaded) return;
 
     final currentState = state as TopicLoaded;
@@ -95,18 +94,16 @@ class TopicBloc extends Bloc<TopicEvent, TopicState> {
         content: event.content,
       );
 
-      // Проходим по текущему списку комментариев и заменяем измененный через copyWith
       final updatedComments = currentState.comments.map((comment) {
         if (comment.id == event.commentId) {
           return comment.copyWith(
             content: event.content,
-            isEdited: true, // Локально помечаем комментарий как отредактированный
+            isEdited: true,
           );
         }
         return comment;
       }).toList();
 
-      // Эмитим обновленный стейт с тем же словарем профилей
       emit(TopicLoaded(
         comments: updatedComments,
         profiles: currentState.profiles,

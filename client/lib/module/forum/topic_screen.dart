@@ -521,7 +521,7 @@ class _Comment extends StatelessWidget {
     final isAuthor = currentUserId == comment.author_id;
     final canDelete = isAuthor || role.contains('admin') || role.contains('council');
 
-    if (!isAuthor && !canDelete) return; // Нет прав ни на что
+    if (!isAuthor && !canDelete) return;
 
     showDialog(
       context: context,
