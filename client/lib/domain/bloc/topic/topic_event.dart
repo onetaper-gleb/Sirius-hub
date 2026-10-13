@@ -23,3 +23,16 @@ class TopicDeleteCommentEvent extends TopicEvent {
 
   TopicDeleteCommentEvent({required this.topicId, required this.commentId});
 }
+
+
+class TopicUpdateCommentRequested extends TopicEvent {
+  final String topicId;
+  final String commentId;
+  final String content;
+
+  TopicUpdateCommentRequested({
+    required this.topicId,
+    required this.commentId,
+    required this.content,
+  });
+}

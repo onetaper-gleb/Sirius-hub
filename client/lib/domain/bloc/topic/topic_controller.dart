@@ -20,6 +20,7 @@ class TopicBloc extends Bloc<TopicEvent, TopicState> {
     on<TopicLoadRequested>(_onLoadComments);
     on<TopicCreateCommentRequested>(_onCreateComment);
     on<TopicDeleteCommentEvent>(_onDeleteComment);
+    on<TopicUpdateCommentRequested>(_onUpdateComment);
   }
 
   Future<void> _onLoadComments(
@@ -74,6 +75,39 @@ class TopicBloc extends Bloc<TopicEvent, TopicState> {
     try {
       await _topicRepository.deleteComment(event.commentId);
       add(TopicLoadRequested(topicId: event.topicId));
+    } catch (e) {
+      emit(TopicError(error: e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateComment(
+      TopicUpdateCommentRequested event,
+      Emitter<TopicState> emit,
+      ) async {
+    if (state is! TopicLoaded) return;
+
+    final currentState = state as TopicLoaded;
+
+    try {
+      await _topicRepository.updateComment(
+        commentId: event.commentId,
+        content: event.content,
+      );
+
+      final updatedComments = currentState.comments.map((comment) {
+        if (comment.id == event.commentId) {
+          return comment.copyWith(
+            content: event.content,
+            isEdited: true,
+          );
+        }
+        return comment;
+      }).toList();
+
+      emit(TopicLoaded(
+        comments: updatedComments,
+        profiles: currentState.profiles,
+      ));
     } catch (e) {
       emit(TopicError(error: e.toString()));
     }
