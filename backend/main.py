@@ -1,5 +1,5 @@
-import base64
-import json
+# import base64
+# import json
 import os
 from contextlib import asynccontextmanager
 
@@ -9,29 +9,29 @@ from fastapi.staticfiles import StaticFiles
 
 load_dotenv()
 
-import firebase_admin
-from firebase_admin import credentials
+# import firebase_admin
+# from firebase_admin import credentials
 
 from database import models
 from database.database import Base, engine
 from utils.logger import set_logger
 
 
-def init_firebase():
-    base64_config = os.getenv("FIREBASE_CONFIG_BASE64")
-    if base64_config:
-        decoded_bytes = base64.b64decode(base64_config)
-        config_dict = json.loads(decoded_bytes)
-        cred = credentials.Certificate(config_dict)
-        firebase_admin.initialize_app(cred)
-        print("Firebase инициализирован через Base64!")
-    else:
-        print("Base64 конфиг не найден, ищу файл...")
-        cred = credentials.Certificate("firebase-adminsdk.json")
-        firebase_admin.initialize_app(cred)
+# def init_firebase():
+#     base64_config = os.getenv("FIREBASE_CONFIG_BASE64")
+#     if base64_config:
+#         decoded_bytes = base64.b64decode(base64_config)
+#         config_dict = json.loads(decoded_bytes)
+#         cred = credentials.Certificate(config_dict)
+#         firebase_admin.initialize_app(cred)
+#         print("Firebase инициализирован через Base64!")
+#     else:
+#         print("Base64 конфиг не найден, ищу файл...")
+#         cred = credentials.Certificate("firebase-adminsdk.json")
+#         firebase_admin.initialize_app(cred)
 
 
-init_firebase()
+# init_firebase()
 set_logger()
 
 import auth
@@ -54,7 +54,7 @@ async def lifespan(app: fastapi.FastAPI):
     yield
 
 
-app = fastapi.FastAPI(title="CampusHub", version="0.0.0", lifespan=lifespan)
+app = fastapi.FastAPI(title="SiriusHub", version="0.0.0", lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory="uploads"), name="static")
 app.include_router(auth.router)

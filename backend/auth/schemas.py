@@ -12,3 +12,9 @@ class PromoteRequest(BaseModel):
 
 class InitUserRequest(BaseModel):
     group_code: Optional[str] = None
+
+class UserCreate(BaseModel):
+    pass
+
+class Token(BaseModel):
+    pass

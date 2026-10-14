@@ -131,9 +131,11 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, index=True)
-    email = Column(String(USER_EMAIL_LEN), unique=True, index=True)
+    email = Column(String(USER_EMAIL_LEN), unique=True, index=True, nullable=False)
     role = Column(String, default="student")
     created_at = Column(DateTime, default=_utc_now_naive)
+    hashed_password = Column(String, nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True)
 
     avatar_emoji = Column(String(USER_AVATAR_EMOJI_MAX_LEN), nullable=True)
     display_name = Column(String(USER_DISPLAY_NAME_MAX_LEN), nullable=True)
