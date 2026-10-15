@@ -56,13 +56,18 @@ def _name_from_token(name: object | None) -> str | None:
 
 @router.post("/init")
 async def init_new_user(
-    request: InitUserRequest,
+    request: InitUserRequest | None = None,
     db: AsyncSession = Depends(get_db),
     user_data: dict = Depends(get_current_user),
 ):
     uid = user_data.get("uid")
     email = user_data.get("email")
     display_name = _name_from_token(user_data.get("name"))
+
+    final_group_code = request.group_code if request else None
+
+    if final_group_code == "":
+        final_group_code = None
 
     try:
         auth.set_custom_user_claims(uid, {"role": "student"})  # replace
@@ -75,7 +80,7 @@ async def init_new_user(
             email=email,
             role="student",
             display_name=display_name,
-            group_code=request.group_code,
+            group_code=final_group_code,
         )
 
         stmt = stmt.on_conflict_do_update(
