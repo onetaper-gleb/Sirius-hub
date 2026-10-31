@@ -14,6 +14,7 @@ load_dotenv()
 
 from database import models
 from database.database import Base, engine
+from sqlalchemy import text
 from utils.logger import set_logger
 
 
@@ -48,10 +49,11 @@ os.makedirs("uploads", exist_ok=True)
 @asynccontextmanager
 async def lifespan(app: fastapi.FastAPI):
     print("Инициализация таблиц БД...")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    async with engine.connect() as conn:
+        await conn.execute(text("SELECT 1"))
     print("БД готова!")
     yield
+    await engine.dispose()
 
 
 app = fastapi.FastAPI(title="SiriusHub", version="0.0.0", lifespan=lifespan)

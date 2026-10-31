@@ -120,12 +120,61 @@ async def require_council_role(current_user: DBUser = Depends(get_current_user))
 
 
 @router.post("/register", response_model=Token, status_code=201)
-async def register():
-    pass
+async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db),):
+    result = await db.execute(select(DBUser).where(DBUser.email == user_data.email))
+    if result.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=400, detail="Email уже существует")
+
+    new_user = DBUser(
+        id=str(uuid.uuid4()),
+        email=user_data.email,
+        display_name=user_data.display_name,
+        hashed_password=get_password_hash(user_data.password),
+        role=UserRole.student.value,
+        is_active=True,
+    )
+    db.add(new_user)
+
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Ошибка при создании пользователя")
+
+    access_token = create_access_token(data={"sub": new_user.id})
+    return Token(access_token=access_token, token_type="bearer")
+
 
 @router.post("/token", response_model=Token)
-async def login_for_access_token():
-    pass
+async def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(), 
+    db: AsyncSession = Depends(get_db),):
+
+    result = await db.execute(select(DBUser).where(DBUser.email == form_data.username))
+    user = result.scalar_one_or_none()
+
+    if user is None or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверный email или пароль",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Пользователь неактивен")
+
+    access_token = create_access_token(data={"sub": user.id})
+    return Token(access_token=access_token, token_type="bearer")
+
+@router.get("/me")
+async def read_me(current_user: DBUser = Depends(get_current_user)):
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "role": current_user.role,
+        "display_name": current_user.display_name,
+        "is_active": current_user.is_active,
+    }
+
 
 # TODO УДАЛИТЬ ЭТУ АПИШКУ КОГДА БУДУТ ИТОГОВЫЕ ПОЛЬЗОВАТЕЛИ.
 @router.post("/test-make-me-council")
@@ -149,7 +198,7 @@ async def make_me_council(
 async def promote_user(
     request: PromoteRequest,
     db: AsyncSession = Depends(get_db),
-    current_admin: dict = Depends(require_council_role),
+    current_admin: DBUser = Depends(require_council_role),
 ):
 
     try:
@@ -165,7 +214,7 @@ async def promote_user(
 
         return {
             "status": "success",
-            "message": f"Пользователь {request.uid} теперь в студсовете.",
+            "message": f"Пользователь {request.uid} теперь {request.role.value}.",
         }
 
     except HTTPException:

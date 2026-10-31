@@ -132,7 +132,7 @@ class User(Base):
 
     id = Column(String, primary_key=True, index=True)
     email = Column(String(USER_EMAIL_LEN), unique=True, index=True, nullable=False)
-    role = Column(String, default="student")
+    role = Column(String, default=UserRole.student.value, nullable=False)
     created_at = Column(DateTime, default=_utc_now_naive)
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)

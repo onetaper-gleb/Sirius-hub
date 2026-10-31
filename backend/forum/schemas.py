@@ -2,7 +2,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from database.constants import TITLE_LEN, USER_COMMENT_MAX_LEN
+from database.constants import TITLE_LEN, USER_COMMENT_MAX_LEN, MIN_LEN
 
 
 class Topic(BaseModel):
@@ -17,18 +17,18 @@ class Topics(BaseModel):
 
 
 class CreateTopicRequest(BaseModel):
-    title: str
+    title: str = Field(..., min_length=MIN_LEN, max_length=TITLE_LEN)
     anon: bool = False
 
 
 class CreateCommentRequest(BaseModel):
-    content: str = Field(..., min_length=2, max_length=199)
+    content: str = Field(..., min_length=MIN_LEN, max_length=USER_COMMENT_MAX_LEN)
     topic_id: str
     parent_comment_id: Optional[str] = None
 
 
 class UpdateCommentRequest(BaseModel):
-    content: str = Field(..., min_length=2, max_length=199)
+    content: str = Field(..., min_length=MIN_LEN, max_length=USER_COMMENT_MAX_LEN)
 
 
 class Comment(BaseModel):
