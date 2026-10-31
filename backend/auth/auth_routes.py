@@ -92,12 +92,42 @@ async def require_council_role(current_user: DBUser = Depends(get_current_user))
 #             display_name=display_name,
 #         )
 
-#         stmt = stmt.on_conflict_do_update(
-#             index_elements=["id"],
-#             set_={
-#                 "email": email,
-#             },
-#         )
+@router.post("/init")
+async def init_new_user(
+    request: InitUserRequest | None = None,
+    db: AsyncSession = Depends(get_db),
+    user_data: dict = Depends(get_current_user),
+):
+    uid = user_data.get("uid")
+    email = user_data.get("email")
+    display_name = _name_from_token(user_data.get("name"))
+
+    final_group_code = request.group_code if request else None
+
+    if final_group_code == "":
+        final_group_code = None
+
+    try:
+        auth.set_custom_user_claims(uid, {"role": "student"})  # replace
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Firebase error: {e}")
+
+    try:
+        stmt = insert(DBUser).values(
+            id=uid,
+            email=email,
+            role="student",
+            display_name=display_name,
+            group_code=final_group_code,
+        )
+
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["id"],
+            set_={
+                "email": email,
+                "group_code": request.group_code,
+            },
+        )
 
 #         await db.execute(stmt)
 #         await db.commit()
