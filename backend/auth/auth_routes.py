@@ -1,13 +1,16 @@
+import uuid
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import JWTError, jwt
 
 # from firebase_admin import auth
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.schemas import PromoteRequest
-from auth.schemas import Token, UserCreate
+from auth.schemas import PromoteRequest, Token, UserCreate
 from auth.security import (
     ALGORITHM,
     SECRET_KEY,
@@ -15,14 +18,10 @@ from auth.security import (
     get_password_hash,
     verify_password,
 )
-
 from database.constants import USER_DISPLAY_NAME_MAX_LEN
 from database.database import get_db
-from database.models import User as DBUser, UserRole
-
-import uuid
-from datetime import timedelta
-from jose import JWTError, jwt
+from database.models import User as DBUser
+from database.models import UserRole
 
 # security = HTTPBearer()
 

@@ -1,8 +1,8 @@
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 

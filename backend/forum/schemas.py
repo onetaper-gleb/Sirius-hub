@@ -2,7 +2,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from database.constants import TITLE_LEN, USER_COMMENT_MAX_LEN, MIN_LEN
+from database.constants import MIN_LEN, TITLE_LEN, USER_COMMENT_MAX_LEN
 
 
 class Topic(BaseModel):

@@ -8,9 +8,9 @@ Create Date: 2026-10-31 16:07:28.632339
 
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "821a1b366db6"
@@ -34,13 +34,11 @@ def upgrade() -> None:
         )
 
     # 2. бэкфилл hashed_password: sentinel-хеш, который никогда не совпадёт
-    op.execute(
-        """
+    op.execute("""
         UPDATE users
         SET hashed_password = '$2b$12$0000000000000000000000000000000000000000000000000000'
         WHERE hashed_password IS NULL
-    """
-    )
+    """)
 
     # 3. теперь NOT NULL (и убираем server_default с is_active — он больше не нужен)
     with op.batch_alter_table("users", schema=None) as batch_op:

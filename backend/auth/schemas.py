@@ -2,12 +2,12 @@
 
 from pydantic import BaseModel, EmailStr, Field
 
-from database.models import UserRole
 from database.constants import (
-    USER_PASSWORD_MIN_LEN,
-    USER_PASSWORD_MAX_LEN,
     USER_DISPLAY_NAME_MAX_LEN,
+    USER_PASSWORD_MAX_LEN,
+    USER_PASSWORD_MIN_LEN,
 )
+from database.models import UserRole
 
 
 class PromoteRequest(BaseModel):
