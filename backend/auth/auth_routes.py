@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
 # from firebase_admin import auth
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
@@ -23,7 +24,7 @@ import uuid
 from datetime import timedelta
 from jose import JWTError, jwt
 
-#security = HTTPBearer()
+# security = HTTPBearer()
 
 router = APIRouter(
     prefix="/auth",
@@ -32,11 +33,16 @@ router = APIRouter(
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db),):
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Ошибка при проверке учетных данных",
-        headers={"WWW-Authenticate": "Bearer"},)
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -48,7 +54,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
 
     result = await db.execute(select(DBUser).where(DBUser.id == uid))
     user = result.scalar_one_or_none()
-    
+
     if user is None:
         raise credentials_exception
     if not user.is_active:
@@ -60,7 +66,8 @@ async def require_council_role(current_user: DBUser = Depends(get_current_user))
 
     if current_user.role not in (UserRole.council.value, UserRole.admin.value):
         raise HTTPException(
-            status_code=403, detail="Только студсовет и администраторы имеют доступ.")
+            status_code=403, detail="Только студсовет и администраторы имеют доступ."
+        )
     return current_user
 
 
@@ -120,7 +127,10 @@ async def require_council_role(current_user: DBUser = Depends(get_current_user))
 
 
 @router.post("/register", response_model=Token, status_code=201)
-async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db),):
+async def register(
+    user_data: UserCreate,
+    db: AsyncSession = Depends(get_db),
+):
     result = await db.execute(select(DBUser).where(DBUser.email == user_data.email))
     if result.scalar_one_or_none() is not None:
         raise HTTPException(status_code=400, detail="Email уже существует")
@@ -147,8 +157,9 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db),):
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(), 
-    db: AsyncSession = Depends(get_db),):
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_db),
+):
 
     result = await db.execute(select(DBUser).where(DBUser.email == form_data.username))
     user = result.scalar_one_or_none()
@@ -165,6 +176,7 @@ async def login_for_access_token(
     access_token = create_access_token(data={"sub": user.id})
     return Token(access_token=access_token, token_type="bearer")
 
+
 @router.get("/me")
 async def read_me(current_user: DBUser = Depends(get_current_user)):
     return {
@@ -179,11 +191,17 @@ async def read_me(current_user: DBUser = Depends(get_current_user)):
 # TODO УДАЛИТЬ ЭТУ АПИШКУ КОГДА БУДУТ ИТОГОВЫЕ ПОЛЬЗОВАТЕЛИ.
 @router.post("/test-make-me-council")
 async def make_me_council(
-    db: AsyncSession = Depends(get_db), current_user: DBUser = Depends(get_current_user),):
+    db: AsyncSession = Depends(get_db),
+    current_user: DBUser = Depends(get_current_user),
+):
 
     try:
 
-        stmt = update(DBUser).where(DBUser.id == current_user.id).values(role=UserRole.council.value)
+        stmt = (
+            update(DBUser)
+            .where(DBUser.id == current_user.id)
+            .values(role=UserRole.council.value)
+        )
         await db.execute(stmt)
         await db.commit()
 
@@ -202,7 +220,11 @@ async def promote_user(
 ):
 
     try:
-        stmt = update(DBUser).where(DBUser.id == request.uid).values(role=request.role.value)
+        stmt = (
+            update(DBUser)
+            .where(DBUser.id == request.uid)
+            .values(role=request.role.value)
+        )
         result = await db.execute(stmt)
 
         if result.rowcount == 0:
