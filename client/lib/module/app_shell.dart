@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:client/core/dependencies.dart';
+import 'package:client/domain/bloc/schedule/schedule_bloc.dart';
 
 import 'forum/forum_screen.dart';
 import 'news/news_screen.dart';
@@ -52,7 +55,14 @@ class _AppShellState extends State<AppShell> {
                 onPressed: () {
                   showDialog(
                     context: context,
-                    builder: (context) => const FreeRoomDialog(),
+                    useRootNavigator: false,
+                    builder: (_) => BlocProvider(
+                      create: (_) => ScheduleBloc(
+                        scheduleRepository:
+                            context.dependencies.scheduleRepository,
+                      ),
+                      child: const FreeRoomDialog(),
+                    ),
                   );
                 },
                 icon: const Icon(Icons.manage_search, size: 20),

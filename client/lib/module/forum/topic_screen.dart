@@ -516,15 +516,16 @@ class _Comment extends StatelessWidget {
   void _showCommentActionsBottonsSheet(BuildContext context) {
     final authState = context.read<AuthBloc>().state as AuthAuthenticated;
     final currentUserId = authState.profileModel.userModel.id;
-    final role = authState.profileModel.userModel.role.toString().toLowerCase();
+    final role = authState.profileModel.userModel.role;
 
     final isAuthor = currentUserId == comment.author_id;
-    final canDelete = isAuthor || role.contains('admin') || role.contains('council');
+    final canDelete = isAuthor || role.canManageContent;
 
     if (!isAuthor && !canDelete) return;
 
     showDialog(
       context: context,
+      useRootNavigator: false,
       builder: (dialogContext) {
         return AlertDialog(
           contentPadding: const EdgeInsets.symmetric(
@@ -583,6 +584,7 @@ class _Comment extends StatelessWidget {
   void _showDeleteConfirmationDialog(BuildContext context) {
     showDialog(
       context: context,
+      useRootNavigator: false,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Удаление комментария'),
         content: const Text('Вы уверены, что хотите удалить этот комментарий?'),
@@ -614,6 +616,7 @@ class _Comment extends StatelessWidget {
       ) {
     showDialog(
       context: context,
+      useRootNavigator: false,
       builder: (dialogContext) => AlertDialog(
         title: Row(
           children: [

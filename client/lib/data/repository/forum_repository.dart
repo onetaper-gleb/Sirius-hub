@@ -1,15 +1,15 @@
 import 'package:client/domain/model/forum_models/topic_model.dart';
 import 'package:dio/dio.dart';
 
-import '../source/firebase_auth_source.dart';
+import '../source/auth_source.dart';
 
 class ForumRepository {
-  final FirebaseAuthDataSource _authDataSource;
+  final AuthDataSource _authDataSource;
   final Dio _dio;
 
   ForumRepository({
     required Dio dio,
-    required FirebaseAuthDataSource authDataSource,
+    required AuthDataSource authDataSource,
   }) : _dio = dio,
        _authDataSource = authDataSource;
 
@@ -39,7 +39,6 @@ class ForumRepository {
     try {
       final rawToken = await _authDataSource.getToken();
       if (rawToken == null) {
-        await _authDataSource.deleteCurrentUser();
         throw Exception('Не удалось получить токен после регистрации');
       }
       final response = await _dio.get(
@@ -71,7 +70,6 @@ class ForumRepository {
     try {
       final rawToken = await _authDataSource.getToken();
       if (rawToken == null) {
-        await _authDataSource.deleteCurrentUser();
         throw Exception('Не удалось получить токен после регистрации');
       }
       final formData = {'title': title, 'anon': isAnonymous};

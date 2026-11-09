@@ -3,140 +3,72 @@ import 'package:dio/dio.dart';
 import 'package:client/data/local/registration_draft_storage.dart';
 import 'package:client/domain/model/model.dart';
 import 'package:client/data/source/source.dart';
-import 'package:firebase_auth/firebase_auth.dart' as firebase;
 
 class AuthRepository {
-  final FirebaseAuthDataSource _authDataSource;
+  final AuthDataSource _authDataSource;
   final Dio _dio;
 
-  AuthRepository({
-    required FirebaseAuthDataSource authDataSource,
-    required Dio dio,
-  }) : _authDataSource = authDataSource,
-       _dio = dio;
+  AuthRepository({required AuthDataSource authDataSource, required Dio dio})
+    : _authDataSource = authDataSource,
+      _dio = dio;
 
   Stream<UserModel?> get userStream {
-    return _authDataSource.authStateChanges.asyncMap((firebaseUser) async {
-      if (firebaseUser == null) return null;
-      return await _fetchUserOrCreateDefault(
-        firebaseUser.uid,
-        firebaseUser.email,
-      );
+    return _authDataSource.authStateChanges.map((user) {
+      if (user == null) return null;
+      return UserModel(id: user.uid, email: user.email ?? '');
     });
   }
 
-  bool get isFirebaseSignedIn => _authDataSource.currentUser != null;
+  bool get isSignedIn => _authDataSource.currentUser != null;
 
-  String? get currentFirebaseUid => _authDataSource.currentUser?.uid;
+  String? get currentUserId => _authDataSource.currentUser?.uid;
 
-  Future<void> signUpFirebaseOnly({
-    required String email,
-    required String password,
-  }) async {
-    final firebaseUser = await _authDataSource.signUp(
-      email: email,
-      password: password,
-    );
-    RegistrationDraftStorage.memoryPendingUid = firebaseUser.uid;
+  Future<void> signUp({required String email, required String password}) async {
+    final user = await _authDataSource.signUp(email: email, password: password);
+    RegistrationDraftStorage.memoryPendingUid = user.uid;
   }
 
   Future<UserModel> completeRegistration(
     RegistrationProfileData profile,
   ) async {
+    await _authDataSource.setUserDisplayName(profile.displayName?.trim() ?? '');
+    final token = await _authDataSource.getToken(forceRefresh: true);
+    if (token == null) throw Exception('Не удалось получить токен');
+    final options = Options(headers: {'Authorization': 'Bearer $token'});
     try {
-      final email = _authDataSource.currentUser?.email ?? '';
-      await _authDataSource.setUserDisplayName(
-        profile.displayName == null ? '' : profile.displayName!.trim(),
-      );
-
-      final rawToken = await _authDataSource.getToken(forceRefresh: true);
-      if (rawToken == null) {
-        await _authDataSource.deleteCurrentUser();
-        throw Exception('Не удалось получить токен после регистрации');
-      }
-
-      final authOptions = Options(
-        headers: {'Authorization': 'Bearer $rawToken'},
-      );
-
-      try {
-        await _dio.post('auth/init', options: authOptions);
-      } on DioException catch (dioError) {
-        await _authDataSource.deleteCurrentUser();
-        final errorMessage =
-            _extractApiDetail(dioError) ?? dioError.message ?? 'Ошибка сервера';
-        throw Exception(errorMessage);
-      }
-
-      try {
-        await _dio.put(
-          'profile/update',
-          data: _profileUpdateJson(profile),
-          options: authOptions,
+      if (_authDataSource.needsBackendInit) {
+        await _dio.post(
+          'auth/init',
+          data: {'group_code': profile.groupCode},
+          options: options,
         );
-      } on DioException catch (dioError) {
-        await _authDataSource.deleteCurrentUser();
-        final errorMessage =
-            _extractApiDetail(dioError) ?? dioError.message ?? 'Ошибка сервера';
-        throw Exception(errorMessage);
       }
-
-      try {
-        await _dio.patch(
-          'profile/avatar',
-          data: {
-            'avatar_emoji': profile.avatarEmoji != null
-                ? profile.avatarEmoji!.trim()
-                : '😀',
-          },
-          options: authOptions,
-        );
-      } on DioException catch (dioError) {
-        await _authDataSource.deleteCurrentUser();
-        final errorMessage =
-            _extractApiDetail(dioError) ?? dioError.message ?? 'Ошибка сервера';
-        throw Exception(errorMessage);
-      }
-
-      await _authDataSource.getToken(forceRefresh: true);
-
-      final uid = _authDataSource.currentUser?.uid;
-      if (uid == null) {
-        throw Exception('Сессия потеряна после регистрации');
-      }
-
-      final newUser = UserModel(
-        id: uid,
-        email: email,
-        role: UserRole.student,
-        name: profile.displayName == null ? '' : profile.displayName!.trim(),
+      await _dio.put(
+        'profile/update',
+        data: _profileUpdateJson(profile),
+        options: options,
       );
-
-      return newUser;
-    } on firebase.FirebaseAuthException {
-      rethrow;
-    } catch (e) {
-      rethrow;
+      await _dio.patch(
+        'profile/avatar',
+        data: {'avatar_emoji': profile.avatarEmoji?.trim() ?? '😀'},
+        options: options,
+      );
+    } on DioException catch (error) {
+      throw Exception(
+        _extractApiDetail(error) ?? error.message ?? 'Ошибка сервера',
+      );
     }
+    final uid = currentUserId;
+    if (uid == null) throw Exception('Сессия потеряна после регистрации');
+    return (await getCurrentProfile()).userModel;
   }
 
-  Map<String, dynamic> _profileUpdateJson(RegistrationProfileData p) {
-    final displayName = p.displayName == null ? '' : p.displayName!.trim();
-    final map = <String, dynamic>{'display_name': displayName};
-    final group = p.groupCode?.trim();
-    if (group != null && group.isNotEmpty) {
-      map['group_code'] = group;
-    }
-    final tg = p.telegramHandle?.trim();
-    if (tg != null && tg.isNotEmpty) {
-      map['telegram_handle'] = tg;
-    }
-    final bio = p.bio?.trim();
-    if (bio != null && bio.isNotEmpty) {
-      map['bio'] = bio;
-    }
-    return map;
-  }
+  Map<String, dynamic> _profileUpdateJson(RegistrationProfileData profile) => {
+    'display_name': profile.displayName?.trim(),
+    'group_code': profile.groupCode?.trim(),
+    'messenger_handle': profile.telegramHandle?.trim(),
+    'bio': profile.bio?.trim(),
+  };
 
   String? _extractApiDetail(DioException e) {
     final data = e.response?.data;
@@ -156,27 +88,8 @@ class AuthRepository {
     return null;
   }
 
-  Future<ProfileModel> signIn({
-    required String email,
-    required String password,
-  }) async {
-    final firebaseUser = await _authDataSource.signIn(
-      email: email,
-      password: password,
-    );
-    final auth = await _fetchUserOrCreateDefault(
-      firebaseUser.uid,
-      firebaseUser.email,
-    );
-
-    final model = await getProfileData();
-    final authModel = ProfileModel(
-      registrationProfileData: model,
-      userModel: auth,
-    );
-    return authModel;
-    // String? token = await _authDataSource.getToken(forceRefresh: true);
-    // print("Bearer "+ token.toString());
+  Future<void> signIn({required String email, required String password}) async {
+    await _authDataSource.signIn(email: email, password: password);
   }
 
   Future<void> signOut() async {
@@ -184,41 +97,36 @@ class AuthRepository {
   }
 
   Future<void> abandonIncompleteRegistration() async {
-    try {
-      await _authDataSource.deleteCurrentUser();
-    } catch (_) {
-      // требуется недавний вход и т.п. — всё равно чистим сессию
-    }
     await _authDataSource.signOut();
   }
 
+  String? get currentEmail => _authDataSource.currentUser?.email;
+
+  Future<ProfileModel> getCurrentProfile() async {
+    final data = await _getProfileJson();
+    final uid = currentUserId;
+    if (uid == null) throw Exception('Сессия завершена');
+    return ProfileModel(
+      registrationProfileData: RegistrationProfileData.fromJson(data),
+      userModel: UserModel.fromResponse(uid, currentEmail, data),
+    );
+  }
+
   Future<RegistrationProfileData> getProfileData() async {
-    if (await hasCompletedBackendProfile()) {
-      final token = await _authDataSource.getToken(forceRefresh: true);
-      if (token == null) throw Exception('No token');
+    final data = await _getProfileJson();
+    return RegistrationProfileData.fromJson(data);
+  }
 
-      try {
-        final response = await _dio.get(
-          'profile/me',
-          options: Options(headers: {'Authorization': 'Bearer $token'}),
-        );
-
-        final data = response.data;
-
-        if (data is! Map<String, dynamic>) {
-          throw Exception('Неправильный формат response при логине.');
-        }
-
-        final model = RegistrationProfileData.fromJson(data);
-        return model;
-      } on DioException {
-        rethrow;
-      } catch (e) {
-        rethrow;
-      }
-    } else {
-      throw Exception('Не получилось войти в аккаунт');
-    }
+  Future<Map<String, dynamic>> _getProfileJson() async {
+    final token = await _authDataSource.getToken(forceRefresh: true);
+    if (token == null) throw Exception('Не удалось получить токен');
+    final response = await _dio.get(
+      'profile/me',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+    if (response.data is! Map<String, dynamic>)
+      throw Exception('Неправильный формат профиля');
+    return response.data as Map<String, dynamic>;
   }
 
   Future<RegistrationProfileData> updateProfileData(
@@ -261,29 +169,17 @@ class AuthRepository {
   }
 
   Future<bool> hasCompletedBackendProfile() async {
-    final token = await _authDataSource.getToken(forceRefresh: true);
-    if (token == null) return false;
-
     try {
-      final response = await _dio.get(
-        'profile/me',
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
-
-      final data = response.data;
-      if (data is! Map<String, dynamic>) return false;
-
-      final displayName = (data['display_name'] as String?)?.trim();
-      final avatarEmoji = (data['avatar_emoji'] as String?)?.trim();
-      return (displayName != null && displayName.isNotEmpty) &&
-          (avatarEmoji != null && avatarEmoji.isNotEmpty);
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 404) {
-        return false;
-      }
-      return false;
-    } catch (e) {
-      return false;
+      final data = await _getProfileJson();
+      final name = (data['display_name'] as String?)?.trim();
+      final avatar = (data['avatar_emoji'] as String?)?.trim();
+      return name != null &&
+          name.isNotEmpty &&
+          avatar != null &&
+          avatar.isNotEmpty;
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 404) return false;
+      rethrow;
     }
   }
 
@@ -319,24 +215,5 @@ class AuthRepository {
     final pending = await RegistrationDraftStorage.isPendingForUid(uid);
     if (pending) return true;
     return !(await hasCompletedBackendProfile());
-  }
-
-  Future<UserModel> _fetchUserOrCreateDefault(String uid, String? email) async {
-    print('Fecthing user');
-    final token = await _authDataSource.getToken(forceRefresh: true);
-    if (token == null) throw Exception('Not registered');
-
-    try {
-      final response = await _dio.get(
-        '/profile/user/$uid',
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
-      final data = response.data;
-      final UserModel userModel = UserModel.fromResponse(uid, email, data);
-
-      return userModel;
-    } catch (e) {
-      return UserModel(id: uid, email: email ?? '', role: UserRole.student);
-    }
   }
 }

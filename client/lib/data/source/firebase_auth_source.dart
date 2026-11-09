@@ -1,13 +1,21 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
+import 'auth_source.dart';
 
-class FirebaseAuthDataSource {
+class FirebaseAuthDataSource implements AuthDataSource {
   final firebase.FirebaseAuth _auth;
 
   FirebaseAuthDataSource({required firebase.FirebaseAuth auth}) : _auth = auth;
 
-  Stream<firebase.User?> get authStateChanges => _auth.authStateChanges();
+  Stream<AuthUser?> get authStateChanges =>
+      _auth.authStateChanges().map(_mapUser);
 
-  firebase.User? get currentUser => _auth.currentUser;
+  AuthUser? get currentUser => _mapUser(_auth.currentUser);
+
+  @override
+  bool get needsBackendInit => true;
+
+  AuthUser? _mapUser(firebase.User? user) =>
+      user == null ? null : AuthUser(uid: user.uid, email: user.email);
 
   Future<String?> getToken({bool forceRefresh = false}) async {
     try {
@@ -17,7 +25,7 @@ class FirebaseAuthDataSource {
     }
   }
 
-  Future<firebase.User> signUp({
+  Future<AuthUser> signUp({
     required String email,
     required String password,
   }) async {
@@ -27,7 +35,7 @@ class FirebaseAuthDataSource {
     );
     if (credential.user == null)
       throw Exception("Ошибка создания пользователя");
-    return credential.user!;
+    return _mapUser(credential.user)!;
   }
 
   Future<void> setUserDisplayName(String displayName) async {
@@ -37,7 +45,7 @@ class FirebaseAuthDataSource {
     await user.reload();
   }
 
-  Future<firebase.User> signIn({
+  Future<AuthUser> signIn({
     required String email,
     required String password,
   }) async {
@@ -46,12 +54,8 @@ class FirebaseAuthDataSource {
       password: password,
     );
     if (credential.user == null) throw Exception("Пользователь не найден");
-    return credential.user!;
+    return _mapUser(credential.user)!;
   }
 
   Future<void> signOut() => _auth.signOut();
-
-  Future<void> deleteCurrentUser() async {
-    await _auth.currentUser?.delete();
-  }
 }

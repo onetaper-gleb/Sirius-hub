@@ -1,14 +1,12 @@
 // Models
 import 'package:client/data/repository/repository.dart';
 import 'package:client/data/source/source.dart';
-import 'package:client/domain/bloc/forum/forum_controller.dart';
 import 'package:flutter/services.dart';
 import 'core/dependencies.dart';
+import 'core/api_config.dart';
+import 'package:flutter/foundation.dart';
 import 'domain/bloc/auth/auth_bloc.dart';
 import 'domain/bloc/auth/auth_event.dart';
-import 'domain/bloc/forum/forum_event.dart';
-import 'domain/bloc/news/news_bloc.dart';
-import 'domain/bloc/schedule/schedule_bloc.dart';
 import 'domain/bloc/theme/theme_bloc.dart';
 import 'domain/bloc/theme/theme_event.dart';
 import 'network/http_client.dart';
@@ -38,12 +36,23 @@ void main() async {
 
   final dio = createAppHttpClient();
 
-  // FireBase initialization
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  final fireBaseAuth = firebase.FirebaseAuth.instance;
-
-  final authDataSource = FirebaseAuthDataSource(auth: fireBaseAuth);
+  ApiConfig.validate(debug: kDebugMode);
+  final AuthDataSource authDataSource;
+  if (ApiConfig.authBackend == 'jwt') {
+    final jwt = JwtAuthDataSource(
+      dio: dio,
+      tokenStore: const SecureSessionTokenStore(),
+    );
+    await jwt.restoreSession();
+    authDataSource = jwt;
+  } else {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    authDataSource = FirebaseAuthDataSource(
+      auth: firebase.FirebaseAuth.instance,
+    );
+  }
 
   // Initializing repos
   final authRepository = AuthRepository(
@@ -88,23 +97,9 @@ void main() async {
       child: MultiBlocProvider(
         providers: [
           BlocProvider(
-            create: (_) => ScheduleBloc(
-              scheduleRepository: dependencies.scheduleRepository,
-            ),
-          ),
-          BlocProvider(
             create: (_) =>
                 AuthBloc(authRepository: dependencies.authRepository)
                   ..add(AuthSubscriptionRequested()),
-          ),
-          BlocProvider(
-            create: (_) =>
-                NewsBloc(newsRepository: dependencies.newsRepository),
-          ),
-          BlocProvider(
-            create: (_) =>
-                ForumBloc(repository: dependencies.forumRepository)
-                  ..add(ForumLoadRequested()),
           ),
           BlocProvider(create: (_) => ThemeBloc()..add(LoadTheme())),
         ],

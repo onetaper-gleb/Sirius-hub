@@ -9,11 +9,16 @@ import 'schedule_state.dart';
 
 class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
   final ScheduleRepository _scheduleRepository;
+  int _weekRequest = 0;
 
   ScheduleBloc({required ScheduleRepository scheduleRepository})
     : _scheduleRepository = scheduleRepository,
       super(ScheduleInitial()) {
     on<ScheduleGetWeek>(_getWeek);
+    on<ScheduleClearWeek>((event, emit) {
+      ++_weekRequest;
+      emit(ScheduleInitial());
+    });
     on<ScheduleGetFreeRooms>(_getFreeRooms);
     on<ScheduleResetFreeRooms>(_resetFreeRooms);
   }
@@ -22,13 +27,14 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
     ScheduleGetWeek event,
     Emitter<ScheduleState> emit,
   ) async {
+    final request = ++_weekRequest;
     emit(ScheduleWeekPending());
     try {
       final week = await _scheduleRepository.getSchedule(
         event.group,
         event.weekOffset,
       );
-      emit(ScheduleHasWeek(week: week));
+      if (request == _weekRequest) emit(ScheduleHasWeek(week: week));
     } catch (e, stacktrace) {
       print(e);
       print(stacktrace);
@@ -39,7 +45,7 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
               e.error is SocketException)) {
         errorMessage = 'Нет подключения к интернету';
       }
-      emit(ScheduleError(error: errorMessage));
+      if (request == _weekRequest) emit(ScheduleError(error: errorMessage));
     }
   }
 

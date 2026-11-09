@@ -71,7 +71,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         builder: (_) => ProfileEditScreen(initialProfile: current),
       ),
     );
-    if (updated != null && mounted) {
+    if (!mounted) return;
+    if (updated != null) {
       setState(() {
         _profile = updated;
       });

@@ -18,6 +18,9 @@ class NewsDetailScreen extends StatefulWidget {
 
 class _NewsDetailScreenState extends State<NewsDetailScreen> {
   EventModel? _event;
+  String? _eventError;
+  bool _registering = false;
+  bool _registered = false;
 
   @override
   void initState() {
@@ -56,8 +59,18 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
       body: BlocListener<NewsBloc, NewsState>(
         listener: (context, state) {
           if (state is EventSuccess) {
-            setState(() => _event = state.event);
+            setState(() {
+              _event = state.event;
+              _eventError = null;
+            });
+          } else if (state is EventRegistrationLoading) {
+            setState(() => _registering = true);
           } else if (state is EventRegistrationSuccess) {
+            setState(() {
+              _registering = false;
+              _registered = true;
+            });
+            context.read<NewsBloc>().add(FetchEvent(widget.news.eventId!));
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text("Вы зарегистрированы"),
@@ -65,6 +78,10 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
               ),
             );
           } else if (state is NewsError) {
+            setState(() {
+              _registering = false;
+              if (_event == null) _eventError = state.message;
+            });
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -121,6 +138,23 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
   }
 
   Widget _eventInfoBlock() {
+    if (_event == null) {
+      if (_eventError != null) {
+        return Column(
+          children: [
+            Text(_eventError!),
+            TextButton(
+              onPressed: () {
+                setState(() => _eventError = null);
+                context.read<NewsBloc>().add(FetchEvent(widget.news.eventId!));
+              },
+              child: const Text('Повторить'),
+            ),
+          ],
+        );
+      }
+      return const Center(child: CircularProgressIndicator());
+    }
     final event = _event!;
     return Card(
       child: Padding(
@@ -148,9 +182,13 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
 
             if (event.isRegOpen)
               TextButton.icon(
-                onPressed: () => _showRegisterMenu(context, event.id),
+                onPressed: _registering || _registered
+                    ? null
+                    : () => _showRegisterMenu(event.id),
                 icon: const Icon(Icons.event_available),
-                label: const Text("Зарегистрироваться"),
+                label: Text(
+                  _registered ? 'Вы зарегистрированы' : 'Зарегистрироваться',
+                ),
                 style: TextButton.styleFrom(alignment: Alignment.centerLeft),
               )
             else
@@ -164,41 +202,17 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     );
   }
 
-  void _showRegisterMenu(BuildContext context, String eventId) {
-    final commentController = TextEditingController();
-
-    showDialog(
+  Future<void> _showRegisterMenu(String eventId) async {
+    final comment = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text("Регистрация на событие"),
-        content: TextField(
-          controller: commentController,
-          maxLines: 5,
-          maxLength: 200,
-          decoration: const InputDecoration(
-            labelText: "Комментарий (необязательно)",
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text("Отмена"),
-          ),
-          TextButton(
-            onPressed: () {
-              final comment = commentController.text.trim();
-              context.read<NewsBloc>().add(
-                RegisterForEvent(
-                  eventId: eventId,
-                  comment: comment.isEmpty ? null : comment,
-                ),
-              );
-              Navigator.pop(dialogContext);
-            },
-            child: const Text("Записаться"),
-          ),
-        ],
+      useRootNavigator: false,
+      builder: (_) => const _EventRegistrationDialog(),
+    );
+    if (!mounted || comment == null) return;
+    context.read<NewsBloc>().add(
+      RegisterForEvent(
+        eventId: eventId,
+        comment: comment.trim().isEmpty ? null : comment,
       ),
     );
   }
@@ -214,6 +228,59 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
           Expanded(child: Text(text)),
         ],
       ),
+    );
+  }
+}
+
+class _EventRegistrationDialog extends StatefulWidget {
+  const _EventRegistrationDialog();
+
+  @override
+  State<_EventRegistrationDialog> createState() =>
+      _EventRegistrationDialogState();
+}
+
+class _EventRegistrationDialogState extends State<_EventRegistrationDialog> {
+  static const _commentMaxLength = 50;
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final length = _controller.text.runes.length;
+    return AlertDialog(
+      title: const Text('Регистрация на событие'),
+      content: TextField(
+        controller: _controller,
+        maxLines: 5,
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(
+          labelText: 'Комментарий (необязательно)',
+          border: const OutlineInputBorder(),
+          counterText: '$length/$_commentMaxLength',
+          errorText: length > _commentMaxLength
+              ? 'Не более 50 символов Unicode'
+              : null,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Отмена'),
+        ),
+        TextButton(
+          onPressed: () {
+            if (_controller.text.runes.length > _commentMaxLength) return;
+            Navigator.pop(context, _controller.text);
+          },
+          child: const Text('Записаться'),
+        ),
+      ],
     );
   }
 }

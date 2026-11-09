@@ -5,12 +5,12 @@ import 'package:client/domain/model/model.dart';
 import 'package:client/data/source/source.dart';
 
 class NewsRepository {
-  final FirebaseAuthDataSource _authDataSource;
+  final AuthDataSource _authDataSource;
   final Dio _dio;
 
   NewsRepository({
     required Dio dio,
-    required FirebaseAuthDataSource authDataSource,
+    required AuthDataSource authDataSource,
   }) : _dio = dio,
        _authDataSource = authDataSource;
 
@@ -18,7 +18,6 @@ class NewsRepository {
     try {
       final rawToken = await _authDataSource.getToken();
       if (rawToken == null) {
-        await _authDataSource.deleteCurrentUser();
         throw Exception('Не удалось получить токен после регистрации');
       }
       final response = await _dio.get(
@@ -54,7 +53,6 @@ class NewsRepository {
     try {
       final rawToken = await _authDataSource.getToken();
       if (rawToken == null) {
-        await _authDataSource.deleteCurrentUser();
         throw Exception('Не удалось получить токен после регистрации');
       }
 
@@ -107,7 +105,6 @@ class NewsRepository {
     try {
       final rawToken = await _authDataSource.getToken();
       if (rawToken == null) {
-        await _authDataSource.deleteCurrentUser();
         throw Exception('Не удалось получить токен после регистрации');
       }
       await _dio.delete(
@@ -133,18 +130,15 @@ class NewsRepository {
     try {
       final rawToken = await _authDataSource.getToken();
       if (rawToken == null) {
-        await _authDataSource.deleteCurrentUser();
         throw Exception("Не удалось получить токен");
       }
 
       final response = await _dio.post(
         '/news/events/$eventId/register',
-        data: {"comment": comment},
+        data: {if (comment != null) 'comment': comment},
         options: Options(
-          headers: {
-            'Authorization': 'Bearer $rawToken',
-            'Content-Type': 'application/json',
-          },
+          contentType: Headers.formUrlEncodedContentType,
+          headers: {'Authorization': 'Bearer $rawToken'},
         ),
       );
 
@@ -166,7 +160,6 @@ class NewsRepository {
     try {
       final rawToken = await _authDataSource.getToken();
       if (rawToken == null) {
-        await _authDataSource.deleteCurrentUser();
         throw Exception("Не удалось получить токен");
       }
 

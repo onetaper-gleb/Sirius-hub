@@ -1,3 +1,13 @@
+String? normalizeMessengerHandle(String? value) {
+  if (value == null) return null;
+  var normalized = value.trim();
+  if (normalized.startsWith('tg/')) {
+    normalized = normalized.substring(3).trim();
+  }
+  if (normalized.startsWith('@')) normalized = normalized.substring(1);
+  return normalized.isEmpty ? null : normalized;
+}
+
 class RegistrationProfileData {
   final String? avatarEmoji;
   final String? displayName;
@@ -17,7 +27,7 @@ class RegistrationProfileData {
     'avatar_emoji': avatarEmoji,
     'display_name': displayName,
     'group_code': groupCode,
-    'telegram_handle': telegramHandle,
+    'messenger_handle': telegramHandle,
     'bio': bio,
   };
 
@@ -26,7 +36,8 @@ class RegistrationProfileData {
       avatarEmoji: json['avatar_emoji'] as String?,
       displayName: json['display_name'] as String?,
       groupCode: json['group_code'] as String?,
-      telegramHandle: json['telegram_handle'] as String?,
+      telegramHandle:
+          (json['messenger_handle'] ?? json['telegram_handle']) as String?,
       bio: json['bio'] as String?,
     );
   }

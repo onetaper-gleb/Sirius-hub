@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:client/domain/model/user_models/user_role.dart';
 import '../../domain/bloc/auth/auth_bloc.dart';
 import '../../domain/bloc/auth/auth_state.dart';
 import '../../domain/bloc/news/news_bloc.dart';
@@ -10,11 +9,9 @@ import '../../domain/bloc/news/news_state.dart';
 import '../widgets/admin_fab.dart';
 import '../widgets/button_notifier.dart';
 import '../widgets/expandable_text.dart';
-import '../widgets/theme_button.dart';
 import 'create_news_screen.dart';
 import 'news_detail_screen.dart';
-import '../forum/topic_screen.dart';
-import '../../domain/model/news_model.dart';
+import 'package:client/core/dependencies.dart';
 
 class NewsScreen extends StatefulWidget {
   const NewsScreen({super.key});
@@ -133,7 +130,13 @@ class _NewsScreenState extends State<NewsScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => NewsDetailScreen(news: news),
+                          builder: (_) => BlocProvider(
+                            create: (_) => NewsBloc(
+                              newsRepository:
+                                  context.dependencies.newsRepository,
+                            ),
+                            child: NewsDetailScreen(news: news),
+                          ),
                         ),
                       );
                     },
@@ -141,10 +144,10 @@ class _NewsScreenState extends State<NewsScreen> {
                       final isAdmin =
                           context.read<AuthBloc>().state is AuthAuthenticated &&
                           (context.read<AuthBloc>().state as AuthAuthenticated)
-                                  .profileModel
-                                  .userModel
-                                  .role ==
-                              UserRole.council;
+                              .profileModel
+                              .userModel
+                              .role
+                              .canManageContent;
                       if (isAdmin) _confirmDelete(context, news.id);
                     },
                     child: Column(
@@ -219,6 +222,7 @@ class _NewsScreenState extends State<NewsScreen> {
   void _confirmDelete(BuildContext context, String id) {
     showDialog(
       context: context,
+      useRootNavigator: false,
       builder: (ctx) => AlertDialog(
         title: const Text('Удалить новость?'),
         content: const Text('Это действие нельзя отменить.'),

@@ -15,6 +15,7 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
     on<CreateNews>(_onCreateNews);
     on<DeleteNews>(_onDeleteNews);
     on<RegisterForEvent>(_onRegisterForEvent);
+    on<FetchEvent>(_onFetchEvent);
   }
 
   Future<void> _onFetchNews(FetchNews event, Emitter<NewsState> emit) async {

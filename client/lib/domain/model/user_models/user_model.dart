@@ -1,9 +1,9 @@
 import 'package:client/domain/model/user_models/user_role.dart';
 
 class UserModel {
-  final String id; // Уникальный UID из Firebase Auth
+  final String id;
   final String email; // Почта
-  final UserRole role; // Наша роль (студент или студсовет)
+  final UserRole role;
   final String?
   name; // Имя (nullable, так как при регистрации его может не быть)
 
@@ -23,7 +23,7 @@ class UserModel {
       id: id,
       email: email ?? '',
       role: UserRole.fromString(data['role'] ?? 'student'),
-      name: data['name'],
+      name: data['display_name'],
     );
   }
 }

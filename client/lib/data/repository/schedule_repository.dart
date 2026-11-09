@@ -47,11 +47,29 @@ class ScheduleRepository {
     }
 
     int now = DateTime.now().millisecondsSinceEpoch;
-    int lastSync = _localSettings.getLastSyncTime() ?? 0;
+    int lastSync = _localSettings.getLastSyncTime(group) ?? 0;
 
     bool isCacheFresh = (now - lastSync) < 7200000;
 
-    var cachedEvents = await _db.getCachedSchedule(group);
+    final storedEvents = await _db.getCachedSchedule(group);
+    final today = DateTime.now();
+    final monday = DateTime(
+      today.year,
+      today.month,
+      today.day - today.weekday + 1,
+    );
+    final nextMonday = monday.add(const Duration(days: 7));
+    final cachedEvents = storedEvents.where((event) {
+      final parts = event.date.split('.');
+      final date =
+          DateTime.tryParse(event.date) ??
+          (parts.length == 3
+              ? DateTime.tryParse('${parts[2]}-${parts[1]}-${parts[0]}')
+              : null);
+      return date != null &&
+          !date.isBefore(monday) &&
+          date.isBefore(nextMonday);
+    }).toList();
 
     if (isCacheFresh == true && cachedEvents.isNotEmpty) {
       print('>>> Взяли расписание из БД');
@@ -69,11 +87,13 @@ class ScheduleRepository {
 
         var networkModel = WeekScheduleModel.fromJson(data);
 
-        await _db.clearGroupSchedule(group);
         var companions = _mapModelToCompanions(networkModel, group);
-        await _db.insertSchedule(companions);
+        await _db.transaction(() async {
+          await _db.clearGroupSchedule(group);
+          await _db.insertSchedule(companions);
+        });
 
-        await _localSettings.saveLastSyncTime(now);
+        await _localSettings.saveLastSyncTime(group, now);
         await _localSettings.saveSelectedGroup(group);
 
         print('>>> Скачали из сети и сохранили в БД');

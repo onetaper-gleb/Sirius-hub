@@ -12,8 +12,11 @@ class RegistrationDraftStorage {
   static String? memoryPendingUid;
 
   static Future<void> setPendingForUid(String uid) async {
-    memoryPendingUid = uid;
     final prefs = await SharedPreferences.getInstance();
+    if (prefs.getString(_keyPendingUid) != uid) {
+      await prefs.remove(_keyDraftJson);
+    }
+    memoryPendingUid = uid;
     await prefs.setString(_keyPendingUid, uid);
   }
 

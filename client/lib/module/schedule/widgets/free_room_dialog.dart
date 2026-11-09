@@ -16,7 +16,7 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
   late int _selectedDayIndex;
   late final int _currentDayIndex;
   String? _errorMessage;
-  final List<String> _dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+  final List<String> _dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
   late final TextEditingController _startController;
   late final TextEditingController _endController;
@@ -30,7 +30,7 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
 
     final now = DateTime.now();
     _weekDays = _getWeekDays(now);
-    _currentDayIndex = (now.weekday >= 1 && now.weekday <= 6)
+    _currentDayIndex = (now.weekday >= 1 && now.weekday <= 7)
         ? now.weekday - 1
         : 0;
     _selectedDayIndex = _currentDayIndex;
@@ -43,14 +43,13 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
   void dispose() {
     _startController.dispose();
     _endController.dispose();
-    _scheduleBloc.add(ScheduleResetFreeRooms());
 
     super.dispose();
   }
 
   List<DateTime> _getWeekDays(DateTime now) {
     final monday = now.subtract(Duration(days: now.weekday - 1));
-    return List.generate(6, (index) => monday.add(Duration(days: index)));
+    return List.generate(7, (index) => monday.add(Duration(days: index)));
   }
 
   Future<void> _selectTime(
@@ -59,6 +58,7 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
   ) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
+      useRootNavigator: false,
       initialTime: const TimeOfDay(hour: 9, minute: 0),
       builder: (context, child) {
         return MediaQuery(
@@ -68,6 +68,7 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
       },
     );
 
+    if (!mounted) return;
     if (picked != null) {
       final String hour = picked.hour.toString().padLeft(2, '0');
       final String minute = picked.minute.toString().padLeft(2, '0');
@@ -94,27 +95,29 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       backgroundColor: Theme.of(context).colorScheme.surface,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: BlocBuilder<ScheduleBloc, ScheduleState>(
-          builder: (context, state) {
-            if (state is ScheduleFreeRoomsPending) {
-              return const SizedBox(
-                height: 200,
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: BlocBuilder<ScheduleBloc, ScheduleState>(
+            builder: (context, state) {
+              if (state is ScheduleFreeRoomsPending) {
+                return const SizedBox(
+                  height: 200,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
 
-            if (state is ScheduleError) {
-              return _buildErrorView(state.error);
-            }
+              if (state is ScheduleError) {
+                return _buildErrorView(state.error);
+              }
 
-            if (state is ScheduleHasFreeRooms) {
-              return _buildResultsView(state.freeRooms);
-            }
+              if (state is ScheduleHasFreeRooms) {
+                return _buildResultsView(state.freeRooms);
+              }
 
-            return _buildSearchForm();
-          },
+              return _buildSearchForm();
+            },
+          ),
         ),
       ),
     );
@@ -278,8 +281,10 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
         ] else ...[
           const SizedBox(height: 32),
         ],
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        Wrap(
+          alignment: WrapAlignment.spaceEvenly,
+          spacing: 8,
+          runSpacing: 8,
           children: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -340,7 +345,7 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
     final colors = Theme.of(context).colorScheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(6, (index) {
+      children: List.generate(7, (index) {
         final isSelected = index == _selectedDayIndex;
         final isToday = index == _currentDayIndex;
         final date = _weekDays[index];
@@ -377,51 +382,55 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
           dayNumWeight = FontWeight.normal;
         }
 
-        return GestureDetector(
-          onTap: () => setState(() => _selectedDayIndex = index),
-          behavior: HitTestBehavior.opaque,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: circleColor,
-                  border: Border.all(color: circleBorder, width: 1.5),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  date.day.toString(),
-                  style: TextStyle(
-                    color: dayNumColor,
-                    fontWeight: dayNumWeight,
-                    fontSize: 15,
+        return Expanded(
+          child: GestureDetector(
+            onTap: () => setState(() => _selectedDayIndex = index),
+            behavior: HitTestBehavior.opaque,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: circleColor,
+                    border: Border.all(color: circleBorder, width: 1.5),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    date.day.toString(),
+                    style: TextStyle(
+                      color: dayNumColor,
+                      fontWeight: dayNumWeight,
+                      fontSize: 15,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _dayNames[index],
-                style: TextStyle(
-                  color: dayNameColor,
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                const SizedBox(height: 4),
+                Text(
+                  _dayNames[index],
+                  style: TextStyle(
+                    color: dayNameColor,
+                    fontSize: 12,
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: isSelected ? 4 : 0,
-                height: isSelected ? 4 : 0,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: colors.primary,
+                const SizedBox(height: 2),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: isSelected ? 4 : 0,
+                  height: isSelected ? 4 : 0,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: colors.primary,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       }),

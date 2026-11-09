@@ -5,7 +5,6 @@ import 'package:client/domain/bloc/schedule/schedule_state.dart';
 import 'package:flutter/material.dart';
 import 'package:client/domain/model/model.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/bloc/schedule/schedule_event.dart';
 import '../../domain/model/schedule_models/lesson_group.dart';
@@ -25,27 +24,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   int _selectedDay = 0;
   String? _group;
   late List<DateTime> _days;
-  final List<String> _dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+  final List<String> _dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
   @override
   void initState() {
     super.initState();
     _days = _getWeekDays();
     final weekday = DateTime.now().weekday;
-    _currentDay = (weekday >= 1 && weekday <= 6) ? weekday - 1 : 0;
+    _currentDay = (weekday >= 1 && weekday <= 7) ? weekday - 1 : 0;
     _selectedDay = _currentDay;
-    _loadCachedGroup();
-  }
-
-  Future<void> _loadCachedGroup() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedGroup = prefs.getString('selected_group');
-    if (savedGroup != null && _group == null) {
-      setState(() {
-        _group = savedGroup;
-      });
-      _getWeek();
-    }
   }
 
   @override
@@ -55,7 +42,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     if (authState is AuthAuthenticated) {
       final groupCode =
           authState.profileModel.registrationProfileData.groupCode;
-      if (groupCode != null && _group == null) {
+      if (groupCode != null && groupCode.isNotEmpty && _group == null) {
         _currentWeek = 0;
         _group = groupCode;
         _getWeek();
@@ -64,7 +51,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _updateWeek(String method) {
-    if (_group == null) return;
+    if (_group == null || _group!.isEmpty) return;
     final currentState = context.read<ScheduleBloc>().state;
     if (currentState is ScheduleWeekPending) return;
 
@@ -113,7 +100,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final monday = now.subtract(Duration(days: now.weekday - 1));
     final targetMonday = monday.add(Duration(days: _currentWeek * 7));
     print('monday: ${monday}, targetMonday: ${targetMonday}');
-    return List.generate(6, (index) => targetMonday.add(Duration(days: index)));
+    return List.generate(7, (index) => targetMonday.add(Duration(days: index)));
   }
 
   @override
@@ -124,10 +111,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           final groupCode =
               state.profileModel.registrationProfileData.groupCode;
 
-          if (groupCode != null && _group != groupCode) {
+          if (_group != groupCode) {
+            context.read<ScheduleBloc>().add(ScheduleClearWeek());
             _group = groupCode;
             _currentWeek = 0;
-            _getWeek();
+            _history.clear();
+            _weekScheduleModel = null;
+            _days = _getWeekDays();
+            if (_group != null && _group!.isNotEmpty) _getWeek();
+            setState(() {});
           }
         }
       },
@@ -146,12 +138,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             child: Column(
               children: [
                 _buildWeekHeader(),
-                if (_group == null && state is ScheduleInitial)
+                if (_group == null || _group!.isEmpty)
                   Center(child: Text('Укажите группу в профиле')),
                 if (state is ScheduleWeekPending && _weekScheduleModel == null)
                   const Center(child: CircularProgressIndicator()),
-                if (_weekScheduleModel != null)
-                  Expanded(child: _buildScheduleToday()),
+                if (_weekScheduleModel != null) _buildScheduleToday(),
                 if (state is ScheduleError) Text(state.error.toString()),
               ],
             ),
@@ -167,8 +158,18 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     if (_days.isNotEmpty && _selectedDay < _days.length) {
       final monthIndex = _days[_selectedDay].month - 1;
       const monthNames = [
-        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+        'Январь',
+        'Февраль',
+        'Март',
+        'Апрель',
+        'Май',
+        'Июнь',
+        'Июль',
+        'Август',
+        'Сентябрь',
+        'Октябрь',
+        'Ноябрь',
+        'Декабрь',
       ];
       monthName = monthNames[monthIndex];
     }
@@ -197,7 +198,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   height: 72,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    itemCount: 6,
+                    itemCount: 7,
                     padding: EdgeInsets.zero,
                     itemBuilder: (context, index) {
                       return _buildDayItem(index);
@@ -258,7 +259,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       onTap: () => setState(() => _selectedDay = index),
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: (MediaQuery.of(context).size.width - 88) / 6,
+        width: (MediaQuery.of(context).size.width - 88) / 7,
         height: 72,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
