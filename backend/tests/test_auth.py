@@ -231,3 +231,37 @@ def test_unicode_passwords_do_not_truncate_and_registration_cannot_set_role():
         assert response.status_code == 422
 
     asyncio.run(run_scenario(check))
+
+
+def test_administrator_can_set_migrated_password_without_replacing_identity(
+    monkeypatch,
+):
+    from manage_roles import promote
+
+    async def check(client, sessions):
+        headers = await register(client)
+        uid = (await client.get("/auth/me", headers=headers)).json()["id"]
+        async with sessions() as db:
+            user = await db.get(User, uid)
+            user.hashed_password = "!"
+            user.display_name = "Existing profile"
+            await db.commit()
+        monkeypatch.setattr(promote, "AsyncSessionLocal", sessions)
+        monkeypatch.setattr(
+            promote.getpass, "getpass", lambda prompt: "new-local-password"
+        )
+        await promote.update_account("student@example.com", "admin", True)
+        response = await client.post(
+            "/auth/token",
+            data={"username": "student@example.com", "password": "new-local-password"},
+        )
+        assert response.status_code == 200
+        restored_headers = {
+            "Authorization": f"Bearer {response.json()['access_token']}"
+        }
+        restored = (await client.get("/auth/me", headers=restored_headers)).json()
+        assert restored["id"] == uid
+        assert restored["display_name"] == "Existing profile"
+        assert restored["role"] == "admin"
+
+    asyncio.run(run_scenario(check))
