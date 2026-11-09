@@ -44,7 +44,7 @@ test "$candidate_volume" = "$db_volume"
 docker compose build api
 
 sql() {
-  docker exec camphub-postgres sh -c 'exec psql -X -qAt -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<<"$1"
+  docker exec -i camphub-postgres sh -c 'exec psql -X -qAt -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<<"$1"
 }
 revision=$(sql 'SELECT version_num FROM alembic_version')
 case "$revision" in

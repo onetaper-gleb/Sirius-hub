@@ -30,35 +30,46 @@ jobs:
           test -n "$DB_USER" && test -n "$DB_PASSWORD" && test -n "$DB_NAME"
 
       - name: Deploy to Server
-        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17 # v1.2.0
         env:
           DEPLOY_SHA: ${{ github.sha }}
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          fingerprint: SHA256:Y+5SuiwFzUUPdx1zEILX2ZJsRjo8p8KrCwaM2EIk6to
-          command_timeout: 30m
-          envs: JWT_SECRET_KEY,DB_USER,DB_PASSWORD,DB_NAME,DEPLOY_SHA
-          script: |
-            bash -se <<'DEPLOY'
-            set -euo pipefail
-            umask 077
-            test "${#JWT_SECRET_KEY}" -ge 32
-            test -n "$DB_USER" && test -n "$DB_PASSWORD" && test -n "$DB_NAME"
-            [[ "$DEPLOY_SHA" =~ ^[0-9a-f]{40}$ ]]
-            exec 9>/tmp/sirius-hub-deploy.lock
-            flock -n 9 || { echo 'Another deployment holds the server lock'; exit 1; }
-            if pgrep -f '[d]ocker (compose|buildx|build)' >/dev/null; then
-              echo 'An earlier Docker operation is still running'
-              exit 1
-            fi
-            active_dir=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' camphub-fastapi)
-            test -d "$active_dir/../.git"
-            cd "$active_dir/.."
-            test -z "$(git status --porcelain --untracked-files=no)"
-            git fetch origin "$DEPLOY_SHA"
-            git checkout --detach "$DEPLOY_SHA"
-            test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
-            exec bash backend/deploy.sh
-            DEPLOY
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          private=$(mktemp -d "$RUNNER_TEMP/sirius-deploy.XXXXXX")
+          trap 'rm -rf "$private"' EXIT
+          printf '%s\n' "$SERVER_SSH_KEY" >"$private/key"
+          printf '%s\n' '104.143.201.57 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFxKq+usJBbk6neVphUqDuF0jjdoeLKufS5ypT1Ya4Lc' >"$private/known_hosts"
+          chmod 600 "$private/key" "$private/known_hosts"
+          for name in JWT_SECRET_KEY DB_USER DB_PASSWORD DB_NAME DEPLOY_SHA; do
+            printf 'export %s=%q\n' "$name" "${!name}"
+          done >"$private/payload"
+          cat >>"$private/payload" <<'REMOTE'
+          bash -se <<'DEPLOY'
+          set -euo pipefail
+          umask 077
+          test "${#JWT_SECRET_KEY}" -ge 32
+          test -n "$DB_USER" && test -n "$DB_PASSWORD" && test -n "$DB_NAME"
+          [[ "$DEPLOY_SHA" =~ ^[0-9a-f]{40}$ ]]
+          exec 9>/tmp/sirius-hub-deploy.lock
+          flock -n 9 || { echo 'Another deployment holds the server lock'; exit 1; }
+          if pgrep -f '[d]ocker (compose|buildx|build)' >/dev/null; then
+            echo 'An earlier Docker operation is still running'
+            exit 1
+          fi
+          active_dir=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' camphub-fastapi)
+          test -d "$active_dir/../.git"
+          cd "$active_dir/.."
+          test -z "$(git status --porcelain --untracked-files=no)"
+          git fetch origin "$DEPLOY_SHA"
+          git checkout --detach "$DEPLOY_SHA"
+          test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
+          exec bash backend/deploy.sh
+          DEPLOYREMOTE
+          timeout --signal=TERM 30m ssh -i "$private/key" -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o HostKeyAlgorithms=ssh-ed25519 -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$private/known_hosts" -o ConnectTimeout=20 \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=6 \
+            "$SERVER_USER@104.143.201.57" 'bash -se' <"$private/payload"
+
