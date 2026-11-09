@@ -1,0 +1,23 @@
+_CHECK_DATA = glob([
+    "lib/**",
+    "test/**",
+    "assets/**",
+]) + ["pubspec.yaml", "pubspec.lock", "analysis_options.yaml"]
+
+sh_test(
+    name = "tests",
+    srcs = ["tool/check.dart"],
+    args = ["test"],
+    data = _CHECK_DATA,
+    tags = ["local"],
+    timeout = "long",
+)
+
+sh_test(
+    name = "analyze",
+    srcs = ["tool/check.dart"],
+    args = ["analyze"],
+    data = _CHECK_DATA,
+    tags = ["local"],
+    timeout = "long",
+)

@@ -1,7 +1,7 @@
 # SiriusHub (client)
 
 Мобильное Flutter-приложение **SiriusHub** для кампуса/университета: новости, форум, расписание и профиль.  
-Клиент работает с backend по HTTP (Dio) и использует **Firebase Auth** для входа.
+Клиент работает с backend через Dio. По умолчанию вход использует Firebase Auth. Для backend с JWT выберите режим сборки `AUTH_BACKEND=jwt`.
 
 Этот файл закрывает пункт отчёта **«Документация разработчика, документация пользователя»** для frontend (`client/`).
 
@@ -47,7 +47,7 @@ SiriusHub помогает студентам и представителям с
 |---------|-------------------------|
 | **Новости** | Лента новостей с изображениями. У роли `council` — кнопка «+» для создания новости (заголовок, текст, фото) и удаление своих/доступных новостей |
 | **Форум** | Список тем. Открытие темы → комментарии (в т.ч. ответы). У `council` — создание новой темы (можно анонимно). Удаление комментария — автор или `council` |
-| **Расписание** | Пары по группе из профиля: дни недели (Пн–Сб), переключение недели вперёд/назад |
+| **Расписание** | Пары по группе из профиля: дни недели (Пн–Вс), переключение недели вперёд/назад |
 | **Профиль** | Просмотр данных, редактирование, выход из аккаунта |
 
 ### Типичные сценарии
@@ -64,6 +64,8 @@ SiriusHub помогает студентам и представителям с
 
 - Flutter SDK (stable), Dart SDK `^3.11.0` (см. `pubspec.yaml`)
 - Android Studio / Xcode (или настроенный эмулятор/устройство)
+- iOS 15 или новее: это минимальная версия Firebase SDK
+- CocoaPods для `flutter_secure_storage` на iOS и macOS
 - Firebase-проект с Email/Password Auth (конфиг уже в репозитории)
 - Доступный backend SiriusHub (деплой или локальный)
 
@@ -97,7 +99,7 @@ core/       → ApiConfig, DI (DependenciesScope)
 Поток данных:
 
 1. UI отправляет события в BLoC / вызывает repository через `DependenciesScope`.
-2. Repository получает Firebase ID Token и вызывает backend с заголовком `Authorization: Bearer <token>`.
+2. Repository получает токен выбранного источника авторизации и вызывает backend с заголовком `Authorization: Bearer <token>`.
 3. Backend проверяет токен (Firebase Admin) и отдаёт JSON.
 4. BLoC обновляет state → UI перестраивается.
 
@@ -134,18 +136,32 @@ lib/
 
 ### Конфигурация backend URL
 
-Файл: `lib/core/api_config.dart`
+Адрес API задаётся при сборке через `API_BASE_URL` (по умолчанию `https://104.143.201.57`). Режим авторизации задаётся через `AUTH_BACKEND`: `firebase` (по умолчанию) или `jwt`. Неизвестный режим и некорректный URL останавливают запуск.
 
-```dart
-abstract final class ApiConfig {
-  static const String baseUrl = 'http://93.88.203.130:56284';
-}
+Для backend из `main` используйте Firebase:
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:56284
 ```
 
-Для локальной разработки замените на адрес вашего API, например:
+После перехода backend на JWT (`/auth/register`, `/auth/token`, `/auth/me`) соберите клиент с тем же режимом:
 
-- эмулятор Android → `http://10.0.2.2:56284` (если backend на хосте в Docker на порту 56284);
-- устройство в той же сети → `http://<IP-хоста>:56284`.
+```bash
+flutter build apk --dart-define=AUTH_BACKEND=jwt --dart-define=API_BASE_URL=https://api.example.org
+flutter build ios --dart-define=AUTH_BACKEND=jwt --dart-define=API_BASE_URL=https://api.example.org
+```
+
+Замените адрес примера на адрес вашего API. JWT требует HTTPS. В debug-сборках разрешён HTTP для `localhost`, `127.0.0.1`, `::1` и Android-эмулятора `10.0.2.2`:
+
+```bash
+flutter run --dart-define=AUTH_BACKEND=jwt --dart-define=API_BASE_URL=http://10.0.2.2:56284
+```
+
+Сначала установите backend-исправления, совместимые с Firebase, и этот клиент. Затем установите backend с JWT и выпустите клиент с `AUTH_BACKEND=jwt`. Firebase-сборка не входит в JWT backend, а JWT-сборка не входит в Firebase backend.
+
+JWT-сессия хранится в Keychain/Keystore через `flutter_secure_storage`. При запуске клиент проверяет сохранённый токен через `/auth/me`. При HTTP 401 или выходе клиент удаляет локальный токен. Backend не выдаёт refresh token: после истечения access token (по умолчанию 60 минут) войдите снова. Пароли Firebase не переносятся в JWT автоматически. Для прежних пользователей администратор должен настроить пароль по инструкции backend.
+
+Ошибка сети не запускает регистрацию повторно и не удаляет аккаунт. Если профиль не загрузился, нажмите «Повторить» или «Выйти». Кнопка «Выйти» в незавершённой регистрации завершает сессию без удаления аккаунта.
 
 ### Firebase
 
@@ -191,6 +207,17 @@ flutter test
 - `test/widget_test.dart` — поведение `ButtonNotifier`
 - `test/module/auth/login_screen_test.dart` — экран входа
 - `test/domain/model/registration_profile_test.dart` — модель профиля регистрации
+- `test/data/` — Firebase/JWT сессии, поля профиля, сроки кэша расписания
+- `test/domain/bloc/` — поздние ответы после выхода и смены группы
+- `test/module/news/`, `test/module/schedule/` — загрузка события, вместимость, раскладка расписания
+
+Для Bazel установите Bazelisk и добавьте Flutter/Dart в `PATH`. Сначала выполните `flutter pub get`, затем запустите из `client/`:
+
+```bash
+bazel test //:tests //:analyze --test_env=PATH --test_env=HOME --test_env=PUB_HOSTED_URL --test_output=errors
+```
+
+Bazel использует закреплённую версию 7.6.1. Dart runner копирует исходники во временный каталог, разрешает зависимости из pub cache и запускает Flutter. Цель `analyze` завершится ошибкой при ошибках анализатора. Существующие предупреждения и подсказки выводятся без остановки проверки.
 
 ### Сборка релиза (кратко)
 
@@ -211,8 +238,8 @@ flutter build ios
 | Симптом | Что проверить |
 |---------|----------------|
 | Ошибка соединения / Dio timeout | `ApiConfig.baseUrl`, доступность backend, firewall, cleartext HTTP на Android |
-| 401 Unauthorized | валидный Firebase-пользователь; токен передаётся в repository |
-| После регистрации «зависает» профиль | backend: `POST /auth/init`, затем профиль; сеть до API |
+| 401 Unauthorized | выбранный режим соответствует backend; JWT-сессия не истекла; войдите снова |
+| После регистрации «зависает» профиль | сеть до API; `POST /auth/init` нужен только для режима Firebase |
 | Пустое расписание | в профиле заполнен `groupCode`; backend `/schedule` отвечает для этой группы |
 | Нет FAB создания новости/темы | у пользователя роль `council` в профиле/custom claims |
 | Splash не снимается | смотрите исключения на старте Firebase / `main()` |

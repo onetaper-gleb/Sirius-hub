@@ -14,11 +14,11 @@ class LocalSettings {
     return _prefs.getString(_keySelectedGroup);
   }
 
-  Future<void> saveLastSyncTime(int timestamp) async {
-    await _prefs.setInt(_keyLastSync, timestamp);
+  Future<void> saveLastSyncTime(String group, int timestamp) async {
+    await _prefs.setInt('${_keyLastSync}_$group', timestamp);
   }
 
-  int? getLastSyncTime() {
-    return _prefs.getInt(_keyLastSync);
+  int? getLastSyncTime(String group) {
+    return _prefs.getInt('${_keyLastSync}_$group');
   }
 }

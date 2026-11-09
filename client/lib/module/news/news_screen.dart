@@ -10,11 +10,9 @@ import '../../domain/bloc/news/news_state.dart';
 import '../widgets/admin_fab.dart';
 import '../widgets/button_notifier.dart';
 import '../widgets/expandable_text.dart';
-import '../widgets/theme_button.dart';
 import 'create_news_screen.dart';
 import 'news_detail_screen.dart';
-import '../forum/topic_screen.dart';
-import '../../domain/model/news_model.dart';
+import 'package:client/core/dependencies.dart';
 
 class NewsScreen extends StatefulWidget {
   const NewsScreen({super.key});
@@ -133,7 +131,13 @@ class _NewsScreenState extends State<NewsScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => NewsDetailScreen(news: news),
+                          builder: (_) => BlocProvider(
+                            create: (_) => NewsBloc(
+                              newsRepository:
+                                  context.dependencies.newsRepository,
+                            ),
+                            child: NewsDetailScreen(news: news),
+                          ),
                         ),
                       );
                     },

@@ -22,7 +22,6 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
   bool _hasTopic = false;
   bool _anon = false;
   bool _isRegOpen = false;
-  int? maxPartic;
   EventStatus? _eventStatus;
 
   late TextEditingController _titleController;
@@ -46,6 +45,7 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (!mounted) return;
     if (pickedFile != null) {
       setState(() {
         _selectedImage = File(pickedFile.path);
@@ -54,6 +54,7 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
   }
 
   Future<void> _saveNews() async {
+    int? maxPartic;
     if (_titleController.text.trim().isEmpty ||
         _contentController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -74,7 +75,7 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
         return;
       }
 
-      final maxPartic = int.tryParse(_maxParticController.text.trim());
+      maxPartic = int.tryParse(_maxParticController.text.trim());
       if (maxPartic == null || maxPartic < 1) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

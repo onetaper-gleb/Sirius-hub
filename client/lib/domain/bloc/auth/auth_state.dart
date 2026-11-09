@@ -1,4 +1,3 @@
-import 'package:client/domain/model/model.dart';
 import 'package:client/domain/model/profile_model.dart';
 
 // States of authentification for BLoC
@@ -10,7 +9,6 @@ class AuthUnauthenticated extends AuthState {}
 
 class AuthLoading extends AuthState {}
 
-/// Firebase-аккаунт создан, ждём экран профиля и вызов бэкенда.
 class AuthAwaitingProfileCompletion extends AuthState {}
 
 class AuthAuthenticated extends AuthState {
@@ -20,5 +18,6 @@ class AuthAuthenticated extends AuthState {
 
 class AuthError extends AuthState {
   final Exception error;
-  AuthError({required this.error});
+  final bool awaitingProfile;
+  AuthError({required this.error, this.awaitingProfile = false});
 }

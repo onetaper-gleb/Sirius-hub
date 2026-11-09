@@ -295,7 +295,7 @@ class _RegistrationProfileScreenState extends State<RegistrationProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final email = firebase.FirebaseAuth.instance.currentUser?.email ?? '';
+    final email = context.dependencies.authRepository.currentEmail ?? '';
 
     return SafeArea(
       child: Scaffold(
