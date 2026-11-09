@@ -1,8 +1,5 @@
 import asyncio
-import os
 from datetime import datetime, timedelta, timezone
-
-os.environ.setdefault("JWT_SECRET_KEY", "test-only-secret-key-at-least-32-bytes")
 
 import httpx
 import jwt
