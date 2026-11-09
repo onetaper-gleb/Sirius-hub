@@ -3,69 +3,62 @@ name: Deploy FastAPI
 on:
   push:
     branches: [ main ]
-    paths: [ 'backend/**' ]
+    paths: [ 'backend/**', '.github/workflows/deploy.yml' ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-backend
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_NAME: ${{ secrets.DB_NAME }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Check deployment configuration
+        run: |
+          test "$GITHUB_REF" = refs/heads/main
+          test "${#JWT_SECRET_KEY}" -ge 32
+          test -n "$DB_USER" && test -n "$DB_PASSWORD" && test -n "$DB_NAME"
 
       - name: Deploy to Server
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17 # v1.2.0
         env:
-          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_NAME: ${{ secrets.DB_NAME }}
+          DEPLOY_SHA: ${{ github.sha }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: JWT_SECRET_KEY,DB_USER,DB_PASSWORD,DB_NAME
+          fingerprint: SHA256:Y+5SuiwFzUUPdx1zEILX2ZJsRjo8p8KrCwaM2EIk6to
+          command_timeout: 30m
+          envs: JWT_SECRET_KEY,DB_USER,DB_PASSWORD,DB_NAME,DEPLOY_SHA
           script: |
-            set -e
-
-            mkdir -p ~/app/Sirius-hub
-            cd ~/app/Sirius-hub
-
-            if [ ! -d ".git" ]; then
-              git clone https://github.com/${{ github.repository }}.git .
-            fi
-
-            git fetch origin
-            git checkout main
-            git reset --hard origin/main
-
-            cd backend
-
-            test "${#JWT_SECRET_KEY}" -ge 32
+            bash -se <<'DEPLOY'
+            set -euo pipefail
             umask 077
-            python3 - <<'PY'
-            import json
-            import os
-            from pathlib import Path
-
-            keys = ("JWT_SECRET_KEY", "DB_USER", "DB_PASSWORD", "DB_NAME")
-            text = "".join(
-                f"{key}={json.dumps(os.environ[key].replace('$', '$$'), ensure_ascii=False)}\n"
-                for key in keys
-            )
-            config = Path(".env")
-            config.write_text(text)
-            config.chmod(0o600)
-            PY
-
-            docker compose build
-            mkdir -p uploads
-            if docker container inspect camphub-fastapi >/dev/null 2>&1; then
-              upload_mount=$(docker container inspect --format '{{range .Mounts}}{{if eq .Destination "/app/uploads"}}{{.Source}}{{end}}{{end}}' camphub-fastapi)
-              if [ "$upload_mount" != "$(pwd)/uploads" ]; then
-                docker stop camphub-fastapi
-                trap 'docker start camphub-fastapi >/dev/null 2>&1 || true' EXIT
-                docker cp camphub-fastapi:/app/uploads/. uploads/
-              fi
+            test "${#JWT_SECRET_KEY}" -ge 32
+            test -n "$DB_USER" && test -n "$DB_PASSWORD" && test -n "$DB_NAME"
+            [[ "$DEPLOY_SHA" =~ ^[0-9a-f]{40}$ ]]
+            exec 9>/tmp/sirius-hub-deploy.lock
+            flock -n 9 || { echo 'Another deployment holds the server lock'; exit 1; }
+            if pgrep -f '[d]ocker (compose|buildx|build)' >/dev/null; then
+              echo 'An earlier Docker operation is still running'
+              exit 1
             fi
-            docker compose up -d
-            trap - EXIT
+            active_dir=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' camphub-fastapi)
+            test -d "$active_dir/../.git"
+            cd "$active_dir/.."
+            test -z "$(git status --porcelain --untracked-files=no)"
+            git fetch origin "$DEPLOY_SHA"
+            git checkout --detach "$DEPLOY_SHA"
+            test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
+            exec bash backend/deploy.sh
+            DEPLOY

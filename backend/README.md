@@ -41,3 +41,5 @@ The migration keeps account IDs, profiles, roles, and foreign keys. Firebase pas
 `DATABASE_URL` takes precedence over `DB_*`. Without either configuration, local development uses SQLite with `aiosqlite`. The privileged development seed script has been removed. The JWT secret must remain stable across restarts. Rotating it invalidates every existing token.
 
 The deployment workflow writes a Compose `.env` file with dollar escaping. Run administrative commands inside the container. Local development can run the same Python CLI directly with a normal `.env` file.
+
+The deployment workflow uses `deploy.sh` in the active Compose directory. It deploys the exact commit and rejects concurrent Docker operations. Before migration, it stops the API and saves a database dump, uploads, and a rollback image under `~/.local/state/sirius-hub/`. Recovery files stay on the server. Failed readiness checks restore the previous API image without downgrading the database. After a JWT migration, the old Firebase image cannot create accounts with the new password schema. Correct the JWT deployment before accepting new registrations.
