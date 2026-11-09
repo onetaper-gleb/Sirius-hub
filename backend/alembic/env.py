@@ -13,15 +13,13 @@ from alembic import context
 # 1. Пути для импортов
 sys.path.append(str(Path(__file__).parent.parent))
 import database.models
-from database.database import Base
+from database.database import Base, engine
 
 target_metadata = Base.metadata
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
-
-from database.database import engine
 
 config.set_main_option(
     "sqlalchemy.url",

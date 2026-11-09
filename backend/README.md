@@ -28,12 +28,14 @@ Prerequisites: PostgreSQL, Python 3.12, a database backup, and a mobile client w
 3. Set the deployment secret `JWT_SECRET_KEY` when using the GitHub deployment workflow.
 4. Check existing accounts for duplicate emails that differ only in case. Reconcile them before migration. The unique index rejects ambiguous email identities.
 5. Run `docker compose up -d --build` from `backend/`. The API container runs `alembic upgrade head` before Uvicorn.
-6. Set a new password for each former Firebase account through a trusted administrator process: `python manage_roles/promote.py EMAIL --set-password`.
-7. Bootstrap an administrator when needed: `python manage_roles/promote.py EMAIL --role admin`.
+6. Set a new password for each former Firebase account through a trusted administrator process: `docker compose exec api python manage_roles/promote.py EMAIL --set-password`.
+7. Bootstrap an administrator when needed: `docker compose exec api python manage_roles/promote.py EMAIL --role admin`.
 8. Build the mobile client with `--dart-define=AUTH_BACKEND=jwt` and the configured backend URL.
 
 For local startup, install `requirements-dev.txt`, run `alembic upgrade head`, then run `uvicorn main:app --reload`.
 
 The migration keeps account IDs, profiles, roles, and foreign keys. Firebase password hashes cannot be transferred through this repository. Existing accounts receive an unusable password marker until an administrator sets their password. Registration cannot replace an existing email. New registrations receive new IDs. The removed development seed script must not be used to create privileged test accounts in production.
 
-`DATABASE_URL` takes precedence over `DB_*`. Without either configuration, local development uses SQLite with `aiosqlite`. Never use the committed sample database as a production database. The JWT secret must remain stable across restarts. Rotating it invalidates every existing token.
+`DATABASE_URL` takes precedence over `DB_*`. Without either configuration, local development uses SQLite with `aiosqlite`. The sample databases and privileged development seed script have been removed. The JWT secret must remain stable across restarts. Rotating it invalidates every existing token.
+
+The deployment workflow writes a Compose `.env` file with dollar escaping. Run administrative commands inside the container. Local development can run the same Python CLI directly with a normal `.env` file.

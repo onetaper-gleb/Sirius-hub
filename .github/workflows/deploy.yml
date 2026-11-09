@@ -20,10 +20,10 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_NAME: ${{ secrets.DB_NAME }}
         with:
-          envs: JWT_SECRET_KEY,DB_USER,DB_PASSWORD,DB_NAME
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          envs: JWT_SECRET_KEY,DB_USER,DB_PASSWORD,DB_NAME
           script: |
             set -e
 
@@ -40,12 +40,32 @@ jobs:
 
             cd backend
 
-            touch .env
-
             test "${#JWT_SECRET_KEY}" -ge 32
             umask 077
-            chmod 600 .env
+            python3 - <<'PY'
+            import json
+            import os
+            from pathlib import Path
 
-            printf '%s\n' "JWT_SECRET_KEY=$JWT_SECRET_KEY" "DB_USER=$DB_USER" "DB_PASSWORD=$DB_PASSWORD" "DB_NAME=$DB_NAME" > .env
+            keys = ("JWT_SECRET_KEY", "DB_USER", "DB_PASSWORD", "DB_NAME")
+            text = "".join(
+                f"{key}={json.dumps(os.environ[key].replace('$', '$$'))}\n"
+                for key in keys
+            )
+            config = Path(".env")
+            config.write_text(text)
+            config.chmod(0o600)
+            PY
 
-            docker compose up -d --build
+            docker compose build
+            mkdir -p uploads
+            if docker container inspect camphub-fastapi >/dev/null 2>&1; then
+              upload_mount=$(docker container inspect --format '{{range .Mounts}}{{if eq .Destination "/app/uploads"}}{{.Source}}{{end}}{{end}}' camphub-fastapi)
+              if [ "$upload_mount" != "$(pwd)/uploads" ]; then
+                docker stop camphub-fastapi
+                trap 'docker start camphub-fastapi >/dev/null 2>&1 || true' EXIT
+                docker cp camphub-fastapi:/app/uploads/. uploads/
+              fi
+            fi
+            docker compose up -d
+            trap - EXIT

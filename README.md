@@ -17,14 +17,14 @@ SiriusHub — мобильное приложение и backend-сервис д
 - Авторизация через **Firebase Auth** (email/password); вход в UI через `AuthGate`
 - Слои: `module` (UI) → `domain` (BLoC/модели) → `data` (Repository + Firebase DataSource) → `network` (Dio)
 - DI через `DependenciesScope` (`client/lib/core/dependencies.dart`)
-- Для этого backend нужен режим JWT (`--dart-define=AUTH_BACKEND=jwt`), описанный в [`backend/README.md`](backend/README.md).
+- Для этого backend нужен режим JWT: `--dart-define=AUTH_BACKEND=jwt`.
 - Базовый URL backend: `client/lib/core/api_config.dart`
 - Роли в UI: `student` (базовый доступ) и `council` (создание новостей и тем форума)
 
 **Backend (FastAPI)**:
 
 - Проверка пользователя по **JWT access token** (HS256). Пароли хранятся как Argon2-хеши.
-- Контракты API, миграция аккаунтов и запуск: [`backend/README.md`](backend/README.md).
+- Контракты API и миграция аккаунтов: [`backend/README.md`](backend/README.md).
 - Данные хранятся в **PostgreSQL** (async SQLAlchemy + asyncpg)
 - Картинки новостей сохраняются в `backend/uploads/` и отдаются как статика по `/static/...`
 - Перед запуском backend применяются миграции Alembic (`alembic upgrade head`).
@@ -49,10 +49,10 @@ SiriusHub — мобильное приложение и backend-сервис д
 Backend запускается как FastAPI-приложение `backend/main.py` и подключает роутеры:
 
 - **Auth** (`/auth/*`):
-  - `POST /auth/register` — создать локальный аккаунт и получить токен
+  - `POST /auth/register` — создать локальный аккаунт и получить JWT
   - `POST /auth/token` — войти по email и паролю
-  - `GET /auth/me` — получить текущий аккаунт
-  - `POST /auth/promote-user` — изменить роль пользователя (только для `admin`)
+  - `GET /auth/me` — текущий аккаунт
+  - `POST /auth/promote-user` — изменить роль пользователя (только `admin`, роль проверяется в PostgreSQL)
 - **Profile** (`/profile/*`):
   - `GET /profile/me` — профиль текущего пользователя
   - `PUT /profile/update` — обновление профиля
@@ -60,13 +60,24 @@ Backend запускается как FastAPI-приложение `backend/main
   - `GET /profile/user/{user_id}` — публичный профиль пользователя
 - **News** (`/news/*`):
   - `GET /news/` — список новостей
-  - `POST /news/` — создание новости (только `council`), поддерживает загрузку изображения (multipart)
+  - `POST /news/` — создание новости (для `council` и `admin`), изображение передаётся строкой Base64 в JSON-поле `image`
   - `DELETE /news/{news_id}` — удаление новости (только `council`)
 - **Schedule** (`/schedule/*`):
   - `GET /schedule?group=...&week_offset=...` — расписание группы (парсинг внешнего источника)
 - **Forum/Topic**:
   - `GET /forum/topics`, `POST /forum/topics` — список/создание тем (создание — только `council`)
   - `GET /topic/comments?topic_id=...`, `POST /topic/comments` — комментарии в теме
+
+**Предложки** (`/offers/*`):
+
+- `POST /offers/offers` — создаёт черновик; JSON содержит `title`, `content`, `contacts_author` и необязательные поля события, темы и Base64-изображения `image`
+- `GET /offers/offers/my`, `GET /offers/offers/{offer_id}` — свои предложки; чужую предложку могут читать только `council` и `admin`
+- `PUT /offers/offers/{offer_id}`, `PATCH /offers/offers/{offer_id}/submit` — автор правит черновик или доработку и отправляет на модерацию
+- `GET /offers/admin/offers`, `PATCH /offers/admin/offers/{offer_id}/moderate` — очередь и решение модератора; доступны `council` и `admin`
+- При одобрении backend создаёт новость, событие и тему в одной транзакции. Ответ содержит предложку со статусом `approved`.
+
+Регистрация на событие занимает место в статусах `moderation` и `confirmed`; `waiting_list` и отменённые регистрации места не занимают.
+Расписание возвращает семь дней выбранной недели, включая пустые дни. Поиск свободных аудиторий принимает `date=YYYY-MM-DD`, `start_time=HH:MM`, `end_time=HH:MM`, не дальше десяти недель от текущей.
 
 **Документация API (Swagger/OpenAPI)** доступна на:
 
@@ -80,9 +91,11 @@ Backend запускается как FastAPI-приложение `backend/main
 См. пример: `backend/.env.example`
 
 - **`JWT_SECRET_KEY`**: случайный секрет не короче 32 байт.
-- **`ACCESS_TOKEN_EXPIRE_MINUTES`**: время жизни токена, по умолчанию 60 минут.
+- **`ACCESS_TOKEN_EXPIRE_MINUTES`**: срок действия JWT, по умолчанию 60 минут.
 - **`DB_USER`**, **`DB_PASSWORD`**, **`DB_NAME`**: параметры Postgres
 - **`DB_HOST`**: хост БД (по умолчанию `db` — имя сервиса в Docker Compose)
+- **`DB_PORT`**: порт PostgreSQL (по умолчанию `5432`)
+- **`DATABASE_URL`**: явный URL подключения, имеет приоритет над `DB_*`; для локальной SQLite нужен драйвер `sqlite+aiosqlite`
 
 ---
 
@@ -107,11 +120,17 @@ docker compose up -d --build
 - **API**: `http://localhost:56284`
 - **Postgres**: `localhost:5454` (внутри compose: `db:5432`)
 
+Изображения хранятся в `backend/uploads/`, подключённом к `/app/uploads`; пересоздание контейнера сохраняет файлы.
+При первом переходе со старого контейнера остановите API и скопируйте `/app/uploads/.` из контейнера в `backend/uploads/` до пересоздания.
+Workflow деплоя переносит эти файлы автоматически. На SSH-хосте нужен Python 3; файл `.env` workflow записывает в формате Docker Compose.
+Для административных команд используйте окружение контейнера: сгенерированный `.env` экранирует символ `$` для Compose.
+Удалённый seed-скрипт содержал общие пароли привилегированных тестовых аккаунтов. Если его запускали, оператор должен отключить эти аккаунты или сменить их пароли.
+
 ---
 
 ### Запуск backend (локально без Docker)
 
-Требования: Python (лучше 3.12, как в CI), установленный Postgres (или используйте Docker только для БД).
+Требования: Python 3.12, как в CI и Docker, установленный Postgres (или используйте Docker только для БД).
 
 ```bash
 cd backend
@@ -170,10 +189,14 @@ flutter test
 ```bash
 cd backend
 pip install -r requirements-dev.txt
-black .
-isort .
-pytest
+black --check .
+isort --check-only .
+cd ..
+bazel test //backend:backend_tests --test_env=BACKEND_TEST_PYTHON="$(command -v python)" --test_env=DART="$(command -v dart)" --test_output=errors
 ```
+
+Для Bazel установите Bazelisk и Dart 3.12. Цель запускает pytest через Dart; API-тесты используют SQLite и JWT с тестовым ключом.
+Прямой запуск тех же тестов: `cd backend && python -m pytest tests`.
 
 Также настроены pre-commit хуки (`.pre-commit-config.yaml`) для форматирования Python-кода в `backend/`.
 
@@ -181,11 +204,11 @@ pytest
 
 ### CI/CD (кратко)
 
-Workflow `.github/workflows/deploy.yml` делает:
+Проверки и деплой разделены:
 
-- форматирование Dart + Python
-- тесты Flutter и pytest
-- деплой backend на сервер по SSH при пуше в `main` (через `docker compose up -d --build` в `backend/`)
+- `.github/workflows/backend.yml` проверяет формат Python и запускает backend-тесты через Bazel для PR
+- `.github/workflows/client.yml` проверяет Flutter
+- `.github/workflows/deploy.yml` собирает контейнер, сохраняет изображения и запускает backend по SSH при пуше в `main`
 
 ---
 
@@ -209,7 +232,7 @@ Workflow `.github/workflows/deploy.yml` делает:
 
 ### Частые проблемы
 
-- **401 Unauthorized**: проверьте заголовок `Authorization: Bearer <access_token>` и срок действия JWT.
-- **Старый аккаунт Firebase не входит**: администратор должен установить локальный пароль по [`backend/README.md`](backend/README.md).
+- **401 Unauthorized**: проверьте JWT в `Authorization: Bearer <access_token>` и срок его действия.
+- **Старый Firebase-аккаунт не входит**: администратор должен установить локальный пароль по [`backend/README.md`](backend/README.md).
 - **Client не достучится до API**: проверьте `client/lib/core/api_config.dart` и сеть устройства/эмулятора (см. [`client/README.md`](client/README.md)).
 

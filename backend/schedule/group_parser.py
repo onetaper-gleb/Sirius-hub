@@ -38,7 +38,7 @@ class SiriusScheduleClient:
         data = response.get("serverMemo", {}).get("data", {})
         days = self._normalize_response(group, week_offset, data)
 
-        return self._add_empty_days(days)
+        return self._add_empty_days(days, week_offset)
 
     def _get_initial_state(self) -> LivewireState:
         with self._opener.open(ROOT_URL, timeout=30) as response:
@@ -198,15 +198,21 @@ class SiriusScheduleClient:
 
         return days
 
-    def _add_empty_days(self, days: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _add_empty_days(
+        self, days: list[dict[str, Any]], week_offset: int = 0
+    ) -> list[dict[str, Any]]:
 
-        weekdays = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"]
+        weekdays = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"]
         if not days:
             datetime_now = datetime.now()
-            monday = datetime_now - timedelta(days=datetime_now.weekday())
+            monday = (
+                datetime_now
+                - timedelta(days=datetime_now.weekday())
+                + timedelta(weeks=week_offset)
+            )
 
             result = []
-            for i in range(6):
+            for i in range(7):
                 date = monday + timedelta(days=i)
                 result.append(
                     {
@@ -224,7 +230,7 @@ class SiriusScheduleClient:
             dict_days[day["date"]] = day
 
         result = []
-        for i in range(6):
+        for i in range(7):
             date = monday + timedelta(days=i)
             date_str = date.strftime("%d.%m.%Y")
 
