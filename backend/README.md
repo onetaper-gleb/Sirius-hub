@@ -38,6 +38,6 @@ For local startup, install `requirements-dev.txt`, run `alembic upgrade head`, t
 
 The migration keeps account IDs, profiles, roles, and foreign keys. Firebase password hashes cannot be transferred through this repository. Existing accounts receive an unusable password marker until an administrator sets their password. Registration cannot replace an existing email. New registrations receive new IDs. The removed development seed script must not be used to create privileged test accounts in production.
 
-`DATABASE_URL` takes precedence over `DB_*`. Without either configuration, local development uses SQLite with `aiosqlite`. The sample databases and privileged development seed script have been removed. The JWT secret must remain stable across restarts. Rotating it invalidates every existing token.
+`DATABASE_URL` takes precedence over `DB_*`. Without either configuration, local development uses SQLite with `aiosqlite`. The privileged development seed script has been removed. The JWT secret must remain stable across restarts. Rotating it invalidates every existing token.
 
 The deployment workflow writes a Compose `.env` file with dollar escaping. Run administrative commands inside the container. Local development can run the same Python CLI directly with a normal `.env` file.
