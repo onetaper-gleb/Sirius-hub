@@ -10,6 +10,7 @@ import 'package:client/domain/model/model.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class RegistrationProfileScreen extends StatefulWidget {
@@ -23,8 +24,8 @@ class RegistrationProfileScreen extends StatefulWidget {
 class _RegistrationProfileScreenState extends State<RegistrationProfileScreen> {
   static const int _maxDisplayName = 30;
   static const int _maxGroupCode = 20;
-  static const int _maxBio = 200;
-  static const int _maxTelegram = 33;
+  static const int _maxBio = 70;
+  static const int _maxTelegram = 32;
   static const int _maxAvatarEmoji = 16;
 
   static const String _defaultAvatarEmoji = '😀';
@@ -95,7 +96,7 @@ class _RegistrationProfileScreenState extends State<RegistrationProfileScreen> {
       setState(() => _error = 'Выбери один смайлик для аватарки');
       return;
     }
-    if (avatar.length > _maxAvatarEmoji) {
+    if (avatar.runes.length > _maxAvatarEmoji) {
       setState(() => _error = 'Смайлик слишком длинный');
       return;
     }
@@ -105,7 +106,7 @@ class _RegistrationProfileScreenState extends State<RegistrationProfileScreen> {
       setState(() => _error = 'Укажи, как тебя показывать в профиле');
       return;
     }
-    if (displayName.length > _maxDisplayName) {
+    if (displayName.runes.length > _maxDisplayName) {
       setState(
         () => _error = 'Имя для профиля — не длиннее $_maxDisplayName символов',
       );
@@ -113,21 +114,21 @@ class _RegistrationProfileScreenState extends State<RegistrationProfileScreen> {
     }
 
     final groupCode = _groupCodeController.text.trim();
-    if (groupCode.length > _maxGroupCode) {
+    if (groupCode.runes.length > _maxGroupCode) {
       setState(
         () => _error = 'Номер группы — не длиннее $_maxGroupCode символов',
       );
       return;
     }
 
-    final telegram = _telegramController.text.trim();
-    if (telegram.length > _maxTelegram) {
+    final telegram = normalizeMessengerHandle(_telegramController.text);
+    if ((telegram?.runes.length ?? 0) > _maxTelegram) {
       setState(() => _error = 'Telegram — не длиннее $_maxTelegram символов');
       return;
     }
 
     final bio = _bioController.text.trim();
-    if (bio.length > _maxBio) {
+    if (bio.runes.length > _maxBio) {
       setState(() => _error = 'О себе — не длиннее $_maxBio символов');
       return;
     }
@@ -142,7 +143,9 @@ class _RegistrationProfileScreenState extends State<RegistrationProfileScreen> {
           avatarEmoji: avatar,
           displayName: displayName,
           groupCode: groupCode.isEmpty ? null : groupCode,
-          telegramHandle: telegram.isEmpty ? null : telegram,
+          telegramHandle: telegram == null
+              ? null
+              : _telegramController.text.trim(),
           bio: bio.isEmpty ? null : bio,
         ),
       ),
@@ -357,6 +360,16 @@ class _RegistrationProfileScreenState extends State<RegistrationProfileScreen> {
                 TextField(
                   controller: _displayNameController,
                   maxLength: _maxDisplayName,
+                  maxLengthEnforcement: MaxLengthEnforcement.none,
+                  buildCounter:
+                      (
+                        context, {
+                        required currentLength,
+                        required isFocused,
+                        maxLength,
+                      }) => Text(
+                        '${_displayNameController.text.trim().runes.length}/$_maxDisplayName',
+                      ),
                   textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
                     labelText: 'Имя в профиле',
@@ -371,6 +384,16 @@ class _RegistrationProfileScreenState extends State<RegistrationProfileScreen> {
                 TextField(
                   controller: _groupCodeController,
                   maxLength: _maxGroupCode,
+                  maxLengthEnforcement: MaxLengthEnforcement.none,
+                  buildCounter:
+                      (
+                        context, {
+                        required currentLength,
+                        required isFocused,
+                        maxLength,
+                      }) => Text(
+                        '${_groupCodeController.text.trim().runes.length}/$_maxGroupCode',
+                      ),
                   decoration: const InputDecoration(
                     labelText: 'Номер группы (необязательно)',
                     prefixIcon: Icon(Icons.groups_outlined),
@@ -383,6 +406,16 @@ class _RegistrationProfileScreenState extends State<RegistrationProfileScreen> {
                 TextField(
                   controller: _telegramController,
                   maxLength: _maxTelegram,
+                  maxLengthEnforcement: MaxLengthEnforcement.none,
+                  buildCounter:
+                      (
+                        context, {
+                        required currentLength,
+                        required isFocused,
+                        maxLength,
+                      }) => Text(
+                        '${normalizeMessengerHandle(_telegramController.text)?.runes.length ?? 0}/$_maxTelegram',
+                      ),
                   autocorrect: false,
                   decoration: const InputDecoration(
                     labelText: 'Telegram (необязательно)',
@@ -397,6 +430,16 @@ class _RegistrationProfileScreenState extends State<RegistrationProfileScreen> {
                 TextField(
                   controller: _bioController,
                   maxLength: _maxBio,
+                  maxLengthEnforcement: MaxLengthEnforcement.none,
+                  buildCounter:
+                      (
+                        context, {
+                        required currentLength,
+                        required isFocused,
+                        maxLength,
+                      }) => Text(
+                        '${_bioController.text.trim().runes.length}/$_maxBio',
+                      ),
                   minLines: 1,
                   maxLines: 3,
                   decoration: const InputDecoration(

@@ -1,3 +1,13 @@
+String? normalizeMessengerHandle(String? value) {
+  if (value == null) return null;
+  var normalized = value.trim();
+  if (normalized.startsWith('tg/')) {
+    normalized = normalized.substring(3).trim();
+  }
+  if (normalized.startsWith('@')) normalized = normalized.substring(1);
+  return normalized.isEmpty ? null : normalized;
+}
+
 class RegistrationProfileData {
   final String? avatarEmoji;
   final String? displayName;

@@ -236,8 +236,8 @@ void main() {
     await tester.tap(find.text('Добавить событие'));
     await tester.pumpAndSettle();
     final fields = find.byType(TextField);
-    await tester.enterText(fields.at(2), '2026-11-09');
-    await tester.enterText(fields.at(3), '2026-11-10');
+    await tester.enterText(fields.at(2), '09.11.2026');
+    await tester.enterText(fields.at(3), '10.11.2026');
     await tester.enterText(fields.at(4), 'Campus');
     await tester.enterText(fields.at(5), '50');
     await tester.tap(find.byType(DropdownButtonFormField<EventStatus>));

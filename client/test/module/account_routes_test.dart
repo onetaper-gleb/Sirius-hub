@@ -140,8 +140,8 @@ void main() {
               anon: false,
               imageFile: null,
               eventStatus: hasEvent ? EventStatus.published : null,
-              eventStart: hasEvent ? '2026-11-09' : null,
-              eventEnd: hasEvent ? '2026-11-10' : null,
+              eventStart: hasEvent ? '2026-11-09T00:00:00.000' : null,
+              eventEnd: hasEvent ? '2026-11-10T00:00:00.000' : null,
               location: hasEvent ? 'Campus' : null,
               maxParticipants: hasEvent ? 50 : null,
               isRegOpen: false,
@@ -161,8 +161,8 @@ void main() {
           if (hasEvent) {
             await tester.tap(find.text('Добавить событие'));
             await tester.pumpAndSettle();
-            await tester.enterText(find.byType(TextField).at(2), '2026-11-09');
-            await tester.enterText(find.byType(TextField).at(3), '2026-11-10');
+            await tester.enterText(find.byType(TextField).at(2), '09.11.2026');
+            await tester.enterText(find.byType(TextField).at(3), '10.11.2026');
             await tester.enterText(find.byType(TextField).at(4), 'Campus');
             await tester.enterText(find.byType(TextField).at(5), '50');
             await tester.tap(find.byType(DropdownButtonFormField<EventStatus>));
@@ -298,20 +298,20 @@ void main() {
           allowed ? findsOneWidget : findsNothing,
         );
         if (allowed) {
-          when(() => h.forum.createTopic('Council topic', false)).thenAnswer(
+          when(() => h.forum.createTopic('Я', false)).thenAnswer(
             (_) async => TopicModel(
               id: 'topic',
-              title: 'Council topic',
+              title: 'Я',
               isAnonymous: false,
               repliesCount: 0,
             ),
           );
           await tester.tap(find.byType(FloatingActionButton));
           await tester.pumpAndSettle();
-          await tester.enterText(find.byType(TextField), 'Council topic');
+          await tester.enterText(find.byType(TextField), 'Я');
           await tester.tap(find.text('Создать'));
           await tester.pumpAndSettle();
-          verify(() => h.forum.createTopic('Council topic', false)).called(1);
+          verify(() => h.forum.createTopic('Я', false)).called(1);
         }
         expect(tester.takeException(), isNull);
         await h.close(tester);
@@ -328,6 +328,27 @@ void main() {
       );
     }
     expect(UserRole.fromString('unknown'), UserRole.student);
+  });
+
+  testWidgets('student submits a single-character forum comment', (
+    tester,
+  ) async {
+    final h = AccountHarness(role: 'student');
+    h.items.add(item(topic: true));
+    when(
+      () => h.topic.createComment('Я', 'topic', null),
+    ).thenAnswer((_) async {});
+    await h.pump(tester);
+    await tester.tap(find.text('Private title'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Прокомментировать'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Я');
+    await tester.tap(find.byIcon(Icons.send));
+    await tester.pumpAndSettle();
+    verify(() => h.topic.createComment('Я', 'topic', null)).called(1);
+    expect(tester.takeException(), isNull);
+    await h.close(tester);
   });
 
   for (final role in ['student', 'council', 'admin']) {
