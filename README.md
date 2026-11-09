@@ -120,6 +120,8 @@ docker compose up -d --build
 - **API**: `http://localhost:56284`
 - **Postgres**: `localhost:5454` (внутри compose: `db:5432`)
 
+API и PostgreSQL публикуются только на loopback хоста. Для внешнего доступа настройте HTTPS reverse proxy к `http://127.0.0.1:56284`.
+
 Изображения хранятся в `backend/uploads/`, подключённом к `/app/uploads`; пересоздание контейнера сохраняет файлы.
 При первом переходе со старого контейнера остановите API и скопируйте `/app/uploads/.` из контейнера в `backend/uploads/` до пересоздания.
 Workflow деплоя переносит эти файлы автоматически. На SSH-хосте нужен Python 3; файл `.env` workflow записывает в формате Docker Compose.
