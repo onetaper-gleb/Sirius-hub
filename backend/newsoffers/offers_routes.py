@@ -165,7 +165,7 @@ async def get_offer(
 ):
     offer = await get_offer_or_404(db, offer_id)
     if offer.author_id != user["uid"]:
-        await require_council_role(db=db, user=user)
+        await require_council_role(user=user)
     return offer
 
 

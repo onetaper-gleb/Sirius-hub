@@ -40,6 +40,7 @@ async def api():
                 email=f"{role}@example.org",
                 role=role,
                 group_code="saved-group",
+                hashed_password="!",
             )
             for role in ("student", "council", "admin")
         )
@@ -143,22 +144,22 @@ async def test_self_promotion_removed_and_role_routes_require_real_admin(api):
 async def test_profile_update_preserves_omitted_group_and_role(api):
     client, sessions, _ = api
     for payload in ({}, {"display_name": "Council"}):
-        response = await client.post(
-            "/auth/init", headers=headers("council"), json=payload
+        response = await client.put(
+            "/profile/update", headers=headers("council"), json=payload
         )
         assert response.status_code == 200, response.text
     async with sessions() as session:
         user = await session.get(User, "council")
         assert user.group_code == "saved-group"
         assert user.role == "council"
-    response = await client.post(
-        "/auth/init", headers=headers(), json={"group_code": " "}
+    response = await client.put(
+        "/profile/update", headers=headers(), json={"group_code": " "}
     )
     assert response.status_code == 200
     async with sessions() as session:
         assert (await session.get(User, "student")).group_code is None
-    too_long = await client.post(
-        "/auth/init", headers=headers(), json={"group_code": "a" * 1000}
+    too_long = await client.put(
+        "/profile/update", headers=headers(), json={"group_code": "a" * 1000}
     )
     assert too_long.status_code == 422
 
