@@ -86,3 +86,28 @@ def test_parse_date_and_time_return_min_for_invalid_values():
     assert client._parse_date(None).year == 1
     assert client._parse_time("99:99").year == 1
     assert client._parse_time(None).year == 1
+
+
+def test_empty_week_uses_offset_and_keeps_sunday(monkeypatch):
+    import datetime
+
+    from schedule import group_parser
+
+    class FixedDateTime(datetime.datetime):
+        @classmethod
+        def now(cls):
+            return cls(2026, 11, 9, 12)
+
+    monkeypatch.setattr(group_parser, "datetime", FixedDateTime)
+    client = SiriusScheduleClient()
+    days = client._add_empty_days([], 2)
+    assert len(days) == 7
+    assert days[0]["date"] == "23.11.2026"
+    assert days[-1]["date"] == "29.11.2026"
+    sunday = {
+        "date": "15.11.2026",
+        "day_week": "ВС",
+        "events": [{"discipline": "Sunday class"}],
+    }
+    days = client._add_empty_days([sunday])
+    assert days[-1]["events"] == sunday["events"]

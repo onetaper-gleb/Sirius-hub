@@ -1,2 +1,12 @@
 .idea/
 *.geom
+*.db
+*.db-journal
+*.log
+__pycache__/
+.pytest_cache/
+.venv/
+.env
+firebase-adminsdk.json
+bazel-*
+backend/uploads/
