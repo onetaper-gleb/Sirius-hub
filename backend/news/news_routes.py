@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from auth.auth_routes import get_current_user, require_council_role
+from database.constants import COMMENT_MAX
 from database.database import get_db
 from database.models import Events, EventStatus, News, Registrations, RegStatus, Topics
 from utils.logger import set_logger
@@ -501,7 +502,7 @@ async def update_event_status(
 @router.post("/events/{event_id}/register", response_model=RegistrationResponse)
 async def create_reg(
     event_id: str,
-    comment: Optional[str] = Form(default=None),
+    comment: Optional[str] = Form(default=None, max_length=COMMENT_MAX),
     user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

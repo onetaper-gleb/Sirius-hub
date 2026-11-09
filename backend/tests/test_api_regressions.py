@@ -238,6 +238,64 @@ async def test_registrations_have_ids_and_count_only_occupied_places(api):
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    "comment",
+    [
+        pytest.param(None, id="omitted"),
+        pytest.param("", id="empty"),
+        pytest.param("a" * 50, id="ascii-50"),
+        pytest.param("😀" * 50, id="emoji-50"),
+        pytest.param("e\u0301" * 25, id="decomposed-50-codepoints"),
+    ],
+)
+async def test_registration_comment_form_round_trip_at_storage_limit(api, comment):
+    client, sessions, _ = api
+    news = await client.post("/news/", headers=headers("council"), json=event_body())
+    assert news.status_code == 200, news.text
+    event_id = news.json()["event_id"]
+    response = await client.post(
+        f"/news/events/{event_id}/register",
+        headers=headers(),
+        data={"comment": comment} if comment is not None else None,
+    )
+    assert response.status_code == 200, response.text
+    expected = comment or None
+    assert response.json()["comment"] == expected
+    async with sessions() as session:
+        registration = await session.get(Registrations, response.json()["id"])
+        assert registration.comment == expected
+        assert (await session.get(Events, event_id)).cur_partic == 1
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "comment",
+    [
+        pytest.param("a" * 51, id="ascii-51"),
+        pytest.param("a" * 200, id="ascii-200"),
+        pytest.param("a" * 201, id="ascii-201"),
+        pytest.param("😀" * 51, id="emoji-51"),
+        pytest.param("e\u0301" * 26, id="decomposed-52-codepoints"),
+    ],
+)
+async def test_registration_rejects_long_comment_before_claiming_place(api, comment):
+    client, sessions, _ = api
+    news = await client.post("/news/", headers=headers("council"), json=event_body())
+    assert news.status_code == 200, news.text
+    event_id = news.json()["event_id"]
+    response = await client.post(
+        f"/news/events/{event_id}/register",
+        headers=headers(),
+        data={"comment": comment},
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["detail"][0]["loc"] == ["body", "comment"]
+    async with sessions() as session:
+        assert (await session.get(Events, event_id)).cur_partic == 0
+        assert await session.scalar(select(func.count(Registrations.id))) == 0
+
+
+@pytest.mark.anyio
 async def test_event_update_uses_iso_strings_and_does_not_shrink_below_occupancy(api):
     client, sessions, _ = api
     response = await client.post(
@@ -530,6 +588,13 @@ def test_migrations_upgrade_downgrade_and_upgrade(tmp_path):
         )
         assert result.returncode == 0, result.stdout + result.stderr
     with sqlite3.connect(db) as connection:
+        registration_columns = connection.execute(
+            "PRAGMA table_info(registrations)"
+        ).fetchall()
+        assert next(row[2] for row in registration_columns if row[1] == "comment") == (
+            "VARCHAR(50)"
+        )
+        assert Registrations.__table__.c.comment.type.length == 50
         assert connection.execute(
             "SELECT version_num FROM alembic_version"
         ).fetchone() == ("5a1e237bc965",)
@@ -610,7 +675,15 @@ credentials.Certificate = lambda path: object()
 firebase_admin.initialize_app = lambda cred: None
 import main
 with TestClient(main.app) as client:
-    assert client.get('/openapi.json').status_code == 200
+    response = client.get('/openapi.json')
+    assert response.status_code == 200
+    schema = response.json()
+    body = schema['paths']['/news/events/{event_id}/register']['post']['requestBody']
+    form = body['content']['application/x-www-form-urlencoded']['schema']
+    form_name = form['$ref'].split('/')[-1]
+    comment = schema['components']['schemas'][form_name]['properties']['comment']
+    assert {'type': 'string', 'maxLength': 50} in comment['anyOf']
+    assert {'type': 'null'} in comment['anyOf']
     assert client.get('/news/').status_code in (401, 403)
     assert client.post('/auth/test-make-me-council').status_code == 404
 """
