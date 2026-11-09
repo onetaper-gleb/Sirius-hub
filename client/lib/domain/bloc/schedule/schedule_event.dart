@@ -1,5 +1,7 @@
 abstract class ScheduleEvent {}
 
+class ScheduleClearWeek extends ScheduleEvent {}
+
 class ScheduleGetWeek extends ScheduleEvent {
   final String group;
   final int weekOffset;

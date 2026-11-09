@@ -184,7 +184,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
               TextButton.icon(
                 onPressed: _registering || _registered
                     ? null
-                    : () => _showRegisterMenu(context, event.id),
+                    : () => _showRegisterMenu(event.id),
                 icon: const Icon(Icons.event_available),
                 label: Text(
                   _registered ? 'Вы зарегистрированы' : 'Зарегистрироваться',
@@ -202,44 +202,19 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     );
   }
 
-  Future<void> _showRegisterMenu(BuildContext context, String eventId) async {
-    final commentController = TextEditingController();
-
-    await showDialog(
+  Future<void> _showRegisterMenu(String eventId) async {
+    final comment = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text("Регистрация на событие"),
-        content: TextField(
-          controller: commentController,
-          maxLines: 5,
-          maxLength: 200,
-          decoration: const InputDecoration(
-            labelText: "Комментарий (необязательно)",
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text("Отмена"),
-          ),
-          TextButton(
-            onPressed: () {
-              final comment = commentController.text.trim();
-              context.read<NewsBloc>().add(
-                RegisterForEvent(
-                  eventId: eventId,
-                  comment: comment.isEmpty ? null : comment,
-                ),
-              );
-              Navigator.pop(dialogContext);
-            },
-            child: const Text("Записаться"),
-          ),
-        ],
+      useRootNavigator: false,
+      builder: (_) => const _EventRegistrationDialog(),
+    );
+    if (!mounted || comment == null) return;
+    context.read<NewsBloc>().add(
+      RegisterForEvent(
+        eventId: eventId,
+        comment: comment.trim().isEmpty ? null : comment,
       ),
     );
-    commentController.dispose();
   }
 
   Widget _row(IconData icon, String text) {
@@ -253,6 +228,59 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
           Expanded(child: Text(text)),
         ],
       ),
+    );
+  }
+}
+
+class _EventRegistrationDialog extends StatefulWidget {
+  const _EventRegistrationDialog();
+
+  @override
+  State<_EventRegistrationDialog> createState() =>
+      _EventRegistrationDialogState();
+}
+
+class _EventRegistrationDialogState extends State<_EventRegistrationDialog> {
+  static const _commentMaxLength = 50;
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final length = _controller.text.runes.length;
+    return AlertDialog(
+      title: const Text('Регистрация на событие'),
+      content: TextField(
+        controller: _controller,
+        maxLines: 5,
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(
+          labelText: 'Комментарий (необязательно)',
+          border: const OutlineInputBorder(),
+          counterText: '$length/$_commentMaxLength',
+          errorText: length > _commentMaxLength
+              ? 'Не более 50 символов Unicode'
+              : null,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Отмена'),
+        ),
+        TextButton(
+          onPressed: () {
+            if (_controller.text.runes.length > _commentMaxLength) return;
+            Navigator.pop(context, _controller.text);
+          },
+          child: const Text('Записаться'),
+        ),
+      ],
     );
   }
 }

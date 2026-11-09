@@ -19,7 +19,7 @@ SiriusHub — мобильное приложение и backend-сервис д
 - DI через `DependenciesScope` (`client/lib/core/dependencies.dart`)
 - Для этого backend нужен режим JWT: `--dart-define=AUTH_BACKEND=jwt`. URL API по умолчанию — `https://104.143.201.57`.
 - Базовый URL backend: `client/lib/core/api_config.dart`
-- Роли в UI: `student` (базовый доступ) и `council` (создание новостей и тем форума)
+- Роли в UI: `student` (базовый доступ), `council` и `admin` (создание новостей и тем форума, модерация)
 
 **Backend (FastAPI)**:
 
@@ -61,11 +61,11 @@ Backend запускается как FastAPI-приложение `backend/main
 - **News** (`/news/*`):
   - `GET /news/` — список новостей
   - `POST /news/` — создание новости (для `council` и `admin`), изображение передаётся строкой Base64 в JSON-поле `image`
-  - `DELETE /news/{news_id}` — удаление новости (только `council`)
+  - `DELETE /news/{news_id}` — удаление новости (`council` и `admin`)
 - **Schedule** (`/schedule/*`):
   - `GET /schedule?group=...&week_offset=...` — расписание группы (парсинг внешнего источника)
 - **Forum/Topic**:
-  - `GET /forum/topics`, `POST /forum/topics` — список/создание тем (создание — только `council`)
+  - `GET /forum/topics`, `POST /forum/topics` — список/создание тем (создание — `council` и `admin`)
   - `GET /topic/comments?topic_id=...`, `POST /topic/comments` — комментарии в теме
 
 **Предложки** (`/offers/*`):
