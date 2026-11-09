@@ -6,6 +6,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from auth.schemas import PromoteRequest, Token, UserCreate
 from auth.security import (
@@ -84,7 +85,9 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
             id=uid,
             email=str(user_data.email),
             display_name=user_data.display_name,
-            hashed_password=get_password_hash(user_data.password),
+            hashed_password=await run_in_threadpool(
+                get_password_hash, user_data.password
+            ),
             role=UserRole.student.value,
             is_active=True,
         )
@@ -108,8 +111,10 @@ async def login_for_access_token(
     )
     user = result.scalar_one_or_none()
     valid_password = (
-        verify_password(
-            form_data.password, user.hashed_password if user else DUMMY_PASSWORD_HASH
+        await run_in_threadpool(
+            verify_password,
+            form_data.password,
+            user.hashed_password if user else DUMMY_PASSWORD_HASH,
         )
         if len(form_data.password) <= 1024
         else False
