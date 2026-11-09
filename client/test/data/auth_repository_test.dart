@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../support/fake_api.dart';
+import '../support/json_api.dart';
 
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
@@ -124,6 +125,55 @@ void main() {
       expect(result.telegramHandle, 'alice');
     },
   );
+
+  for (final completion in [false, true]) {
+    for (final input in [
+      'a' * 32,
+      '@${'a' * 32}',
+      ' tg/ @${'a' * 32} ',
+      '@${'a' * 31}😀',
+      '@@name',
+      '   ',
+      ' tg/ @',
+      null,
+    ]) {
+      test(
+        '${completion ? 'complete' : 'update'} profile preserves $input for server normalization',
+        () async {
+          final source = MockSource();
+          when(
+            () => source.currentUser,
+          ).thenReturn(const AuthUser(uid: 'existing-user'));
+          when(() => source.needsBackendInit).thenReturn(false);
+          when(
+            () => source.getToken(forceRefresh: true),
+          ).thenAnswer((_) async => 'token');
+          when(() => source.setUserDisplayName(any())).thenAnswer((_) async {});
+          final api = JsonApi((_, _) => profileJson);
+          final repository = AuthRepository(
+            authDataSource: source,
+            dio: Dio(BaseOptions(baseUrl: 'https://example.test/'))
+              ..httpClientAdapter = api,
+          );
+          final data = RegistrationProfileData(
+            displayName: 'Alice',
+            avatarEmoji: '😀',
+            telegramHandle: input,
+          );
+          if (completion) {
+            await repository.completeRegistration(data);
+          } else {
+            await repository.updateProfileData(data);
+          }
+          final (request, body) = api.requests.singleWhere(
+            (entry) => entry.$1.path == 'profile/update',
+          );
+          expect(request.contentType, Headers.jsonContentType);
+          expect(body!['messenger_handle'], input?.trim());
+        },
+      );
+    }
+  }
 
   test(
     'only a missing profile starts registration; connection failure is retriable',

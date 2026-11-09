@@ -16,6 +16,7 @@ class CreateNewsScreen extends StatefulWidget {
 }
 
 class _CreateNewsScreenState extends State<CreateNewsScreen> {
+  static const _maxTitle = 60;
   File? _selectedImage;
   bool _isLoading = false;
   bool _hasEvent = false;
@@ -55,10 +56,19 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
 
   Future<void> _saveNews() async {
     int? maxPartic;
+    DateTime? eventStart;
+    DateTime? eventEnd;
     if (_titleController.text.trim().isEmpty ||
         _contentController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Заполните заголовок и текст')),
+      );
+      return;
+    }
+
+    if (_titleController.text.trim().runes.length > _maxTitle) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Заголовок — не длиннее 60 символов')),
       );
       return;
     }
@@ -84,6 +94,25 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
         );
         return;
       }
+
+      eventStart = _parseDate(_eventStartController.text);
+      eventEnd = _parseDate(_eventEndController.text);
+      if (eventStart == null || eventEnd == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Укажите существующие даты в формате дд.мм.гггг'),
+          ),
+        );
+        return;
+      }
+      if (!eventEnd.isAfter(eventStart)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Дата окончания должна быть позже даты начала'),
+          ),
+        );
+        return;
+      }
     }
 
     setState(() => _isLoading = true);
@@ -96,13 +125,29 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
         hasTopic: _hasTopic,
         anon: _anon,
         eventStatus: _hasEvent ? _eventStatus : null,
-        eventStart: _hasEvent ? _eventStartController.text.trim() : null,
-        eventEnd: _hasEvent ? _eventEndController.text.trim() : null,
+        eventStart: eventStart?.toIso8601String(),
+        eventEnd: eventEnd?.toIso8601String(),
         location: _hasEvent ? _locationController.text.trim() : null,
         maxParticipants: _hasEvent ? maxPartic : null,
         isRegOpen: _hasEvent ? _isRegOpen : false,
       ),
     );
+  }
+
+  DateTime? _parseDate(String input) {
+    final match = RegExp(
+      r'^([0-9]{2})\.([0-9]{2})\.([0-9]{4})$',
+    ).firstMatch(input.trim());
+    if (match == null) return null;
+    final day = int.parse(match[1]!);
+    final month = int.parse(match[2]!);
+    final year = int.parse(match[3]!);
+    if (year < 1) return null;
+    final date = DateTime(year, month, day);
+    if (date.year != year || date.month != month || date.day != day) {
+      return null;
+    }
+    return date;
   }
 
   @override
@@ -180,8 +225,17 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
                   TextField(
                     controller: _titleController,
                     maxLines: 1,
-                    maxLength: 100,
-                    maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                    maxLength: _maxTitle,
+                    maxLengthEnforcement: MaxLengthEnforcement.none,
+                    buildCounter:
+                        (
+                          context, {
+                          required currentLength,
+                          required isFocused,
+                          maxLength,
+                        }) => Text(
+                          '${_titleController.text.trim().runes.length}/$_maxTitle',
+                        ),
                     decoration: const InputDecoration(
                       labelText: 'Заголовок',
                       border: OutlineInputBorder(),
