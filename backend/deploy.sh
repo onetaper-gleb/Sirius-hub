@@ -61,15 +61,31 @@ rollback() {
   status=$?
   trap - EXIT
   if [ "$status" -ne 0 ] && [ "$stopped" = true ]; then
+    rollback_start_failed=false
     if [ "$candidate_started" = true ]; then
       docker rm -f camphub-fastapi >/dev/null 2>&1 || true
       docker run -d --name camphub-fastapi --restart always --network "$network" \
         --network-alias api -p 127.0.0.1:56284:8000 \
-        -v "$(pwd)/uploads:/app/uploads" "$rollback_image" >/dev/null
+        -v "$(pwd)/uploads:/app/uploads" --entrypoint uvicorn "$rollback_image" \
+        main:app --host 0.0.0.0 --port 8000 >/dev/null || rollback_start_failed=true
     else
-      docker start camphub-fastapi >/dev/null
+      docker start camphub-fastapi >/dev/null || rollback_start_failed=true
     fi
-    echo 'Deployment failed. Previous API restored. Database was not downgraded.'
+    restored=false
+    if [ "$rollback_start_failed" = false ]; then
+      for attempt in $(seq 1 60); do
+        if curl --fail --silent --max-time 3 http://127.0.0.1:56284/openapi.json >"$backup/rollback-openapi.json"; then
+          restored=true
+          break
+        fi
+        sleep 2
+      done
+    fi
+    if [ "$restored" = true ]; then
+      echo 'Deployment failed. Previous API restored. Database was not downgraded.'
+    else
+      echo 'Deployment failed. Previous API readiness failed. Manual recovery required. Database was not downgraded.' >&2
+    fi
     echo "Private recovery files: $backup"
   fi
   exit "$status"
