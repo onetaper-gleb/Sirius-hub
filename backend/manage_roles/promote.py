@@ -1,117 +1,51 @@
-import os
-import sys
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+import argparse
 import asyncio
-import base64
-import json
+import getpass
+import sys
+from pathlib import Path
 
-import firebase_admin
-from dotenv import load_dotenv
-from firebase_admin import auth, credentials
-from sqlalchemy import create_engine, select, update
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import sessionmaker
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from database.models import User as DBUser
+from sqlalchemy import func, select
 
-load_dotenv()
-
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "5454")
-DB_NAME = os.getenv("DB_NAME")
-
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-if not DATABASE_URL:
-    if DB_USER and DB_PASSWORD and DB_NAME:
-        DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    else:
-        DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./test.db")
-
-print(f"DATABASE_URL: {DATABASE_URL}")
-engine = create_async_engine(DATABASE_URL)
-# SessionLocal = sessionmaker(bind=engine)
-SessionLocal = async_sessionmaker(
-    bind=engine, class_=AsyncSession, expire_on_commit=False
-)
-
-print("engine got")
+from auth.security import get_password_hash
+from database.database import AsyncSessionLocal, engine
+from database.models import User, UserRole
 
 
-def init_firebase():
-    base64_config = os.getenv("FIREBASE_CONFIG_BASE64")
-    if base64_config:
-        decoded_bytes = base64.b64decode(base64_config)
-        config_dict = json.loads(decoded_bytes)
-        cred = credentials.Certificate(config_dict)
-        firebase_admin.initialize_app(cred)
-        print("Firebase инициализирован через Base64!")
-    else:
-        print("Base64 конфиг не найден, ищу файл...")
-        cred = credentials.Certificate("firebase-adminsdk.json")
-        firebase_admin.initialize_app(cred)
-
-
-init_firebase()
-
-
-async def give_me_role(email, role_u):
-    async with SessionLocal() as session:
-        print("Session done")
-
-        try:
-            # user_record = auth.get_user_by_email(email)
-            # uid = user_record.uid
-            # auth.set_custom_user_claims(uid, {"role": role_u})
-            stmt = update(DBUser).where(DBUser.email == email).values(role=role_u)
-
-            print("stmt created")
-            result = await session.execute(stmt)
-            print("stmt executed")
-
+async def update_account(email: str, role: str | None, reset_password: bool) -> None:
+    try:
+        async with AsyncSessionLocal() as session:
+            user = await session.scalar(
+                select(User).where(func.lower(User.email) == email.strip().lower())
+            )
+            if user is None:
+                raise ValueError("User not found.")
+            if reset_password:
+                password = getpass.getpass("New password: ")
+                if not 8 <= len(password) <= 64:
+                    raise ValueError("The password must contain 8 to 64 characters.")
+                if password != getpass.getpass("Repeat password: "):
+                    raise ValueError("The passwords do not match.")
+                user.hashed_password = get_password_hash(password)
+            if role:
+                user.role = role
             await session.commit()
-
-            if result.rowcount == 0:
-                print(f"Ошибка: пользователь с email {email} не найден")
-                sys.exit(1)
-            else:
-                print(f"status: success; Роль обновлена везде!")
-
-        # except auth.UserNotFoundError:
-        #     print(f"Ошибка: Пользователь с email '{email}' не найден")
-        #     sys.exit(1)
-
-        except Exception as e:
-            await session.rollback()
-            print(f"Ошибка: {e}")
-            sys.exit(1)
-
-    # finally:
-    #     session.close()
+    finally:
+        await engine.dispose()
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Использование: python3 promote.py EMAIL ROLE")
-        print("Роли: student, council, admin")
-        sys.exit(1)
-
-    email = sys.argv[1]
-    role_u = sys.argv[2]
-
-    print(email, role_u)
-
-    valid_roles = ["student", "council", "admin"]
-    if role_u not in valid_roles:
-        print(f"Ошибка: роль '{role_u}' не существует")
-        sys.exit(1)
-
+    parser = argparse.ArgumentParser(
+        description="Update a local account with database administrator access."
+    )
+    parser.add_argument("email")
+    parser.add_argument("--role", choices=[role.value for role in UserRole])
+    parser.add_argument("--set-password", action="store_true")
+    args = parser.parse_args()
+    if not args.role and not args.set_password:
+        parser.error("Set --role or --set-password.")
     try:
-        asyncio.run(give_me_role(email, role_u))
-    except Exception as e:
-        print(f"Ошибка: {e}")
-        sys.exit(1)
+        asyncio.run(update_account(args.email, args.role, args.set_password))
+    except ValueError as error:
+        parser.exit(1, f"{error}\n")

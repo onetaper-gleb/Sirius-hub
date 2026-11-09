@@ -21,18 +21,12 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# 2. Твоя логика подключения (как в database.py)
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_NAME = os.getenv("DB_NAME")
-DB_HOST = os.getenv("DB_HOST", "db")
+from database.database import engine
 
-if DB_USER and DB_PASSWORD and DB_NAME:
-    database_url = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
-else:
-    database_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./test.db")
-
-config.set_main_option("sqlalchemy.url", database_url)
+config.set_main_option(
+    "sqlalchemy.url",
+    engine.url.render_as_string(hide_password=False).replace("%", "%%"),
+)
 
 
 def run_migrations_offline() -> None:

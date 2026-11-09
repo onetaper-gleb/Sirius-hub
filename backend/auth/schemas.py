@@ -1,6 +1,4 @@
-﻿from typing import Optional
-
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from database.constants import (
     USER_DISPLAY_NAME_MAX_LEN,
@@ -15,16 +13,17 @@ class PromoteRequest(BaseModel):
     role: UserRole
 
 
-class InitUserRequest(BaseModel):
-    group_code: Optional[str] = None
-
-
 class UserCreate(BaseModel):
-    email: EmailStr
+    email: EmailStr = Field(max_length=254)
     password: str = Field(
         min_length=USER_PASSWORD_MIN_LEN, max_length=USER_PASSWORD_MAX_LEN
     )
     display_name: str | None = Field(default=None, max_length=USER_DISPLAY_NAME_MAX_LEN)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value):
+        return value.strip().lower() if isinstance(value, str) else value
 
 
 class Token(BaseModel):

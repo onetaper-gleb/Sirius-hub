@@ -4,7 +4,7 @@ SiriusHub — мобильное приложение и backend-сервис д
 Репозиторий содержит два основных модуля:
 
 - **`client/`**: Flutter-приложение SiriusHub (BLoC + Dio + Firebase Auth)
-- **`backend/`**: FastAPI API-сервис (PostgreSQL + SQLAlchemy async + Firebase Admin)
+- **`backend/`**: FastAPI API-сервис (PostgreSQL + SQLAlchemy async + JWT)
 
 **Документация frontend (разработчик + пользователь):** [`client/README.md`](client/README.md)
 
@@ -17,16 +17,17 @@ SiriusHub — мобильное приложение и backend-сервис д
 - Авторизация через **Firebase Auth** (email/password); вход в UI через `AuthGate`
 - Слои: `module` (UI) → `domain` (BLoC/модели) → `data` (Repository + Firebase DataSource) → `network` (Dio)
 - DI через `DependenciesScope` (`client/lib/core/dependencies.dart`)
-- HTTP к backend с заголовком `Authorization: Bearer <Firebase ID Token>`
+- Для этого backend нужен режим JWT (`--dart-define=AUTH_BACKEND=jwt`), описанный в [`backend/README.md`](backend/README.md).
 - Базовый URL backend: `client/lib/core/api_config.dart`
 - Роли в UI: `student` (базовый доступ) и `council` (создание новостей и тем форума)
 
 **Backend (FastAPI)**:
 
-- Проверка пользователя по **Firebase ID Token** (Bearer-токен) через `firebase_admin.auth.verify_id_token`
+- Проверка пользователя по **JWT access token** (HS256). Пароли хранятся как Argon2-хеши.
+- Контракты API, миграция аккаунтов и запуск: [`backend/README.md`](backend/README.md).
 - Данные хранятся в **PostgreSQL** (async SQLAlchemy + asyncpg)
 - Картинки новостей сохраняются в `backend/uploads/` и отдаются как статика по `/static/...`
-- При старте backend создаёт таблицы (через `Base.metadata.create_all`)
+- Перед запуском backend применяются миграции Alembic (`alembic upgrade head`).
 
 **Инфраструктура**:
 
@@ -38,7 +39,7 @@ SiriusHub — мобильное приложение и backend-сервис д
 ### Стек
 
 - **Mobile (client)**: Flutter, Dart `^3.11`, bloc/flutter_bloc, dio, shared_preferences, firebase_core, firebase_auth, image_picker, cached_network_image, flutter_native_splash
-- **Backend**: FastAPI, Uvicorn, SQLAlchemy 2 (async), asyncpg, Alembic (зависимость есть), firebase-admin, python-dotenv, pytest, Pillow
+- **Backend**: FastAPI, Uvicorn, SQLAlchemy 2 (async), asyncpg, Alembic, PyJWT, pwdlib/Argon2, python-dotenv, pytest, Pillow
 - **DB**: PostgreSQL 15
 
 ---
@@ -48,11 +49,12 @@ SiriusHub — мобильное приложение и backend-сервис д
 Backend запускается как FastAPI-приложение `backend/main.py` и подключает роутеры:
 
 - **Auth** (`/auth/*`):
-  - `POST /auth/init` — инициализация пользователя в БД и установка роли `student` в Firebase custom claims
-  - `POST /auth/promote-user` — повысить пользователя до `council` (только для `council`)
-  - `POST /auth/test-make-me-council` — временный тестовый эндпоинт (в коде помечен как TODO удалить)
+  - `POST /auth/register` — создать локальный аккаунт и получить токен
+  - `POST /auth/token` — войти по email и паролю
+  - `GET /auth/me` — получить текущий аккаунт
+  - `POST /auth/promote-user` — изменить роль пользователя (только для `admin`)
 - **Profile** (`/profile/*`):
-  - `GET /profile/me` — профиль текущего пользователя (требует предварительный `POST /auth/init`)
+  - `GET /profile/me` — профиль текущего пользователя
   - `PUT /profile/update` — обновление профиля
   - `PATCH /profile/avatar` — обновление аватар-эмодзи
   - `GET /profile/user/{user_id}` — публичный профиль пользователя
@@ -77,8 +79,8 @@ Backend запускается как FastAPI-приложение `backend/main
 
 См. пример: `backend/.env.example`
 
-- **`FIREBASE_CONFIG_BASE64`**: Base64 от JSON service account (Firebase Admin SDK).  
-  Если не задан, backend попытается прочитать файл `backend/firebase-adminsdk.json`.
+- **`JWT_SECRET_KEY`**: случайный секрет не короче 32 байт.
+- **`ACCESS_TOKEN_EXPIRE_MINUTES`**: время жизни токена, по умолчанию 60 минут.
 - **`DB_USER`**, **`DB_PASSWORD`**, **`DB_NAME`**: параметры Postgres
 - **`DB_HOST`**: хост БД (по умолчанию `db` — имя сервиса в Docker Compose)
 
@@ -119,6 +121,7 @@ python -m venv .venv
 # - Windows (cmd): .venv\Scripts\activate.bat
 # - macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
+alembic upgrade head
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -133,7 +136,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```bash
 cd client
 flutter pub get
-flutter run
+flutter run --dart-define=AUTH_BACKEND=jwt
 ```
 
 Backend URL задаётся в `client/lib/core/api_config.dart` (по умолчанию — адрес деплоя).
@@ -167,8 +170,8 @@ flutter test
 ```bash
 cd backend
 pip install -r requirements-dev.txt
-black backend
-isort backend
+black .
+isort .
 pytest
 ```
 
@@ -206,8 +209,7 @@ Workflow `.github/workflows/deploy.yml` делает:
 
 ### Частые проблемы
 
-- **401 Unauthorized**: проверьте что запросы идут с `Authorization: Bearer <Firebase ID Token>`.
-- **Профиль не найден** на `GET /profile/me`: сначала вызовите `POST /auth/init`.
-- **Firebase Admin**: если не используете `FIREBASE_CONFIG_BASE64`, положите `firebase-adminsdk.json` рядом с `backend/main.py`.
+- **401 Unauthorized**: проверьте заголовок `Authorization: Bearer <access_token>` и срок действия JWT.
+- **Старый аккаунт Firebase не входит**: администратор должен установить локальный пароль по [`backend/README.md`](backend/README.md).
 - **Client не достучится до API**: проверьте `client/lib/core/api_config.dart` и сеть устройства/эмулятора (см. [`client/README.md`](client/README.md)).
 

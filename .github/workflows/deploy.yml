@@ -14,7 +14,13 @@ jobs:
 
       - name: Deploy to Server
         uses: appleboy/ssh-action@master
+        env:
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
         with:
+          envs: JWT_SECRET_KEY,DB_USER,DB_PASSWORD,DB_NAME
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
@@ -36,13 +42,10 @@ jobs:
 
             touch .env
 
-            sed -i '/FIREBASE_CONFIG_BASE64/d' .env
+            test "${#JWT_SECRET_KEY}" -ge 32
+            umask 077
+            chmod 600 .env
 
-            echo "FIREBASE_CONFIG_BASE64='${{ secrets.FIREBASE_CONFIG_BASE64 }}'" > .env
-            echo "DB_USER='${{ secrets.DB_USER }}'" >> .env
-            echo "DB_PASSWORD='${{ secrets.DB_PASSWORD }}'" >> .env
-            echo "DB_NAME='${{ secrets.DB_NAME }}'" >> .env
+            printf '%s\n' "JWT_SECRET_KEY=$JWT_SECRET_KEY" "DB_USER=$DB_USER" "DB_PASSWORD=$DB_PASSWORD" "DB_NAME=$DB_NAME" > .env
 
-            docker compose down
             docker compose up -d --build
-            docker exec camphub-fastapi python -m alembic upgrade head

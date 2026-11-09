@@ -28,7 +28,8 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      DB_HOST: db
+      DB_PORT: 5432
     command: >
       sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000"
     depends_on:
