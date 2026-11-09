@@ -133,6 +133,46 @@ Finder input(String label) => find.byWidgetPredicate(
 );
 
 void main() {
+  for (final capacity in ['0', '1', '2147483647', '2147483648']) {
+    testWidgets(
+      'event capacity $capacity obeys the API integer bounds through serialized JSON',
+      (tester) async {
+        final h = CreateHarness();
+        await h.pump(tester, event: true);
+        await tester.enterText(input('Дата начала'), '09.11.2026');
+        await tester.enterText(input('Дата окончания'), '10.11.2026');
+        await tester.enterText(input('Макс. кол-во участников'), capacity);
+        await h.submit(tester);
+        final value = int.parse(capacity);
+        if (value < 1 || value > 2147483647) {
+          expect(h.creations, isEmpty);
+          expect(
+            find.text(
+              value < 1
+                  ? 'Макс. кол-во участников должно быть больше 0'
+                  : 'Макс. кол-во участников — не больше 2147483647',
+            ),
+            findsOneWidget,
+          );
+          expect(
+            tester
+                .widget<TextField>(input('Макс. кол-во участников'))
+                .controller!
+                .text,
+            capacity,
+          );
+          expect(find.byType(CreateNewsScreen), findsOneWidget);
+        } else {
+          expect(h.creations, hasLength(1));
+          expect(h.creations.single, containsPair('max_partic', value));
+          expect(find.byType(CreateNewsScreen), findsNothing);
+          expect(find.text('Feed: Event'), findsOneWidget);
+        }
+        expect(tester.takeException(), isNull);
+        await h.close(tester);
+      },
+    );
+  }
   for (final (start, end, isoStart, isoEnd) in [
     (
       '09.11.2026',

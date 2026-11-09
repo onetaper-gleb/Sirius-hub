@@ -17,6 +17,7 @@ class CreateNewsScreen extends StatefulWidget {
 
 class _CreateNewsScreenState extends State<CreateNewsScreen> {
   static const _maxTitle = 60;
+  static const _maxParticipants = 2147483647;
   File? _selectedImage;
   bool _isLoading = false;
   bool _hasEvent = false;
@@ -90,6 +91,14 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Макс. кол-во участников должно быть больше 0'),
+          ),
+        );
+        return;
+      }
+      if (maxPartic > _maxParticipants) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Макс. кол-во участников — не больше 2147483647'),
           ),
         );
         return;
