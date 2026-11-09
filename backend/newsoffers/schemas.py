@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from database.constants import COMMENT_MAX
+from database.constants import COMMENT_MAX, TITLE_LEN
 from database.models import EventStatus, ModerationStatus
 
 
@@ -43,7 +43,7 @@ class OfferEventResponse(BaseModel):
 
 
 class OfferNewsEventsRequest(BaseModel):
-    title: str
+    title: str = Field(..., max_length=TITLE_LEN)
     content: str
     has_event: bool = False
     has_topic: bool = False

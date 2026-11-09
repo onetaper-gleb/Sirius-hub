@@ -1,8 +1,9 @@
 import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from database.constants import TITLE_LEN
 from database.models import EventStatus, RegStatus
 
 
@@ -49,7 +50,7 @@ class RegistrationResponse(BaseModel):
 
 
 class NewsCreateRequest(BaseModel):
-    title: str
+    title: str = Field(..., max_length=TITLE_LEN)
     content: str
     has_event: bool = False
     has_topic: bool = False
@@ -66,7 +67,7 @@ class NewsCreateRequest(BaseModel):
 
 
 class NewsUpdateRequest(BaseModel):
-    title: Optional[str] = None
+    title: Optional[str] = Field(default=None, max_length=TITLE_LEN)
     content: Optional[str] = None
     has_event: Optional[bool] = None
     has_topic: Optional[bool] = None
