@@ -1,5 +1,3 @@
-import 'package:client/core/api_config.dart';
-
 class RegistrationModel {
   final String id;
   final String eventId;
@@ -19,7 +17,7 @@ class RegistrationModel {
     return RegistrationModel(
       id: (json['id'])?.toString() ?? '',
       eventId: (json['event_id'])?.toString() ?? '',
-      userId: (json['user)id'])?.toString() ?? '',
+      userId: (json['user_id'])?.toString() ?? '',
       status: (json['status'])?.toString() ?? '',
       comment: json['comment'] as String?,
     );

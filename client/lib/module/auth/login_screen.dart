@@ -23,8 +23,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-    final passwordRepeat = _passwordRepeatController.text.trim();
+    final password = _passwordController.text;
+    final passwordRepeat = _passwordRepeatController.text;
 
     if (email.isEmpty || password.isEmpty) {
       setState(() => _error = 'Заполни все поля');
@@ -70,6 +70,14 @@ class _LoginScreenState extends State<LoginScreen> {
           return 'Ошибка ${_isLogin ? "входа" : "регистрации"}.';
       }
     } else if (error is DioException) {
+      if (error.response?.statusCode == 401 ||
+          error.response?.statusCode == 403) {
+        return 'Неверные почта или пароль.';
+      }
+      if (error.response?.statusCode == 409)
+        return 'Эта почта уже используется.';
+      if (error.response?.statusCode == 422)
+        return 'Проверьте email и пароль (от 8 до 64 символов).';
       return 'Ошибка соединения.';
     } else {
       final s = error.toString();

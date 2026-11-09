@@ -18,6 +18,9 @@ class NewsDetailScreen extends StatefulWidget {
 
 class _NewsDetailScreenState extends State<NewsDetailScreen> {
   EventModel? _event;
+  String? _eventError;
+  bool _registering = false;
+  bool _registered = false;
 
   @override
   void initState() {
@@ -56,8 +59,18 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
       body: BlocListener<NewsBloc, NewsState>(
         listener: (context, state) {
           if (state is EventSuccess) {
-            setState(() => _event = state.event);
+            setState(() {
+              _event = state.event;
+              _eventError = null;
+            });
+          } else if (state is EventRegistrationLoading) {
+            setState(() => _registering = true);
           } else if (state is EventRegistrationSuccess) {
+            setState(() {
+              _registering = false;
+              _registered = true;
+            });
+            context.read<NewsBloc>().add(FetchEvent(widget.news.eventId!));
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text("Вы зарегистрированы"),
@@ -65,6 +78,10 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
               ),
             );
           } else if (state is NewsError) {
+            setState(() {
+              _registering = false;
+              if (_event == null) _eventError = state.message;
+            });
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -121,6 +138,23 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
   }
 
   Widget _eventInfoBlock() {
+    if (_event == null) {
+      if (_eventError != null) {
+        return Column(
+          children: [
+            Text(_eventError!),
+            TextButton(
+              onPressed: () {
+                setState(() => _eventError = null);
+                context.read<NewsBloc>().add(FetchEvent(widget.news.eventId!));
+              },
+              child: const Text('Повторить'),
+            ),
+          ],
+        );
+      }
+      return const Center(child: CircularProgressIndicator());
+    }
     final event = _event!;
     return Card(
       child: Padding(
@@ -148,9 +182,13 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
 
             if (event.isRegOpen)
               TextButton.icon(
-                onPressed: () => _showRegisterMenu(context, event.id),
+                onPressed: _registering || _registered
+                    ? null
+                    : () => _showRegisterMenu(context, event.id),
                 icon: const Icon(Icons.event_available),
-                label: const Text("Зарегистрироваться"),
+                label: Text(
+                  _registered ? 'Вы зарегистрированы' : 'Зарегистрироваться',
+                ),
                 style: TextButton.styleFrom(alignment: Alignment.centerLeft),
               )
             else
@@ -164,10 +202,10 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     );
   }
 
-  void _showRegisterMenu(BuildContext context, String eventId) {
+  Future<void> _showRegisterMenu(BuildContext context, String eventId) async {
     final commentController = TextEditingController();
 
-    showDialog(
+    await showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text("Регистрация на событие"),
@@ -201,6 +239,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
         ],
       ),
     );
+    commentController.dispose();
   }
 
   Widget _row(IconData icon, String text) {
