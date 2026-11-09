@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth.auth_routes import get_current_user, require_admin_role, require_council_role
+from database.constants import EVENT_CAPACITY_MAX
 from database.database import get_db
 from database.models import (
     Events,
@@ -256,6 +257,11 @@ async def moderate_offer(
     }:
         raise HTTPException(400, "Недопустимое действие модерации")
     if request.action == ModerationStatus.approved:
+        source = None
+        if offer.has_event:
+            source = await get_offer_event_or_404(db, offer.event_id)
+            if source.max_partic > EVENT_CAPACITY_MAX:
+                raise HTTPException(400, "max_partic не должно превышать 2147483647")
         source_topic = None
         if offer.has_topic:
             validate_topic_title(offer.title)
@@ -272,7 +278,6 @@ async def moderate_offer(
         db.add(news)
         await db.flush()
         if offer.has_event:
-            source = await get_offer_event_or_404(db, offer.event_id)
             event = Events(
                 status=source.event_status,
                 news_id=news.id,

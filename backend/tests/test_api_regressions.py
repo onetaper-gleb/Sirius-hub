@@ -703,6 +703,8 @@ with TestClient(main.app) as client:
     for name in ('NewsCreateRequest', 'OfferNewsEventsRequest'):
         assert models[name]['properties']['title']['maxLength'] == 60
     assert {'type': 'string', 'maxLength': 60} in models['NewsUpdateRequest']['properties']['title']['anyOf']
+    for name in ('NewsCreateRequest', 'NewsUpdateRequest', 'OfferNewsEventsRequest'):
+        assert {'type': 'integer', 'maximum': 2147483647} in models[name]['properties']['max_partic']['anyOf']
     assert client.get('/news/').status_code in (401, 403)
     assert client.post('/auth/test-make-me-council').status_code == 404
 """
