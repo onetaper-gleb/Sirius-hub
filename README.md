@@ -3,7 +3,7 @@
 SiriusHub — мобильное приложение и backend-сервис для кампуса/университета: **новости**, **расписание**, **профили**, **форум/темы/комментарии**.  
 Репозиторий содержит два основных модуля:
 
-- **`client/`**: Flutter-приложение SiriusHub (BLoC + Dio + Firebase Auth)
+- **`client/`**: Flutter-приложение SiriusHub (BLoC + Dio + JWT/Firebase Auth)
 - **`backend/`**: FastAPI API-сервис (PostgreSQL + SQLAlchemy async + JWT)
 
 **Документация frontend (разработчик + пользователь):** [`client/README.md`](client/README.md)
@@ -14,10 +14,10 @@ SiriusHub — мобильное приложение и backend-сервис д
 
 **Client (Flutter)**:
 
-- Авторизация через **Firebase Auth** (email/password); вход в UI через `AuthGate`
-- Слои: `module` (UI) → `domain` (BLoC/модели) → `data` (Repository + Firebase DataSource) → `network` (Dio)
+- Авторизация через **JWT** (email/password) для текущего backend; вход в UI через `AuthGate`. Режим Firebase оставлен для прежнего backend.
+- Слои: `module` (UI) → `domain` (BLoC/модели) → `data` (Repository + AuthDataSource) → `network` (Dio)
 - DI через `DependenciesScope` (`client/lib/core/dependencies.dart`)
-- Для этого backend нужен режим JWT: `--dart-define=AUTH_BACKEND=jwt`.
+- Для этого backend нужен режим JWT: `--dart-define=AUTH_BACKEND=jwt`. URL API по умолчанию — `https://104.143.201.57`.
 - Базовый URL backend: `client/lib/core/api_config.dart`
 - Роли в UI: `student` (базовый доступ) и `council` (создание новостей и тем форума)
 
@@ -221,7 +221,7 @@ bazel test //backend:backend_tests --test_env=BACKEND_TEST_PYTHON="$(command -v 
   - `lib/main.dart` — точка входа
   - `lib/module/` — UI: auth, news, forum, schedule, profile
   - `lib/domain/` — BLoC и модели
-  - `lib/data/` — repositories и Firebase Auth data source
+  - `lib/data/` — repositories и Firebase/JWT Auth data sources
   - `lib/network/`, `lib/core/` — Dio и конфиг API
   - `test/` — unit/widget-тесты
 - **`backend/`** — FastAPI backend

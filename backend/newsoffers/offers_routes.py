@@ -302,7 +302,7 @@ async def delete_offer(
 ):
     offer = await get_offer_or_404(db, offer_id, for_update=True)
     if offer.author_id != user["uid"]:
-        await require_admin_role(db=db, user=user)
+        await require_admin_role(user=user)
     if offer.event_id:
         await db.delete(
             await get_offer_event_or_404(db, offer.event_id, for_update=True)

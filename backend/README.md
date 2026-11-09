@@ -32,6 +32,8 @@ Prerequisites: PostgreSQL, Python 3.12, a database backup, and a mobile client w
 7. Bootstrap an administrator when needed: `docker compose exec api python manage_roles/promote.py EMAIL --role admin`.
 8. Build the mobile client with `--dart-define=AUTH_BACKEND=jwt` and the configured backend URL.
 
+External API requests must use the HTTPS reverse proxy. Compose binds the API and PostgreSQL to localhost.
+
 For local startup, install `requirements-dev.txt`, run `alembic upgrade head`, then run `uvicorn main:app --reload`.
 
 The migration keeps account IDs, profiles, roles, and foreign keys. Firebase password hashes cannot be transferred through this repository. Existing accounts receive an unusable password marker until an administrator sets their password. Registration cannot replace an existing email. New registrations receive new IDs. The removed development seed script must not be used to create privileged test accounts in production.
