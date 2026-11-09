@@ -3,7 +3,7 @@ import 'package:client/domain/model/user_models/user_role.dart';
 class UserModel {
   final String id;
   final String email; // Почта
-  final UserRole role; // Наша роль (студент или студсовет)
+  final UserRole role;
   final String?
   name; // Имя (nullable, так как при регистрации его может не быть)
 

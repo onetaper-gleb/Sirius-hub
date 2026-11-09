@@ -58,6 +58,7 @@ class _FreeRoomDialogState extends State<FreeRoomDialog> {
   ) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
+      useRootNavigator: false,
       initialTime: const TimeOfDay(hour: 9, minute: 0),
       builder: (context, child) {
         return MediaQuery(

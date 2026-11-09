@@ -62,8 +62,15 @@ class AuthGate extends StatelessWidget {
   );
 }
 
-class _AuthenticatedApp extends StatelessWidget {
+class _AuthenticatedApp extends StatefulWidget {
   const _AuthenticatedApp({super.key});
+
+  @override
+  State<_AuthenticatedApp> createState() => _AuthenticatedAppState();
+}
+
+class _AuthenticatedAppState extends State<_AuthenticatedApp> {
+  final _navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   Widget build(BuildContext context) => MultiBlocProvider(
@@ -83,6 +90,13 @@ class _AuthenticatedApp extends StatelessWidget {
         ),
       ),
     ],
-    child: const AppShell(),
+    child: NavigatorPopHandler<Object?>(
+      onPopWithResult: (result) => _navigatorKey.currentState!.pop(result),
+      child: Navigator(
+        key: _navigatorKey,
+        onGenerateRoute: (_) =>
+            MaterialPageRoute<void>(builder: (_) => const AppShell()),
+      ),
+    ),
   );
 }

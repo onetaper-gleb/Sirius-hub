@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:client/domain/bloc/auth/auth_bloc.dart';
 import 'package:client/domain/bloc/auth/auth_state.dart';
-import 'package:client/domain/model/user_models/user_role.dart';
 
 class AdminFab extends StatelessWidget {
   final VoidCallback onPressed;
@@ -29,7 +28,7 @@ class AdminFab extends StatelessWidget {
         '[Admin fab] $state, ${rl.role}, ${rl.email}, ${rl.id}, ${rl.name}',
       );
       return state is AuthAuthenticated &&
-          state.profileModel.userModel.role == UserRole.council;
+          state.profileModel.userModel.role.canManageContent;
     });
 
     if (!isAdmin) return const SizedBox.shrink();

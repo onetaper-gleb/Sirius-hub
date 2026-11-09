@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:client/domain/model/user_models/user_role.dart';
 import '../../domain/bloc/auth/auth_bloc.dart';
 import '../../domain/bloc/auth/auth_state.dart';
 import '../../domain/bloc/news/news_bloc.dart';
@@ -145,10 +144,10 @@ class _NewsScreenState extends State<NewsScreen> {
                       final isAdmin =
                           context.read<AuthBloc>().state is AuthAuthenticated &&
                           (context.read<AuthBloc>().state as AuthAuthenticated)
-                                  .profileModel
-                                  .userModel
-                                  .role ==
-                              UserRole.council;
+                              .profileModel
+                              .userModel
+                              .role
+                              .canManageContent;
                       if (isAdmin) _confirmDelete(context, news.id);
                     },
                     child: Column(
@@ -223,6 +222,7 @@ class _NewsScreenState extends State<NewsScreen> {
   void _confirmDelete(BuildContext context, String id) {
     showDialog(
       context: context,
+      useRootNavigator: false,
       builder: (ctx) => AlertDialog(
         title: const Text('Удалить новость?'),
         content: const Text('Это действие нельзя отменить.'),

@@ -46,6 +46,119 @@ void main() {
     registerFallbackValue(FakeNewsEvent());
   });
 
+  for (final dismissal in ['confirm', 'cancel', 'barrier']) {
+    testWidgets('registration dialog safely disposes after $dismissal', (
+      tester,
+    ) async {
+      final repo = MockRepository();
+      when(() => repo.getEvent('event')).thenAnswer((_) async => event);
+      when(
+        () => repo.registerForEvent(eventId: 'event', comment: 'Hello'),
+      ).thenAnswer(
+        (_) async => RegistrationModel(
+          id: 'registration',
+          eventId: 'event',
+          userId: 'user',
+          status: 'registered',
+        ),
+      );
+      final bloc = NewsBloc(newsRepository: repo);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BlocProvider.value(
+            value: bloc,
+            child: NewsDetailScreen(news: news),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Зарегистрироваться'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Hello');
+      if (dismissal == 'barrier') {
+        await tester.tapAt(const Offset(5, 5));
+      } else {
+        await tester.tap(
+          find.text(dismissal == 'confirm' ? 'Записаться' : 'Отмена'),
+        );
+      }
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(AlertDialog), findsNothing);
+      if (dismissal == 'confirm') {
+        verify(
+          () => repo.registerForEvent(eventId: 'event', comment: 'Hello'),
+        ).called(1);
+      } else {
+        verifyNever(
+          () => repo.registerForEvent(
+            eventId: 'event',
+            comment: any(named: 'comment'),
+          ),
+        );
+      }
+      await tester.pumpWidget(const SizedBox());
+      await tester.runAsync(bloc.close);
+    });
+  }
+
+  for (final unit in ['a', '😀', 'e\u0301']) {
+    testWidgets(
+      'registration validates 50 code points without truncating $unit',
+      (tester) async {
+        final repo = MockRepository();
+        when(() => repo.getEvent('event')).thenAnswer((_) async => event);
+        final boundary = List.filled(50 ~/ unit.runes.length, unit).join();
+        final tooLong = '$boundary$unit';
+        when(
+          () => repo.registerForEvent(eventId: 'event', comment: boundary),
+        ).thenAnswer(
+          (_) async => RegistrationModel(
+            id: 'registration',
+            eventId: 'event',
+            userId: 'user',
+            status: 'registered',
+          ),
+        );
+        final bloc = NewsBloc(newsRepository: repo);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: BlocProvider.value(
+              value: bloc,
+              child: NewsDetailScreen(news: news),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Зарегистрироваться'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), tooLong);
+        await tester.tap(find.text('Записаться'));
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          tooLong,
+        );
+        verifyNever(
+          () => repo.registerForEvent(
+            eventId: 'event',
+            comment: any(named: 'comment'),
+          ),
+        );
+        await tester.enterText(find.byType(TextField), boundary);
+        await tester.tap(find.text('Записаться'));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        verify(
+          () => repo.registerForEvent(eventId: 'event', comment: boundary),
+        ).called(1);
+        await tester.pumpWidget(const SizedBox());
+        await tester.runAsync(bloc.close);
+      },
+    );
+  }
+
   testWidgets(
     'event details render loading then data without a null assertion',
     (tester) async {

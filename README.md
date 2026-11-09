@@ -19,7 +19,7 @@ SiriusHub — мобильное приложение и backend-сервис д
 - DI через `DependenciesScope` (`client/lib/core/dependencies.dart`)
 - HTTP к backend с заголовком `Authorization: Bearer <Firebase ID Token>`
 - Базовый URL backend: `client/lib/core/api_config.dart`
-- Роли в UI: `student` (базовый доступ) и `council` (создание новостей и тем форума)
+- Роли в UI: `student` (базовый доступ), `council` и `admin` (создание новостей и тем форума, модерация)
 
 **Backend (FastAPI)**:
 
@@ -58,12 +58,12 @@ Backend запускается как FastAPI-приложение `backend/main
   - `GET /profile/user/{user_id}` — публичный профиль пользователя
 - **News** (`/news/*`):
   - `GET /news/` — список новостей
-  - `POST /news/` — создание новости (только `council`), поддерживает загрузку изображения (multipart)
-  - `DELETE /news/{news_id}` — удаление новости (только `council`)
+  - `POST /news/` — создание новости (`council` и `admin`), поддерживает загрузку изображения (multipart)
+  - `DELETE /news/{news_id}` — удаление новости (`council` и `admin`)
 - **Schedule** (`/schedule/*`):
   - `GET /schedule?group=...&week_offset=...` — расписание группы (парсинг внешнего источника)
 - **Forum/Topic**:
-  - `GET /forum/topics`, `POST /forum/topics` — список/создание тем (создание — только `council`)
+  - `GET /forum/topics`, `POST /forum/topics` — список/создание тем (создание — `council` и `admin`)
   - `GET /topic/comments?topic_id=...`, `POST /topic/comments` — комментарии в теме
 
 **Документация API (Swagger/OpenAPI)** доступна на:

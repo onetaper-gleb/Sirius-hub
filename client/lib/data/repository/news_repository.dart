@@ -135,12 +135,10 @@ class NewsRepository {
 
       final response = await _dio.post(
         '/news/events/$eventId/register',
-        data: {"comment": comment},
+        data: {if (comment != null) 'comment': comment},
         options: Options(
-          headers: {
-            'Authorization': 'Bearer $rawToken',
-            'Content-Type': 'application/json',
-          },
+          contentType: Headers.formUrlEncodedContentType,
+          headers: {'Authorization': 'Bearer $rawToken'},
         ),
       );
 

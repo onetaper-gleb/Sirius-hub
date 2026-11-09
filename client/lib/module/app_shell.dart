@@ -55,6 +55,7 @@ class _AppShellState extends State<AppShell> {
                 onPressed: () {
                   showDialog(
                     context: context,
+                    useRootNavigator: false,
                     builder: (_) => BlocProvider(
                       create: (_) => ScheduleBloc(
                         scheduleRepository:

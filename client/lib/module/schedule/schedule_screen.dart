@@ -42,7 +42,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     if (authState is AuthAuthenticated) {
       final groupCode =
           authState.profileModel.registrationProfileData.groupCode;
-      if (groupCode != null && _group == null) {
+      if (groupCode != null && groupCode.isNotEmpty && _group == null) {
         _currentWeek = 0;
         _group = groupCode;
         _getWeek();
@@ -51,7 +51,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _updateWeek(String method) {
-    if (_group == null) return;
+    if (_group == null || _group!.isEmpty) return;
     final currentState = context.read<ScheduleBloc>().state;
     if (currentState is ScheduleWeekPending) return;
 
@@ -112,6 +112,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               state.profileModel.registrationProfileData.groupCode;
 
           if (_group != groupCode) {
+            context.read<ScheduleBloc>().add(ScheduleClearWeek());
             _group = groupCode;
             _currentWeek = 0;
             _history.clear();

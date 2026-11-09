@@ -15,6 +15,10 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
     : _scheduleRepository = scheduleRepository,
       super(ScheduleInitial()) {
     on<ScheduleGetWeek>(_getWeek);
+    on<ScheduleClearWeek>((event, emit) {
+      ++_weekRequest;
+      emit(ScheduleInitial());
+    });
     on<ScheduleGetFreeRooms>(_getFreeRooms);
     on<ScheduleResetFreeRooms>(_resetFreeRooms);
   }
