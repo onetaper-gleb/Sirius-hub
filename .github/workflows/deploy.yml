@@ -72,4 +72,3 @@ jobs:
             -o UserKnownHostsFile="$private/known_hosts" -o ConnectTimeout=20 \
             -o ServerAliveInterval=30 -o ServerAliveCountMax=6 \
             "$SERVER_USER@104.143.201.57" 'bash -se' <"$private/payload"
-
