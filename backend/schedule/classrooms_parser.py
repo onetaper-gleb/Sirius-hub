@@ -208,7 +208,7 @@ class Schedule:
     Also you can choose between this week or next week.
     """
 
-    async def classroom(self, number, next=False):
+    async def classroom(self, number, next=False, week_offset=None):
         # Choosing method to use.
         # If we need second week of different from previous classroom, then we need to change page to new classroom.
         if type(number) != str or type(next) != type(False):
@@ -216,9 +216,7 @@ class Schedule:
                 "Group number must be a string. Type of variable next must be Bull."
             )
 
-        method = "set"
-        if next:
-            method = "addWeek"
+        week_offset = int(next) if week_offset is None else week_offset
 
         session = aiohttp.ClientSession()
         session.headers.update(
@@ -262,12 +260,23 @@ class Schedule:
             "updates": [
                 {
                     "type": "callMethod",
-                    "payload": {"id": "get1", "method": method, "params": [number]},
+                    "payload": {"id": "get1", "method": "set", "params": [number]},
                 }
             ],
             "fingerprint": wire["fingerprint"],
             "serverMemo": wire["serverMemo"],
         }
+        for _ in range(abs(week_offset)):
+            payload["updates"].append(
+                {
+                    "type": "callMethod",
+                    "payload": {
+                        "id": "get1",
+                        "method": "addWeek" if week_offset > 0 else "minusWeek",
+                        "params": [],
+                    },
+                }
+            )
 
         # Setting headers
         headers = {
@@ -284,12 +293,6 @@ class Schedule:
                 self.__URL_CLASSROOM, headers=headers, json=payload
             ) as response:
                 ans = await response.json()
-            # Resetting position on web-site
-            payload["updates"][0]["payload"]["method"] = "minusWeek"
-            async with session.post(
-                self.__URL_CLASSROOM, headers=headers, json=payload
-            ) as r:
-                pass
         except:
             await session.close()
 
@@ -326,6 +329,7 @@ class Schedule:
                         schedule[int(i[2:3])].append(j)
                     else:
                         hour, minute = map(lambda x: int(x), j["startTime"].split(":"))
+                        pair = len(self.__lessons)
                         for m, time in enumerate(self.__lessons):
                             if time > hour * 60 + minute:
                                 pair = m
@@ -362,40 +366,38 @@ class Schedule:
 
         if start_date >= end_date:
             raise ValueError("The start time mush be before the end time")
+        today = datetime.now().date()
+        monday = today - timedelta(days=today.weekday())
+        requested_monday = start_date.date() - timedelta(days=start_date.weekday())
+        week_offset = (requested_monday - monday).days // 7
+        if abs(week_offset) > 10:
+            raise ValueError("The requested week is outside the supported range")
 
         # TODO delete classroom time dependent updates, move them to main and stick them to timer
 
         await self.update_classroom_list()
         # Collecting schedules
         all_classrooms = await asyncio.gather(
-            *(self.classroom(classroom) for classroom in self.__classrooms[:20])
+            *(
+                self.classroom(classroom, week_offset=week_offset)
+                for classroom in self.__classrooms[:20]
+            )
         )
         all_classrooms_2 = await asyncio.gather(
-            *(self.classroom(classroom) for classroom in self.__classrooms[20:40])
+            *(
+                self.classroom(classroom, week_offset=week_offset)
+                for classroom in self.__classrooms[20:40]
+            )
         )
         all_classrooms_3 = await asyncio.gather(
-            *(self.classroom(classroom) for classroom in self.__classrooms[40:])
+            *(
+                self.classroom(classroom, week_offset=week_offset)
+                for classroom in self.__classrooms[40:]
+            )
         )
 
         all_classrooms = all_classrooms + all_classrooms_2 + all_classrooms_3
         keys_for_free_classrooms = []
-        start_pair = len(self.__lessons)
-        end_pair = len(self.__lessons)
-
-        start_date_minutes = start_date.hour * 60 + start_date.minute
-        end_date_minutes = end_date.hour * 60 + end_date.minute - 1
-
-        for i, time in enumerate(self.__lessons):
-            if time > start_date_minutes:
-                start_pair = i
-                break
-
-        for i, time in enumerate(self.__lessons):
-            if time > end_date_minutes:
-                end_pair = i
-                break
-
-        need_pairs = set(range(start_pair, end_pair + 1))
         weekday = start_date.weekday()
 
         # Finding free classrooms
@@ -404,8 +406,20 @@ class Schedule:
                 keys_for_free_classrooms.append(i)
                 continue
 
-            not_free_pairs = {pair["numberPair"] for pair in i[weekday]}
-            if not need_pairs.intersection(not_free_pairs):
+            overlaps = False
+            for lesson in i[weekday]:
+                lesson_start = datetime.combine(
+                    start_date.date(),
+                    datetime.strptime(lesson["startTime"], "%H:%M").time(),
+                )
+                lesson_end = datetime.combine(
+                    start_date.date(),
+                    datetime.strptime(lesson["endTime"], "%H:%M").time(),
+                )
+                if lesson_start < end_date and lesson_end > start_date:
+                    overlaps = True
+                    break
+            if not overlaps:
                 keys_for_free_classrooms.append(i["classroom"])
 
         free_classrooms = [

@@ -32,7 +32,6 @@ if not DATABASE_URL:
     else:
         DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./test.db")
 
-print(f"DATABASE_URL: {DATABASE_URL}")
 engine = create_async_engine(DATABASE_URL)
 # SessionLocal = sessionmaker(bind=engine)
 SessionLocal = async_sessionmaker(

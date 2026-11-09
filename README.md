@@ -48,9 +48,8 @@ SiriusHub — мобильное приложение и backend-сервис д
 Backend запускается как FastAPI-приложение `backend/main.py` и подключает роутеры:
 
 - **Auth** (`/auth/*`):
-  - `POST /auth/init` — инициализация пользователя в БД и установка роли `student` в Firebase custom claims
-  - `POST /auth/promote-user` — повысить пользователя до `council` (только для `council`)
-  - `POST /auth/test-make-me-council` — временный тестовый эндпоинт (в коде помечен как TODO удалить)
+  - `POST /auth/init` — создаёт профиль с ролью `student`; повторный запрос сохраняет роль и неуказанные поля профиля
+  - `POST /auth/promote-user` — меняет роль пользователя; доступен только `admin`, роль вызывающего проверяется в PostgreSQL
 - **Profile** (`/profile/*`):
   - `GET /profile/me` — профиль текущего пользователя (требует предварительный `POST /auth/init`)
   - `PUT /profile/update` — обновление профиля
@@ -58,13 +57,24 @@ Backend запускается как FastAPI-приложение `backend/main
   - `GET /profile/user/{user_id}` — публичный профиль пользователя
 - **News** (`/news/*`):
   - `GET /news/` — список новостей
-  - `POST /news/` — создание новости (только `council`), поддерживает загрузку изображения (multipart)
+  - `POST /news/` — создание новости (для `council` и `admin`), изображение передаётся строкой Base64 в JSON-поле `image`
   - `DELETE /news/{news_id}` — удаление новости (только `council`)
 - **Schedule** (`/schedule/*`):
   - `GET /schedule?group=...&week_offset=...` — расписание группы (парсинг внешнего источника)
 - **Forum/Topic**:
   - `GET /forum/topics`, `POST /forum/topics` — список/создание тем (создание — только `council`)
   - `GET /topic/comments?topic_id=...`, `POST /topic/comments` — комментарии в теме
+
+**Предложки** (`/offers/*`):
+
+- `POST /offers/offers` — создаёт черновик; JSON содержит `title`, `content`, `contacts_author` и необязательные поля события, темы и Base64-изображения `image`
+- `GET /offers/offers/my`, `GET /offers/offers/{offer_id}` — свои предложки; чужую предложку могут читать только `council` и `admin`
+- `PUT /offers/offers/{offer_id}`, `PATCH /offers/offers/{offer_id}/submit` — автор правит черновик или доработку и отправляет на модерацию
+- `GET /offers/admin/offers`, `PATCH /offers/admin/offers/{offer_id}/moderate` — очередь и решение модератора; доступны `council` и `admin`
+- При одобрении backend создаёт новость, событие и тему в одной транзакции. Ответ содержит предложку со статусом `approved`.
+
+Регистрация на событие занимает место в статусах `moderation` и `confirmed`; `waiting_list` и отменённые регистрации места не занимают.
+Расписание возвращает семь дней выбранной недели, включая пустые дни. Поиск свободных аудиторий принимает `date=YYYY-MM-DD`, `start_time=HH:MM`, `end_time=HH:MM`, не дальше десяти недель от текущей.
 
 **Документация API (Swagger/OpenAPI)** доступна на:
 
@@ -79,8 +89,11 @@ Backend запускается как FastAPI-приложение `backend/main
 
 - **`FIREBASE_CONFIG_BASE64`**: Base64 от JSON service account (Firebase Admin SDK).  
   Если не задан, backend попытается прочитать файл `backend/firebase-adminsdk.json`.
+  Docker-образ не содержит этот файл: для контейнера задайте переменную или подключите файл отдельным read-only mount.
 - **`DB_USER`**, **`DB_PASSWORD`**, **`DB_NAME`**: параметры Postgres
 - **`DB_HOST`**: хост БД (по умолчанию `db` — имя сервиса в Docker Compose)
+- **`DB_PORT`**: порт PostgreSQL (по умолчанию `5432`)
+- **`DATABASE_URL`**: явный URL подключения, имеет приоритет над `DB_*`; для локальной SQLite нужен драйвер `sqlite+aiosqlite`
 
 ---
 
@@ -105,11 +118,17 @@ docker compose up -d --build
 - **API**: `http://localhost:56284`
 - **Postgres**: `localhost:5454` (внутри compose: `db:5432`)
 
+Изображения хранятся в `backend/uploads/`, подключённом к `/app/uploads`; пересоздание контейнера сохраняет файлы.
+При первом переходе со старого контейнера остановите API и скопируйте `/app/uploads/.` из контейнера в `backend/uploads/` до пересоздания.
+Workflow деплоя переносит эти файлы автоматически. На SSH-хосте нужен Python 3; файл `.env` workflow записывает в формате Docker Compose.
+Для административных команд используйте окружение контейнера: сгенерированный `.env` экранирует символ `$` для Compose.
+Удалённый seed-скрипт содержал общие пароли привилегированных тестовых аккаунтов. Если его запускали, оператор должен отключить эти аккаунты или сменить их пароли.
+
 ---
 
 ### Запуск backend (локально без Docker)
 
-Требования: Python (лучше 3.12, как в CI), установленный Postgres (или используйте Docker только для БД).
+Требования: Python 3.12, как в CI и Docker, установленный Postgres (или используйте Docker только для БД).
 
 ```bash
 cd backend
@@ -167,10 +186,14 @@ flutter test
 ```bash
 cd backend
 pip install -r requirements-dev.txt
-black backend
-isort backend
-pytest
+black --check .
+isort --check-only .
+cd ..
+bazel test //backend:backend_tests --test_env=BACKEND_TEST_PYTHON="$(command -v python)" --test_env=DART="$(command -v dart)" --test_output=errors
 ```
+
+Для Bazel установите Bazelisk и Dart 3.12. Цель запускает pytest через Dart; API-тесты используют SQLite и подменяют Firebase-проверку.
+Прямой запуск тех же тестов: `cd backend && python -m pytest tests`.
 
 Также настроены pre-commit хуки (`.pre-commit-config.yaml`) для форматирования Python-кода в `backend/`.
 
@@ -178,11 +201,11 @@ pytest
 
 ### CI/CD (кратко)
 
-Workflow `.github/workflows/deploy.yml` делает:
+Проверки и деплой разделены:
 
-- форматирование Dart + Python
-- тесты Flutter и pytest
-- деплой backend на сервер по SSH при пуше в `main` (через `docker compose up -d --build` в `backend/`)
+- `.github/workflows/backend.yml` проверяет формат Python и запускает backend-тесты через Bazel для PR
+- `.github/workflows/client.yml` проверяет Flutter
+- `.github/workflows/deploy.yml` собирает контейнер, сохраняет изображения и запускает backend по SSH при пуше в `main`
 
 ---
 

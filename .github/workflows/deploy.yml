@@ -14,10 +14,16 @@ jobs:
 
       - name: Deploy to Server
         uses: appleboy/ssh-action@master
+        env:
+          FIREBASE_CONFIG_BASE64: ${{ secrets.FIREBASE_CONFIG_BASE64 }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          envs: FIREBASE_CONFIG_BASE64,DB_USER,DB_PASSWORD,DB_NAME
           script: |
             set -e
 
@@ -34,15 +40,31 @@ jobs:
 
             cd backend
 
-            touch .env
+            umask 077
+            python3 - <<'PY'
+            import json
+            import os
+            from pathlib import Path
 
-            sed -i '/FIREBASE_CONFIG_BASE64/d' .env
+            keys = ("FIREBASE_CONFIG_BASE64", "DB_USER", "DB_PASSWORD", "DB_NAME")
+            text = "".join(
+                f"{key}={json.dumps(os.environ[key].replace('$', '$$'))}\n"
+                for key in keys
+            )
+            config = Path(".env")
+            config.write_text(text)
+            config.chmod(0o600)
+            PY
 
-            echo "FIREBASE_CONFIG_BASE64='${{ secrets.FIREBASE_CONFIG_BASE64 }}'" > .env
-            echo "DB_USER='${{ secrets.DB_USER }}'" >> .env
-            echo "DB_PASSWORD='${{ secrets.DB_PASSWORD }}'" >> .env
-            echo "DB_NAME='${{ secrets.DB_NAME }}'" >> .env
-
-            docker compose down
-            docker compose up -d --build
-            docker exec camphub-fastapi python -m alembic upgrade head
+            docker compose build
+            mkdir -p uploads
+            if docker container inspect camphub-fastapi >/dev/null 2>&1; then
+              upload_mount=$(docker container inspect --format '{{range .Mounts}}{{if eq .Destination "/app/uploads"}}{{.Source}}{{end}}{{end}}' camphub-fastapi)
+              if [ "$upload_mount" != "$(pwd)/uploads" ]; then
+                docker stop camphub-fastapi
+                trap 'docker start camphub-fastapi >/dev/null 2>&1 || true' EXIT
+                docker cp camphub-fastapi:/app/uploads/. uploads/
+              fi
+            fi
+            docker compose up -d
+            trap - EXIT

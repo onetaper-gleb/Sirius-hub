@@ -4,6 +4,8 @@ import io
 import logging
 import os
 import uuid
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException
@@ -33,6 +35,10 @@ logger = logging.getLogger("logs")
 
 MAX_FILE_SIZE = 4 * 1024 * 1024
 UPLOAD_DIR = "uploads"
+OCCUPIED_REGISTRATION_STATUSES = {
+    RegStatus.moderation.value,
+    RegStatus.confirmed.value,
+}
 
 
 class NotFound(HTTPException):
@@ -92,10 +98,14 @@ async def delete_old_image(image_url: str | None) -> None:
         logger.debug("Image not found")
         return
 
-    old_file_path = image_url.replace("/static/", "uploads/")
-    if os.path.exists(old_file_path):
-
-        os.remove(old_file_path)
+    if not image_url.startswith("/static/"):
+        return
+    file_name = image_url[len("/static/") :]
+    if not file_name or Path(file_name).name != file_name or "\\" in file_name:
+        return
+    old_file_path = Path(UPLOAD_DIR) / file_name
+    if old_file_path.is_file() and not old_file_path.is_symlink():
+        old_file_path.unlink()
         logger.info("Successful image deletion")
 
 
@@ -176,6 +186,16 @@ def validate_event_data(request):
 
     if request.max_partic < 1:
         raise HTTPException(status_code=400, detail="max_partic должно быть больше 0")
+    validate_event_times(request.event_start, request.event_end)
+
+
+def validate_event_times(start: datetime, end: datetime):
+    start = start if start.tzinfo else start.replace(tzinfo=timezone.utc)
+    end = end if end.tzinfo else end.replace(tzinfo=timezone.utc)
+    if start >= end:
+        raise HTTPException(
+            status_code=400, detail="Событие должно закончиться после начала"
+        )
 
 
 @router.post("/", response_model=NewsResponse)
@@ -211,8 +231,8 @@ async def create_news(
 
         new_event = Events(
             status=request.event_status,
-            event_start=request.event_start,
-            event_end=request.event_end,
+            event_start=request.event_start.isoformat(),
+            event_end=request.event_end.isoformat(),
             location=request.location,
             max_partic=request.max_partic,
             cur_partic=0,
@@ -296,16 +316,16 @@ async def update_news(
                 event.status = request.event_status
                 logger.debug("Status updated")
             if request.event_start is not None:
-                event.event_start = request.event_start
+                event.event_start = request.event_start.isoformat()
                 logger.debug("Event_start updated")
             if request.event_end is not None:
-                event.event_end = request.event_end
+                event.event_end = request.event_end.isoformat()
                 logger.debug("Event_end updated")
             if request.location is not None:
                 event.location = request.location
                 logger.debug("Location updated")
             if request.max_partic is not None:
-                if request.max_partic < 1:
+                if request.max_partic < max(1, event.cur_partic):
                     await db.rollback()
                     raise HTTPException(400, "max_partic должно быть больше 0")
                 event.max_partic = request.max_partic
@@ -313,6 +333,10 @@ async def update_news(
             if request.is_reg_open is not None:
                 event.is_reg_open = request.is_reg_open
                 logger.debug("Field 'is_reg_open' updated")
+            validate_event_times(
+                datetime.fromisoformat(event.event_start),
+                datetime.fromisoformat(event.event_end),
+            )
 
         else:
             validate_event_data(request)
@@ -320,8 +344,8 @@ async def update_news(
 
             new_event = Events(
                 status=request.event_status,
-                event_start=request.event_start,
-                event_end=request.event_end,
+                event_start=request.event_start.isoformat(),
+                event_end=request.event_end.isoformat(),
                 location=request.location,
                 max_partic=request.max_partic,
                 cur_partic=0,
@@ -344,11 +368,11 @@ async def update_news(
             await db.delete(event)
             logger.debug("The existing event has been deleted.")
 
+    old_image_url = None
     if request.image:
         new_image_url = await process_image(request.image)
         old_image_url = news.image_url
         news.image_url = new_image_url
-        await delete_old_image(old_image_url)
 
         logger.debug("Image updated")
 
@@ -385,6 +409,7 @@ async def update_news(
             logger.debug("The existing topic has been deleted.")
 
     await db.commit()
+    await delete_old_image(old_image_url)
     await db.refresh(news)
     logger.info("Transaction committed: news updated successfully")
 
@@ -426,12 +451,10 @@ async def delete_news(
                 await db.flush()
                 await db.delete(topic)
 
-        if news_item.image_url:
-            await delete_old_image(news_item.image_url)
-
         await db.delete(news_item)
 
         await db.commit()
+        await delete_old_image(news_item.image_url)
         return {"status": "success", "message": "Успешное удаление"}
 
     except NotFound as e:
@@ -500,11 +523,15 @@ async def create_reg(
     if event.cur_partic >= event.max_partic:
         status = RegStatus.waiting_list
     else:
-        status = RegStatus.pending
+        status = RegStatus.moderation
         event.cur_partic += 1
 
     new_registration = Registrations(
-        event_id=event_id, user_id=user.get("uid"), status=status.value, comment=comment
+        id=str(uuid.uuid4()),
+        event_id=event_id,
+        user_id=user.get("uid"),
+        status=status.value,
+        comment=comment,
     )
 
     db.add(new_registration)
@@ -537,7 +564,7 @@ async def delete_reg(
 
     await db.delete(registration)
 
-    if registration.status != RegStatus.waiting_list.value:
+    if registration.status in OCCUPIED_REGISTRATION_STATUSES:
         event.cur_partic -= 1
 
     await db.commit()
@@ -556,7 +583,7 @@ async def get_all_part(
     result = await db.execute(
         select(Registrations)
         .where(Registrations.event_id == event_id)
-        .order_by(Registrations.created_at.asc())
+        .order_by(Registrations.id.asc())
     )
     registrations = result.scalars().all()
 
@@ -591,9 +618,10 @@ async def update_part_status(
     validate_registration_status(status)
 
     old_status = registration.status
-    registration.status = status
-
-    if old_status != RegStatus.confirmed.value and status == RegStatus.confirmed.value:
+    if (
+        old_status not in OCCUPIED_REGISTRATION_STATUSES
+        and status in OCCUPIED_REGISTRATION_STATUSES
+    ):
         if event.cur_partic < event.max_partic:
             event.cur_partic += 1
         else:
@@ -601,9 +629,12 @@ async def update_part_status(
                 status_code=403, detail="Превышено максимальное количество участников"
             )
     elif (
-        old_status == RegStatus.confirmed.value and status != RegStatus.confirmed.value
+        old_status in OCCUPIED_REGISTRATION_STATUSES
+        and status not in OCCUPIED_REGISTRATION_STATUSES
     ):
         event.cur_partic -= 1
+
+    registration.status = status
 
     await db.commit()
     await db.refresh(registration)
