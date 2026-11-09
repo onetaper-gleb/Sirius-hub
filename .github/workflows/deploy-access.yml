@@ -23,7 +23,8 @@ jobs:
           known="$RUNNER_TEMP/deploy-known-hosts"
           trap 'rm -f "$identity" "$known"' EXIT
           printf '%s\n' "$SERVER_SSH_KEY" >"$identity"
-          printf '%s\n' '104.143.201.57 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFxKq+usJBbk6neVphUqDuF0jjdoeLKufS5ypT1Ya4Lc' >"$known"          chmod 600 "$identity" "$known"
+          printf '%s\n' '104.143.201.57 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFxKq+usJBbk6neVphUqDuF0jjdoeLKufS5ypT1Ya4Lc' >"$known"
+          chmod 600 "$identity" "$known"
           ssh -i "$identity" -o IdentitiesOnly=yes -o HostKeyAlgorithms=ssh-ed25519 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$known" -o ConnectTimeout=20 "$SERVER_USER@104.143.201.57" 'bash -se' <<'REMOTE'
           set -eu
           umask 077
