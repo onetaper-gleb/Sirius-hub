@@ -21,6 +21,7 @@ from news.news_routes import (
     delete_old_image,
     process_image,
     validate_event_data,
+    validate_topic_title,
 )
 
 from .schemas import AdminModRequest, OfferNewsEventsRequest, OfferNewsResponse
@@ -255,6 +256,11 @@ async def moderate_offer(
     }:
         raise HTTPException(400, "Недопустимое действие модерации")
     if request.action == ModerationStatus.approved:
+        source_topic = None
+        if offer.has_topic:
+            validate_topic_title(offer.title)
+            source_topic = await get_offer_topic_or_404(db, offer.topic_id)
+            validate_topic_title(source_topic.title)
         news = News(
             title=offer.title,
             content=offer.content,
@@ -281,8 +287,9 @@ async def moderate_offer(
             await db.flush()
             news.event_id = event.id
         if offer.has_topic:
-            source = await get_offer_topic_or_404(db, offer.topic_id)
-            topic = Topics(title=source.title, anon=source.anon, news_id=news.id)
+            topic = Topics(
+                title=source_topic.title, anon=source_topic.anon, news_id=news.id
+            )
             db.add(topic)
             await db.flush()
             news.topic_id = topic.id

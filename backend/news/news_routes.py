@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from auth.auth_routes import get_current_user, require_council_role
-from database.constants import COMMENT_MAX
+from database.constants import COMMENT_MAX, TITLE_LEN
 from database.database import get_db
 from database.models import Events, EventStatus, News, Registrations, RegStatus, Topics
 from utils.logger import set_logger
@@ -199,6 +199,11 @@ def validate_event_times(start: datetime, end: datetime):
         )
 
 
+def validate_topic_title(title: str):
+    if len(title) > TITLE_LEN:
+        raise HTTPException(400, f"Topic title must not exceed {TITLE_LEN} characters")
+
+
 @router.post("/", response_model=NewsResponse)
 async def create_news(
     request: NewsCreateRequest,
@@ -294,6 +299,10 @@ async def update_news(
     news = await get_news_or_404(db, news_id, for_update=True)
     logger.debug("Fetching news by ID")
 
+    has_topic = news.has_topic if request.has_topic is None else request.has_topic
+    if has_topic:
+        validate_topic_title(news.title if request.title is None else request.title)
+
     if request.title is not None:
         news.title = request.title
         logger.debug("Title updated")
@@ -377,7 +386,7 @@ async def update_news(
 
         logger.debug("Image updated")
 
-    if request.has_topic:
+    if has_topic:
         if news.topic_id:
             topic = await get_topic_or_404(db, news.topic_id, for_update=True)
             logger.debug("Fetching topic by ID")

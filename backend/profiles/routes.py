@@ -86,11 +86,13 @@ class ProfileUpdateBody(BaseModel):
         v = v.strip()
         return v or None
 
-    @field_validator("messenger_handle")
+    @field_validator("messenger_handle", mode="before")
     @classmethod
     def messenger_strip(cls, v: str | None) -> str | None:
-        if v is None or v == "":
+        if v is None:
             return None
+        if not isinstance(v, str):
+            raise ValueError("Messenger handle must be a string")
         v = v.strip()
         if v.startswith("tg/"):
             v = v[3:].strip()

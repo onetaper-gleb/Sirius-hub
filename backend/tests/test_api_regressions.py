@@ -595,6 +595,14 @@ def test_migrations_upgrade_downgrade_and_upgrade(tmp_path):
             "VARCHAR(50)"
         )
         assert Registrations.__table__.c.comment.type.length == 50
+        for table, column, expected in (
+            ("topics", "title", "VARCHAR(60)"),
+            ("offertopics", "title", "VARCHAR(60)"),
+            ("comments", "content", "VARCHAR(1024)"),
+            ("users", "messenger_handle", "VARCHAR(32)"),
+        ):
+            columns = connection.execute(f"PRAGMA table_info({table})").fetchall()
+            assert next(row[2] for row in columns if row[1] == column) == expected
         assert connection.execute(
             "SELECT version_num FROM alembic_version"
         ).fetchone() == ("5a1e237bc965",)
@@ -684,6 +692,17 @@ with TestClient(main.app) as client:
     comment = schema['components']['schemas'][form_name]['properties']['comment']
     assert {'type': 'string', 'maxLength': 50} in comment['anyOf']
     assert {'type': 'null'} in comment['anyOf']
+    models = schema['components']['schemas']
+    for name, field, minimum, maximum in (
+        ('CreateTopicRequest', 'title', 1, 60),
+        ('CreateCommentRequest', 'content', 1, 1024),
+        ('UpdateCommentRequest', 'content', 1, 1024),
+    ):
+        prop = models[name]['properties'][field]
+        assert (prop['minLength'], prop['maxLength']) == (minimum, maximum)
+    for name in ('NewsCreateRequest', 'OfferNewsEventsRequest'):
+        assert models[name]['properties']['title']['maxLength'] == 60
+    assert {'type': 'string', 'maxLength': 60} in models['NewsUpdateRequest']['properties']['title']['anyOf']
     assert client.get('/news/').status_code in (401, 403)
     assert client.post('/auth/test-make-me-council').status_code == 404
 """

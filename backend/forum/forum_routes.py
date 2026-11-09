@@ -48,7 +48,7 @@ async def create_topic(
     db: AsyncSession = Depends(get_db),
 ):
     title = request.title.strip()
-    if not MIN_LEN < len(title) < TITLE_LEN:
+    if not MIN_LEN <= len(title) <= TITLE_LEN:
         raise HTTPException(status_code=400, detail="Title is invalid")
     new_topic = Topics(title=title, anon=request.anon)
     db.add(new_topic)
