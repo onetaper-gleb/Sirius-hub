@@ -1,8 +1,9 @@
 import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from database.constants import COMMENT_MAX, EVENT_CAPACITY_MAX, TITLE_LEN
 from database.models import EventStatus, ModerationStatus
 
 
@@ -30,8 +31,8 @@ class OfferEventResponse(BaseModel):
     id: str
     status: EventStatus
     news_id: str
-    event_start: str
-    event_end: str
+    event_start: datetime.datetime
+    event_end: datetime.datetime
     location: str
     max_partic: int
     cur_partic: int
@@ -42,17 +43,19 @@ class OfferEventResponse(BaseModel):
 
 
 class OfferNewsEventsRequest(BaseModel):
-    title: str
+    title: str = Field(..., max_length=TITLE_LEN)
     content: str
     has_event: bool = False
     has_topic: bool = False
     event_status: Optional[str] = None
-    event_start: Optional[str] = None
-    event_end: Optional[str] = None
+    event_start: Optional[datetime.datetime] = None
+    event_end: Optional[datetime.datetime] = None
     location: Optional[str] = None
-    max_partic: Optional[int] = None
+    max_partic: Optional[int] = Field(default=None, le=EVENT_CAPACITY_MAX)
     is_reg_open: bool = False
-    contacts_author: str
+    contacts_author: str = Field(min_length=1, max_length=COMMENT_MAX)
+    anon: bool = False
+    image: Optional[str] = None
 
 
 class AdminModRequest(BaseModel):

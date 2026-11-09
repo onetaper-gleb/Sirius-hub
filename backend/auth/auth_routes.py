@@ -22,12 +22,12 @@ def get_current_user(res: HTTPAuthorizationCredentials = Depends(security)):
     token = res.credentials
 
     try:
-        decoded_token = auth.verify_id_token(token)  # replace
+        decoded_token = auth.verify_id_token(token, check_revoked=True)
         return decoded_token
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Невалидный или истекший токен: {str(e)}",
+            detail="Невалидный или истекший токен",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -44,7 +44,18 @@ async def require_council_role(
         raise HTTPException(
             status_code=403, detail="Только студсовет и администраторы имеют доступ."
         )
-    return user
+    return {**user, "role": role}
+
+
+async def require_admin_role(
+    db: AsyncSession = Depends(get_db), user: dict = Depends(get_current_user)
+):
+    result = await db.execute(select(DBUser.role).where(DBUser.id == user.get("uid")))
+    if result.scalar() != "admin":
+        raise HTTPException(
+            status_code=403, detail="Только администраторы имеют доступ."
+        )
+    return {**user, "role": "admin"}
 
 
 def _name_from_token(name: object | None) -> str | None:
@@ -70,11 +81,6 @@ async def init_new_user(
         final_group_code = None
 
     try:
-        auth.set_custom_user_claims(uid, {"role": "student"})  # replace
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Firebase error: {e}")
-
-    try:
         stmt = insert(DBUser).values(
             id=uid,
             email=email,
@@ -83,67 +89,33 @@ async def init_new_user(
             group_code=final_group_code,
         )
 
+        update_values = {"email": email}
+        if request is not None and "group_code" in request.model_fields_set:
+            update_values["group_code"] = final_group_code
         stmt = stmt.on_conflict_do_update(
             index_elements=["id"],
-            set_={
-                "email": email,
-                "group_code": request.group_code,
-            },
+            set_=update_values,
         )
 
         await db.execute(stmt)
         await db.commit()
         return {"status": "ok"}
 
-    except Exception as e:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
-
-
-# @router.post("/admin-action")
-# async def do_something_secret(user: dict = Depends(get_current_user)):
-#     role = user.get("role", "student")
-#     if role != "council":
-#         raise HTTPException(
-#             status_code=403, detail="Доступ запрещен. Только для студсовета."
-#         )
-
-#     return {"message": "Секретное действие выполнено"}
-
-
-# TODO УДАЛИТЬ ЭТУ АПИШКУ КОГДА БУДУТ ИТОГОВЫЕ ПОЛЬЗОВАТЕЛИ.
-@router.post("/test-make-me-council")
-async def make_me_council(
-    db_postgres: AsyncSession = Depends(get_db), user: dict = Depends(get_current_user)
-):
-    uid = user.get("uid")
-
-    try:
-        auth.set_custom_user_claims(uid, {"role": "council"})  # replace
-
-        stmt = update(DBUser).where(DBUser.id == uid).values(role="council")
-        await db_postgres.execute(stmt)
-        await db_postgres.commit()
-
-        return {"status": "success", "message": "Роль обновлена везде!"}
-
-    except Exception as e:
-        await db_postgres.rollback()
-        raise HTTPException(status_code=500, detail=f"Ошибка: {str(e)}")
+        raise HTTPException(status_code=500, detail="Не удалось создать профиль")
 
 
 @router.post("/promote-user")
 async def promote_user(
     request: PromoteRequest,
     db: AsyncSession = Depends(get_db),
-    current_admin: dict = Depends(require_council_role),
+    current_admin: dict = Depends(require_admin_role),
 ):
     target_uid = request.uid
     target_role = request.role.value
 
     try:
-        auth.set_custom_user_claims(target_uid, {"role": target_role})
-
         stmt = update(DBUser).where(DBUser.id == target_uid).values(role=target_role)
         result = await db.execute(stmt)
 
@@ -152,6 +124,7 @@ async def promote_user(
                 status_code=404, detail="Пользователь не найден в PostgreSQL."
             )
 
+        auth.set_custom_user_claims(target_uid, {"role": target_role})
         await db.commit()
 
         return {
@@ -160,7 +133,8 @@ async def promote_user(
         }
 
     except HTTPException:
-        raise
-    except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Ошибка при повышении: {str(e)}")
+        raise
+    except Exception:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Не удалось изменить роль")

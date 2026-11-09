@@ -1,0 +1,6 @@
+sh_test(
+    name = "backend_tests",
+    srcs = ["run_tests.sh"],
+    data = glob(["**/*.py", "alembic.ini"]) + ["run_tests.dart"],
+    timeout = "moderate",
+)

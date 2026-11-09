@@ -116,7 +116,7 @@ async def create_comment(
 
     content = request.content.strip()
 
-    if not (MIN_LEN < len(content) < USER_COMMENT_MAX_LEN):
+    if not (MIN_LEN <= len(content) <= USER_COMMENT_MAX_LEN):
 
         logger.warning(f"User tried to create an invalid comment")
         raise HTTPException(status_code=400, detail="Comment content is invalid")
@@ -180,7 +180,7 @@ async def update_comment(
     logger.info(f"User {current_user_id} is trying to edit comment {comment_id}")
 
     content = request.content.strip()
-    if not (MIN_LEN < len(content) < USER_COMMENT_MAX_LEN):
+    if not (MIN_LEN <= len(content) <= USER_COMMENT_MAX_LEN):
         logger.warning(f"User tried to update comment with invalid content length")
         raise HTTPException(status_code=400, detail="Comment content is invalid")
 
