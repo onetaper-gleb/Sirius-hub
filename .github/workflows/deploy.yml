@@ -66,7 +66,8 @@ jobs:
           git checkout --detach "$DEPLOY_SHA"
           test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
           exec bash backend/deploy.sh
-          DEPLOYREMOTE
+          DEPLOY
+          REMOTE
           timeout --signal=TERM 30m ssh -i "$private/key" -o BatchMode=yes -o IdentitiesOnly=yes \
             -o HostKeyAlgorithms=ssh-ed25519 -o StrictHostKeyChecking=yes \
             -o UserKnownHostsFile="$private/known_hosts" -o ConnectTimeout=20 \
