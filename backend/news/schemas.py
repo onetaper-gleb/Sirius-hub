@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from database.constants import TITLE_LEN
+from database.constants import EVENT_CAPACITY_MAX, TITLE_LEN
 from database.models import EventStatus, RegStatus
 
 
@@ -59,7 +59,7 @@ class NewsCreateRequest(BaseModel):
     event_start: Optional[datetime.datetime] = None
     event_end: Optional[datetime.datetime] = None
     location: Optional[str] = None
-    max_partic: Optional[int] = None
+    max_partic: Optional[int] = Field(default=None, le=EVENT_CAPACITY_MAX)
     is_reg_open: bool = False
 
     anon: Optional[bool] = None
@@ -76,7 +76,7 @@ class NewsUpdateRequest(BaseModel):
     event_start: Optional[datetime.datetime] = None
     event_end: Optional[datetime.datetime] = None
     location: Optional[str] = None
-    max_partic: Optional[int] = None
+    max_partic: Optional[int] = Field(default=None, le=EVENT_CAPACITY_MAX)
     is_reg_open: Optional[bool] = None
 
     anon: Optional[bool] = None

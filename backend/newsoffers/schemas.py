@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from database.constants import COMMENT_MAX, TITLE_LEN
+from database.constants import COMMENT_MAX, EVENT_CAPACITY_MAX, TITLE_LEN
 from database.models import EventStatus, ModerationStatus
 
 
@@ -51,7 +51,7 @@ class OfferNewsEventsRequest(BaseModel):
     event_start: Optional[datetime.datetime] = None
     event_end: Optional[datetime.datetime] = None
     location: Optional[str] = None
-    max_partic: Optional[int] = None
+    max_partic: Optional[int] = Field(default=None, le=EVENT_CAPACITY_MAX)
     is_reg_open: bool = False
     contacts_author: str = Field(min_length=1, max_length=COMMENT_MAX)
     anon: bool = False

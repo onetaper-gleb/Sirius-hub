@@ -49,7 +49,7 @@ jobs:
 
             keys = ("JWT_SECRET_KEY", "DB_USER", "DB_PASSWORD", "DB_NAME")
             text = "".join(
-                f"{key}={json.dumps(os.environ[key].replace('$', '$$'))}\n"
+                f"{key}={json.dumps(os.environ[key].replace('$', '$$'), ensure_ascii=False)}\n"
                 for key in keys
             )
             config = Path(".env")
