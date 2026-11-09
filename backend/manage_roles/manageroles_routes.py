@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.auth_routes import promote_user, require_admin_role
-from auth.schemas import PromoteRequest
+from auth.auth_routes import require_admin_role
 from database.database import get_db
 from database.models import User as DBUser
 
@@ -17,17 +16,14 @@ router = APIRouter(prefix="/roles", tags=["Roles"])
 async def give_me_role(
     request: CreateRoleRequest,
     db_postgres: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_admin_role),
+    _admin: dict = Depends(require_admin_role),
 ):
     result = await db_postgres.execute(
-        select(DBUser.id).where(DBUser.email == request.u_email)
+        update(DBUser)
+        .where(func.lower(DBUser.email) == str(request.u_email).lower())
+        .values(role=request.u_role.value)
     )
-    uid = result.scalar_one_or_none()
-    if uid is None:
+    if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
-    await promote_user(
-        request=PromoteRequest(uid=uid, role=request.u_role),
-        db=db_postgres,
-        current_admin=user,
-    )
-    return {"u_email": request.u_email, "u_role": request.u_role}
+    await db_postgres.commit()
+    return {"u_email": str(request.u_email), "u_role": request.u_role.value}

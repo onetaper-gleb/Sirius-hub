@@ -15,7 +15,7 @@ jobs:
       - name: Deploy to Server
         uses: appleboy/ssh-action@master
         env:
-          FIREBASE_CONFIG_BASE64: ${{ secrets.FIREBASE_CONFIG_BASE64 }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_NAME: ${{ secrets.DB_NAME }}
@@ -23,7 +23,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: FIREBASE_CONFIG_BASE64,DB_USER,DB_PASSWORD,DB_NAME
+          envs: JWT_SECRET_KEY,DB_USER,DB_PASSWORD,DB_NAME
           script: |
             set -e
 
@@ -40,13 +40,14 @@ jobs:
 
             cd backend
 
+            test "${#JWT_SECRET_KEY}" -ge 32
             umask 077
             python3 - <<'PY'
             import json
             import os
             from pathlib import Path
 
-            keys = ("FIREBASE_CONFIG_BASE64", "DB_USER", "DB_PASSWORD", "DB_NAME")
+            keys = ("JWT_SECRET_KEY", "DB_USER", "DB_PASSWORD", "DB_NAME")
             text = "".join(
                 f"{key}={json.dumps(os.environ[key].replace('$', '$$'), ensure_ascii=False)}\n"
                 for key in keys

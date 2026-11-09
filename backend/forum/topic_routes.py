@@ -239,7 +239,7 @@ async def delete_comment(
         raise HTTPException(status_code=404, detail="Comment not found")
 
     if comment.user_id != id_user:
-        await require_council_role(db=db, user=user)
+        await require_council_role(user=user)
 
     await db.delete(comment)
     await db.commit()

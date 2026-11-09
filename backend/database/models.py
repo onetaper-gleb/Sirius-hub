@@ -2,7 +2,17 @@ import enum
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.orm import relationship
 
 from database.constants import *
@@ -131,9 +141,12 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, index=True)
-    email = Column(String(USER_EMAIL_LEN), unique=True, index=True)
-    role = Column(String, default="student")
+    email = Column(String(USER_EMAIL_LEN), unique=True, index=True, nullable=True)
+    __table_args__ = (Index("ix_users_email_lower", func.lower(email), unique=True),)
+    role = Column(String, default=UserRole.student.value, nullable=False)
     created_at = Column(DateTime, default=_utc_now_naive)
+    hashed_password = Column(String, nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True)
 
     avatar_emoji = Column(String(USER_AVATAR_EMOJI_MAX_LEN), nullable=True)
     display_name = Column(String(USER_DISPLAY_NAME_MAX_LEN), nullable=True)

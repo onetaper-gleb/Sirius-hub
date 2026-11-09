@@ -2,7 +2,6 @@ import base64
 import datetime
 import io
 from pathlib import Path
-from unittest.mock import Mock
 
 import httpx
 import pytest
@@ -12,6 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from auth import auth_routes
+from auth.security import create_access_token
 from database.database import Base, get_db
 from database.models import Events, News, OfferNews, Registrations, Topics, User
 from forum import forum_router, topic_router
@@ -28,7 +28,7 @@ def anyio_backend():
 
 
 @pytest.fixture
-async def api(monkeypatch):
+async def api():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     sessions = async_sessionmaker(engine, expire_on_commit=False)
     async with engine.begin() as connection:
@@ -40,27 +40,24 @@ async def api(monkeypatch):
                 email=f"{role}@example.org",
                 role=role,
                 group_code="saved-group",
+                hashed_password="!",
             )
             for role in ("student", "council", "admin")
         )
-        session.add(User(id="other", email="other@example.org", role="student"))
+        session.add(
+            User(
+                id="other",
+                email="other@example.org",
+                role="student",
+                hashed_password="!",
+            )
+        )
         await session.commit()
 
     async def database():
         async with sessions() as session:
             yield session
 
-    monkeypatch.setattr(
-        auth_routes.auth,
-        "verify_id_token",
-        lambda token, **kwargs: {
-            "uid": token,
-            "email": f"{token}@example.org",
-            "role": "admin",
-        },
-    )
-    claims = Mock()
-    monkeypatch.setattr(auth_routes.auth, "set_custom_user_claims", claims)
     app = FastAPI()
     for router in (
         auth_routes.router,
@@ -77,12 +74,12 @@ async def api(monkeypatch):
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        yield client, sessions, claims
+        yield client, sessions, None
     await engine.dispose()
 
 
 def headers(role="student"):
-    return {"Authorization": f"Bearer {role}"}
+    return {"Authorization": f"Bearer {create_access_token({"sub": role})}"}
 
 
 def event_body(**changes):
@@ -102,7 +99,7 @@ def event_body(**changes):
 
 @pytest.mark.anyio
 async def test_self_promotion_removed_and_role_routes_require_real_admin(api):
-    client, sessions, claims = api
+    client, sessions, _ = api
     assert (
         await client.post("/auth/test-make-me-council", headers=headers())
     ).status_code == 404
@@ -123,7 +120,6 @@ async def test_self_promotion_removed_and_role_routes_require_real_admin(api):
             },
         )
         assert response.status_code == 403
-    claims.assert_not_called()
     response = await client.post(
         "/roles/test-give_me_role",
         headers=headers("admin"),
@@ -134,7 +130,6 @@ async def test_self_promotion_removed_and_role_routes_require_real_admin(api):
         },
     )
     assert response.status_code == 200, response.text
-    claims.assert_called_once_with("student", {"role": "council"})
     async with sessions() as session:
         assert (await session.get(User, "student")).role == "council"
     missing = await client.post(
@@ -143,30 +138,28 @@ async def test_self_promotion_removed_and_role_routes_require_real_admin(api):
         json={"uid": "missing", "role": "admin"},
     )
     assert missing.status_code == 404
-    assert claims.call_count == 1
 
 
 @pytest.mark.anyio
-async def test_init_without_body_preserves_group_and_role(api):
-    client, sessions, claims = api
-    for payload in (None, {}):
-        response = await client.post(
-            "/auth/init", headers=headers("council"), json=payload
+async def test_profile_update_preserves_omitted_group_and_role(api):
+    client, sessions, _ = api
+    for payload in ({}, {"display_name": "Council"}):
+        response = await client.put(
+            "/profile/update", headers=headers("council"), json=payload
         )
         assert response.status_code == 200, response.text
     async with sessions() as session:
         user = await session.get(User, "council")
         assert user.group_code == "saved-group"
         assert user.role == "council"
-    claims.assert_not_called()
-    response = await client.post(
-        "/auth/init", headers=headers(), json={"group_code": " "}
+    response = await client.put(
+        "/profile/update", headers=headers(), json={"group_code": " "}
     )
     assert response.status_code == 200
     async with sessions() as session:
         assert (await session.get(User, "student")).group_code is None
-    too_long = await client.post(
-        "/auth/init", headers=headers(), json={"group_code": "a" * 1000}
+    too_long = await client.put(
+        "/profile/update", headers=headers(), json={"group_code": "a" * 1000}
     )
     assert too_long.status_code == 422
 
@@ -605,7 +598,7 @@ def test_migrations_upgrade_downgrade_and_upgrade(tmp_path):
             assert next(row[2] for row in columns if row[1] == column) == expected
         assert connection.execute(
             "SELECT version_num FROM alembic_version"
-        ).fetchone() == ("5a1e237bc965",)
+        ).fetchone() == ("821a1b366db6",)
         assert (
             len(connection.execute("PRAGMA foreign_key_list(comments)").fetchall()) == 3
         )
@@ -673,14 +666,9 @@ def test_production_app_starts_and_builds_openapi_without_cloud_calls(tmp_path):
         **os.environ,
         "PYTHONPATH": str(backend),
         "DATABASE_URL": f"sqlite+aiosqlite:///{tmp_path / 'startup.db'}",
-        "FIREBASE_CONFIG_BASE64": "",
     }
     code = """
-import firebase_admin
-from firebase_admin import credentials
 from fastapi.testclient import TestClient
-credentials.Certificate = lambda path: object()
-firebase_admin.initialize_app = lambda cred: None
 import main
 with TestClient(main.app) as client:
     response = client.get('/openapi.json')

@@ -1,11 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 from database.models import UserRole
 
 
 class CreateRoleRequest(BaseModel):
-    admin_id: str
-    u_email: str
+    admin_id: str | None = None
+    u_email: EmailStr
     u_role: UserRole
 
 

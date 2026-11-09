@@ -150,20 +150,20 @@ lib/
 
 Адрес API задаётся при сборке через `API_BASE_URL` (по умолчанию `https://104.143.201.57`). Режим авторизации задаётся через `AUTH_BACKEND`: `firebase` (по умолчанию) или `jwt`. Неизвестный режим и некорректный URL останавливают запуск.
 
-Для backend из `main` используйте Firebase:
+Для прежнего backend с `/auth/init` используйте Firebase:
 
 ```bash
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:56284
 ```
 
-После перехода backend на JWT (`/auth/register`, `/auth/token`, `/auth/me`) соберите клиент с тем же режимом:
+Backend в этой ветке использует JWT (`/auth/register`, `/auth/token`, `/auth/me`). Соберите клиент с тем же режимом:
 
 ```bash
-flutter build apk --dart-define=AUTH_BACKEND=jwt --dart-define=API_BASE_URL=https://api.example.org
-flutter build ios --dart-define=AUTH_BACKEND=jwt --dart-define=API_BASE_URL=https://api.example.org
+flutter build apk --dart-define=AUTH_BACKEND=jwt --dart-define=API_BASE_URL=https://104.143.201.57
+flutter build ios --dart-define=AUTH_BACKEND=jwt --dart-define=API_BASE_URL=https://104.143.201.57
 ```
 
-Замените адрес примера на адрес вашего API. JWT требует HTTPS. В debug-сборках разрешён HTTP для `localhost`, `127.0.0.1`, `::1` и Android-эмулятора `10.0.2.2`:
+Если backend работает по другому адресу, замените `API_BASE_URL`. JWT требует HTTPS. В debug-сборках разрешён HTTP для `localhost`, `127.0.0.1`, `::1` и Android-эмулятора `10.0.2.2`:
 
 ```bash
 flutter run --dart-define=AUTH_BACKEND=jwt --dart-define=API_BASE_URL=http://10.0.2.2:56284
@@ -192,14 +192,14 @@ flutterfire configure
 ```bash
 cd client
 flutter pub get
-flutter run
+flutter run --dart-define=AUTH_BACKEND=jwt
 ```
 
 Полезные варианты:
 
 ```bash
-flutter run -d chrome          # web (если нужен)
-flutter run -d <device_id>     # конкретное устройство
+flutter run -d chrome --dart-define=AUTH_BACKEND=jwt
+flutter run -d <device_id> --dart-define=AUTH_BACKEND=jwt
 flutter devices                # список устройств
 ```
 
@@ -238,12 +238,12 @@ Bazel использует закреплённую версию 7.6.1. Dart run
 
 ```bash
 # Android
-flutter build apk
+flutter build apk --dart-define=AUTH_BACKEND=jwt
 # или
-flutter build appbundle
+flutter build appbundle --dart-define=AUTH_BACKEND=jwt
 
 # iOS (macOS + Xcode)
-flutter build ios
+flutter build ios --dart-define=AUTH_BACKEND=jwt
 ```
 
 Иконки и splash задаются в `pubspec.yaml` (`flutter_launcher_icons`, `flutter_native_splash`).
