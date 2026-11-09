@@ -24,7 +24,7 @@ services:
     container_name: camphub-fastapi
     restart: always
     ports:
-      - "56284:8000"
+      - "127.0.0.1:56284:8000"
     volumes:
       - ./uploads:/app/uploads
     env_file:
