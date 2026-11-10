@@ -47,6 +47,7 @@ jobs:
                       event = await session.scalar(select(Events).where(Events.id == "a8ea0392-ad6a-49ec-83ee-a185d096a17d"))
                       if event is None:
                           raise RuntimeError("Requested event absent")
+                      print({"event_start": event.event_start, "event_end": event.event_end})
                       try:
                           EventResponse.model_validate(event)
                           print("Event model validation passed")
