@@ -1,0 +1,66 @@
+name: Diagnose event detail response
+on:
+  push:
+    branches: [ ops/event-api-diagnostic-20261110 ]
+    paths: [ '.github/workflows/diagnose-event.yml' ]
+permissions:
+  contents: read
+concurrency:
+  group: production-backend
+  cancel-in-progress: false
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Capture bounded event response traceback
+        env:
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          private=$(mktemp -d "$RUNNER_TEMP/sirius-role.XXXXXX")
+          trap 'rm -rf "$private"' EXIT
+          printf '%s\n' "$SERVER_SSH_KEY" >"$private/key"
+          printf '%s\n' '104.143.201.57 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFxKq+usJBbk6neVphUqDuF0jjdoeLKufS5ypT1Ya4Lc' >"$private/known_hosts"
+          chmod 600 "$private/key" "$private/known_hosts"
+          cat >"$private/payload" <<'REMOTE'
+          set -euo pipefail
+          exec 9>/tmp/sirius-hub-deploy.lock
+          flock -n 9 || { echo 'Another operation holds the server lock'; exit 1; }
+          active_dir=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' camphub-fastapi)
+          test "$active_dir" = /home/deploy/app/Sirius-hub/backend
+          test "$(docker inspect --format '{{.State.Running}}' camphub-fastapi)" = true
+          docker exec -i camphub-fastapi python - <<'PYTHON'
+          import asyncio
+          import traceback
+          from fastapi.exceptions import ResponseValidationError
+          from sqlalchemy import select
+          from database.database import AsyncSessionLocal, engine
+          from database.models import Events
+          from news.schemas import EventResponse
+
+          async def main():
+              try:
+                  async with AsyncSessionLocal() as session:
+                      event = await session.scalar(select(Events).where(Events.id == "a8ea0392-ad6a-49ec-83ee-a185d096a17d"))
+                      if event is None:
+                          raise RuntimeError("Requested event absent")
+                      try:
+                          EventResponse.model_validate(event)
+                          print("Event model validation passed")
+                      except Exception as exc:
+                          print("EventResponse validation failed:", type(exc).__name__)
+                          for issue in exc.errors(include_input=False, include_url=False):
+                              print(issue)
+                          raise RuntimeError("Event response cannot validate") from None
+              finally:
+                  await engine.dispose()
+          asyncio.run(main())
+          PYTHON
+          REMOTE
+          timeout --signal=TERM 3m ssh -i "$private/key" -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o HostKeyAlgorithms=ssh-ed25519 -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$private/known_hosts" -o ConnectTimeout=20 \
+            "$SERVER_USER@104.143.201.57" 'bash -se' <"$private/payload"
