@@ -799,6 +799,7 @@ async def test_event_details_normalize_stored_legacy_dates(
 
 def test_event_response_rejects_invalid_legacy_dates():
     from pydantic import ValidationError
+
     from news.schemas import EventResponse
 
     with pytest.raises(ValidationError):
