@@ -752,3 +752,66 @@ assert not engine.echo
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout == ""
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "start,end,expected_start,expected_end",
+    [
+        ("10.10.2026", "11.10.2026", "2026-10-10T00:00:00", "2026-10-11T00:00:00"),
+        ("31.12.2026", "01.01.2027", "2026-12-31T00:00:00", "2027-01-01T00:00:00"),
+        (
+            "2026-11-10T10:00:00+03:00",
+            "2026-11-10T12:00:00+03:00",
+            "2026-11-10T10:00:00+03:00",
+            "2026-11-10T12:00:00+03:00",
+        ),
+    ],
+)
+async def test_event_details_normalize_stored_legacy_dates(
+    api, start, end, expected_start, expected_end
+):
+    client, sessions, _ = api
+    created = await client.post("/news/", headers=headers("council"), json=event_body())
+    assert created.status_code == 200, created.text
+    event_id = created.json()["event_id"]
+    async with sessions() as session:
+        event = await session.get(Events, event_id)
+        event.event_start = start
+        event.event_end = end
+        await session.commit()
+    response = await client.get(f"/news/events/{event_id}")
+    assert response.status_code == 200, response.text
+    assert response.json()["event_start"] == expected_start
+    assert response.json()["event_end"] == expected_end
+    updated = await client.put(
+        f"/news/{created.json()['id']}",
+        headers=headers("council"),
+        json={"has_event": True, "location": "Room 2"},
+    )
+    assert updated.status_code == 200, updated.text
+    async with sessions() as session:
+        event = await session.get(Events, event_id)
+        assert event.event_start == start
+        assert event.event_end == end
+        assert event.location == "Room 2"
+
+
+def test_event_response_rejects_invalid_legacy_dates():
+    from pydantic import ValidationError
+    from news.schemas import EventResponse
+
+    with pytest.raises(ValidationError):
+        EventResponse.model_validate(
+            {
+                "id": "event",
+                "status": "published",
+                "news_id": "news",
+                "event_start": "31.02.2026",
+                "event_end": "01.03.2026",
+                "location": "Room 1",
+                "max_partic": 1,
+                "cur_partic": 0,
+                "is_reg_open": True,
+            }
+        )

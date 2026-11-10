@@ -1,10 +1,17 @@
 import datetime
+import re
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from database.constants import EVENT_CAPACITY_MAX, TITLE_LEN
 from database.models import EventStatus, RegStatus
+
+
+def normalize_legacy_event_time(value):
+    if isinstance(value, str) and re.fullmatch(r"\d{2}\.\d{2}\.\d{4}", value):
+        return datetime.datetime.strptime(value, "%d.%m.%Y").isoformat()
+    return value
 
 
 class NewsResponse(BaseModel):
@@ -33,6 +40,11 @@ class EventResponse(BaseModel):
     max_partic: int
     cur_partic: int
     is_reg_open: bool
+
+    @field_validator("event_start", "event_end", mode="before")
+    @classmethod
+    def normalize_legacy_dates(cls, value):
+        return normalize_legacy_event_time(value)
 
     class Config:
         from_attributes = True
