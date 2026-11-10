@@ -1,3 +1,4 @@
+import '../../network/api_error.dart';
 import 'package:client/domain/model/profile_model.dart';
 import 'package:dio/dio.dart';
 import 'package:client/data/local/registration_draft_storage.dart';
@@ -55,7 +56,9 @@ class AuthRepository {
       );
     } on DioException catch (error) {
       throw Exception(
-        _extractApiDetail(error) ?? error.message ?? 'Ошибка сервера',
+        apiErrorDetail(error.response?.data) ??
+            error.message ??
+            'Ошибка сервера',
       );
     }
     final uid = currentUserId;
@@ -69,24 +72,6 @@ class AuthRepository {
     'messenger_handle': profile.telegramHandle?.trim(),
     'bio': profile.bio?.trim(),
   };
-
-  String? _extractApiDetail(DioException e) {
-    final data = e.response?.data;
-    if (data is Map<String, dynamic>) {
-      final detail = data['detail'];
-      if (detail is String) return detail;
-      if (detail is List && detail.isNotEmpty) {
-        final msgs = <String>[];
-        for (final item in detail) {
-          if (item is Map && item['msg'] != null) {
-            msgs.add(item['msg'].toString());
-          }
-        }
-        if (msgs.isNotEmpty) return msgs.join('; ');
-      }
-    }
-    return null;
-  }
 
   Future<void> signIn({required String email, required String password}) async {
     await _authDataSource.signIn(email: email, password: password);
@@ -145,7 +130,9 @@ class AuthRepository {
       );
     } on DioException catch (dioError) {
       final errorMessage =
-          _extractApiDetail(dioError) ?? dioError.message ?? 'Ошибка сервера';
+          apiErrorDetail(dioError.response?.data) ??
+          dioError.message ??
+          'Ошибка сервера';
       throw Exception(errorMessage);
     }
 
@@ -161,7 +148,9 @@ class AuthRepository {
       );
     } on DioException catch (dioError) {
       final errorMessage =
-          _extractApiDetail(dioError) ?? dioError.message ?? 'Ошибка сервера';
+          apiErrorDetail(dioError.response?.data) ??
+          dioError.message ??
+          'Ошибка сервера';
       throw Exception(errorMessage);
     }
 

@@ -1,3 +1,4 @@
+import '../../network/api_error.dart';
 import 'package:client/domain/model/forum_models/topic_model.dart';
 import 'package:dio/dio.dart';
 
@@ -7,11 +8,9 @@ class ForumRepository {
   final AuthDataSource _authDataSource;
   final Dio _dio;
 
-  ForumRepository({
-    required Dio dio,
-    required AuthDataSource authDataSource,
-  }) : _dio = dio,
-       _authDataSource = authDataSource;
+  ForumRepository({required Dio dio, required AuthDataSource authDataSource})
+    : _dio = dio,
+      _authDataSource = authDataSource;
 
   final List<TopicModel> _mockTopics = [
     const TopicModel(
@@ -93,8 +92,7 @@ class ForumRepository {
         throw Exception("Доступ запрещен. Вы не состоите в студсовете.");
       }
       final data = e.response?.data;
-      final errorDetail =
-          (data is Map ? data['detail'] : data)?.toString() ?? e.message;
+      final errorDetail = apiErrorDetail(data) ?? e.message;
       throw Exception("Ошибка создания топика: $errorDetail");
     }
   }
