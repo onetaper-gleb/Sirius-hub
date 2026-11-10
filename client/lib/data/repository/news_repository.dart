@@ -1,3 +1,4 @@
+import '../../network/api_error.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:dio/dio.dart';
@@ -8,11 +9,9 @@ class NewsRepository {
   final AuthDataSource _authDataSource;
   final Dio _dio;
 
-  NewsRepository({
-    required Dio dio,
-    required AuthDataSource authDataSource,
-  }) : _dio = dio,
-       _authDataSource = authDataSource;
+  NewsRepository({required Dio dio, required AuthDataSource authDataSource})
+    : _dio = dio,
+      _authDataSource = authDataSource;
 
   Future<List<NewsModel>> getAllNews() async {
     try {
@@ -96,7 +95,7 @@ class NewsRepository {
           "Слишком большой файл или неверный формат (макс 2 МБ).",
         );
       }
-      final errorDetail = e.response?.data?['detail'] ?? e.message;
+      final errorDetail = apiErrorDetail(e.response?.data) ?? e.message;
       throw Exception("Ошибка создания новости: $errorDetail");
     }
   }
@@ -151,7 +150,7 @@ class NewsRepository {
       } else if (e.response?.statusCode == 409) {
         throw Exception("Вы уже зарегистрированы.");
       }
-      final errorDetail = e.response?.data?['detail'] ?? e.message;
+      final errorDetail = apiErrorDetail(e.response?.data) ?? e.message;
       throw Exception("Ошибка регистрации: $errorDetail");
     }
   }
@@ -173,7 +172,7 @@ class NewsRepository {
       if (e.response?.statusCode == 404) {
         throw Exception("Событие не найдено");
       }
-      final errorDetail = e.response?.data?['detail'] ?? e.message;
+      final errorDetail = apiErrorDetail(e.response?.data) ?? e.message;
       throw Exception("Ошибка получения события: $errorDetail");
     }
   }

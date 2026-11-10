@@ -1,3 +1,4 @@
+import '../../network/api_error.dart';
 import 'package:dio/dio.dart';
 
 import '../../domain/model/forum_models/comment_model.dart';
@@ -7,11 +8,9 @@ class TopicRepository {
   final AuthDataSource _authDataSource;
   final Dio _dio;
 
-  TopicRepository({
-    required Dio dio,
-    required AuthDataSource authDataSource,
-  }) : _dio = dio,
-       _authDataSource = authDataSource;
+  TopicRepository({required Dio dio, required AuthDataSource authDataSource})
+    : _dio = dio,
+      _authDataSource = authDataSource;
 
   final List<CommentModel> _mockComments = [
     const CommentModel(
@@ -95,8 +94,7 @@ class TopicRepository {
       );
     } on DioException catch (e) {
       final data = e.response?.data;
-      final errorDetail =
-          (data is Map ? data['detail'] : data)?.toString() ?? e.message;
+      final errorDetail = apiErrorDetail(data) ?? e.message;
       print(errorDetail);
       throw Exception("Ошибка создания комментария: $errorDetail");
     }
@@ -115,8 +113,7 @@ class TopicRepository {
       );
     } on DioException catch (e) {
       final data = e.response?.data;
-      final errorDetail =
-          (data is Map ? data['detail'] : data)?.toString() ?? e.message;
+      final errorDetail = apiErrorDetail(data) ?? e.message;
       print(errorDetail);
       throw Exception("Ошибка удаления комментария: $errorDetail");
     }
@@ -141,17 +138,14 @@ class TopicRepository {
         throw Exception('Длина комментария не должна превышать 500 символов');
       }
 
-
       await _dio.patch(
         '/topic/comments/$commentId',
         data: {"content": trimmedContent},
         options: Options(headers: {'Authorization': 'Bearer $rawToken'}),
       );
-
     } on DioException catch (e) {
       final data = e.response?.data;
-      final errorDetail =
-          (data is Map ? data['detail'] : data)?.toString() ?? e.message;
+      final errorDetail = apiErrorDetail(data) ?? e.message;
       print(errorDetail);
       throw Exception("Ошибка обновления комментария: $errorDetail");
     } catch (e) {
