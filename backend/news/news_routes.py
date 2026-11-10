@@ -25,6 +25,7 @@ from .schemas import (
     NewsResponse,
     NewsUpdateRequest,
     RegistrationResponse,
+    normalize_legacy_event_time,
 )
 
 router = APIRouter(
@@ -344,8 +345,8 @@ async def update_news(
                 event.is_reg_open = request.is_reg_open
                 logger.debug("Field 'is_reg_open' updated")
             validate_event_times(
-                datetime.fromisoformat(event.event_start),
-                datetime.fromisoformat(event.event_end),
+                datetime.fromisoformat(normalize_legacy_event_time(event.event_start)),
+                datetime.fromisoformat(normalize_legacy_event_time(event.event_end)),
             )
 
         else:
