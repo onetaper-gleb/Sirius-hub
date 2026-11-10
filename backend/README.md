@@ -43,3 +43,7 @@ The migration keeps account IDs, profiles, roles, and foreign keys. Firebase pas
 The deployment workflow writes a Compose `.env` file with dollar escaping. Run administrative commands inside the container. Local development can run the same Python CLI directly with a normal `.env` file.
 
 The deployment workflow uses `deploy.sh` in the active Compose directory. It deploys the exact commit and rejects concurrent Docker operations. Before migration, it stops the API and saves a database dump, uploads, and a rollback image under `~/.local/state/sirius-hub/`. Recovery files stay on the server. Failed readiness checks restart the previous API image with Uvicorn directly, without rerunning its old Alembic migrations or downgrading the database. The script reports restoration only after the previous API responds to an OpenAPI request. If that check fails, it reports that manual recovery is required. After a JWT migration, the old Firebase image cannot create accounts with the new password schema. Correct the JWT deployment before accepting new registrations.
+
+## Comment deletion
+
+`DELETE /topic/comments/{comment_id}` deletes only the selected comment. Its direct replies move to its parent; replies to a root comment become root comments. Other comments keep their content and authors. The author, council members, and administrators can delete a comment.

@@ -2,6 +2,7 @@ import logging
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload
@@ -241,9 +242,14 @@ async def delete_comment(
     if comment.user_id != id_user:
         await require_council_role(user=user)
 
+    await db.execute(
+        update(Comments)
+        .where(Comments.parent_comment_id == comment_id)
+        .values(parent_comment_id=comment.parent_comment_id)
+    )
     await db.delete(comment)
     await db.commit()
 
-    logger.info(f"User successfully deleted a comment {comment_id} and its replies")
+    logger.info(f"User successfully deleted a comment {comment_id}")
 
     return {"message": "Comment deleted successfully"}
