@@ -7,13 +7,21 @@ import httpx
 import pytest
 from fastapi import FastAPI
 from PIL import Image
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from auth import auth_routes
 from auth.security import create_access_token
 from database.database import Base, get_db
-from database.models import Events, News, OfferNews, Registrations, Topics, User
+from database.models import (
+    Comments,
+    Events,
+    News,
+    OfferNews,
+    Registrations,
+    Topics,
+    User,
+)
 from forum import forum_router, topic_router
 from manage_roles import router as roles_router
 from news import news_routes
@@ -553,6 +561,76 @@ async def test_comments_ownership_and_anonymous_reply_does_not_expose_ids(api):
     public = await client.get("/profile/user/student", headers=headers("other"))
     assert public.status_code == 200
     assert "email" not in public.json()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("actor", ["student", "other", "council", "admin"])
+@pytest.mark.parametrize("target", ["root", "childA"])
+async def test_delete_comment_preserves_other_comments_and_authorization(
+    api, actor, target
+):
+    client, sessions, _ = api
+    async with sessions() as session:
+        await session.execute(text("PRAGMA foreign_keys=ON"))
+        assert (await session.execute(text("PRAGMA foreign_keys"))).scalar() == 1
+    topic = await client.post(
+        "/forum/topics", headers=headers("council"), json={"title": "Deletion test"}
+    )
+    assert topic.status_code == 200, topic.text
+    topic_id = topic.json()["topic_id"]
+    ids = {}
+    for name, parent, author in (
+        ("root", None, "student"),
+        ("childA", "root", "student"),
+        ("childB", "root", "other"),
+        ("grandchild", "childA", "other"),
+    ):
+        response = await client.post(
+            "/topic/comments",
+            headers=headers(author),
+            json={
+                "topic_id": topic_id,
+                "content": name,
+                "parent_comment_id": ids.get(parent),
+            },
+        )
+        assert response.status_code == 200, response.text
+        ids[name] = response.json()["comment_id"]
+
+    response = await client.delete(
+        f"/topic/comments/{ids[target]}", headers=headers(actor)
+    )
+    allowed = actor != "other"
+    assert response.status_code == (200 if allowed else 403), response.text
+    expected_parents = {
+        "root": None,
+        "childA": "root",
+        "childB": "root",
+        "grandchild": "childA",
+    }
+    if allowed:
+        del expected_parents[target]
+        for name, parent in expected_parents.items():
+            if parent == target:
+                expected_parents[name] = None if target == "root" else "root"
+    listing = await client.get(
+        "/topic/comments", params={"topic_id": topic_id}, headers=headers()
+    )
+    assert listing.status_code == 200, listing.text
+    rows = {row["comment_id"]: row for row in listing.json()}
+    assert set(rows) == {ids[name] for name in expected_parents}
+    async with sessions() as session:
+        stored = (await session.execute(select(Comments))).scalars().all()
+        assert {row.id for row in stored} == set(rows)
+        for name, parent in expected_parents.items():
+            expected_parent = ids.get(parent)
+            assert rows[ids[name]]["parent_comment_id"] == expected_parent
+            record = next(row for row in stored if row.id == ids[name])
+            assert record.parent_comment_id == expected_parent
+            assert record.content == name
+            assert record.user_id == (
+                "student" if name in ("root", "childA") else "other"
+            )
 
 
 def test_migrations_upgrade_downgrade_and_upgrade(tmp_path):
