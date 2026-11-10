@@ -102,7 +102,7 @@ identity_sql="SELECT md5(coalesce(string_agg(((to_jsonb(u) - 'hashed_password' -
 sql "$identity_sql" >"$backup/accounts.before"
 docker cp camphub-fastapi:/app/uploads "$backup/uploads"
 mkdir -p uploads
-cp -a "$backup/uploads/." uploads/
+cp -a --remove-destination "$backup/uploads/." uploads/
 tar -C "$backup" -czf "$backup/uploads.tar.gz" uploads
 if ! docker commit camphub-fastapi "$rollback_image" >/dev/null; then
   docker export camphub-fastapi >"$backup/previous-rootfs.tar"
