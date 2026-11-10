@@ -104,7 +104,33 @@ docker cp camphub-fastapi:/app/uploads "$backup/uploads"
 mkdir -p uploads
 cp -a "$backup/uploads/." uploads/
 tar -C "$backup" -czf "$backup/uploads.tar.gz" uploads
-docker commit camphub-fastapi "$rollback_image" >/dev/null
+if ! docker commit camphub-fastapi "$rollback_image" >/dev/null; then
+  docker export camphub-fastapi >"$backup/previous-rootfs.tar"
+  docker import --change 'WORKDIR /app' "$backup/previous-rootfs.tar" "$rollback_image-flat" >/dev/null
+  python3 - "$backup" "$rollback_image" <<'PY'
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+backup = Path(sys.argv[1])
+image = sys.argv[2]
+config = json.loads((backup / "containers.json").read_text())[0]["Config"]
+environment = config["Env"]
+assert all("\n" not in value and "\r" not in value for value in environment)
+env_file = backup / "rollback.env"
+env_file.write_text("\n".join(environment) + "\n")
+env_file.chmod(0o600)
+container = subprocess.check_output(
+    ["docker", "create", "--env-file", str(env_file), "--workdir", config.get("WorkingDir") or "/app", image + "-flat", "/bin/true"],
+    text=True,
+).strip()
+try:
+    subprocess.run(["docker", "commit", container, image], check=True, stdout=subprocess.DEVNULL)
+finally:
+    subprocess.run(["docker", "rm", container], check=True, stdout=subprocess.DEVNULL)
+PY
+fi
 printf '%s\n' "$rollback_image" >"$backup/rollback-image"
 docker image inspect "$rollback_image" >/dev/null
 
