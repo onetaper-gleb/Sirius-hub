@@ -65,145 +65,151 @@ class _NewsScreenState extends State<NewsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: BlocConsumer<NewsBloc, NewsState>(
-        buildWhen: (previous, current) {
-          return current is NewsInitial ||
-              current is NewsLoading ||
-              current is NewsLoaded ||
-              current is NewsError;
-        },
-        listener: (context, state) {
-          if (state is NewsError) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
-          }
-        },
-        builder: (context, state) {
-          if ((state is NewsLoading) || (state is NewsInitial)) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: SafeArea(
+        child: BlocConsumer<NewsBloc, NewsState>(
+          buildWhen: (previous, current) {
+            return current is NewsInitial ||
+                current is NewsLoading ||
+                current is NewsLoaded ||
+                current is NewsError;
+          },
+          listener: (context, state) {
+            if (state is NewsError) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(state.message)));
+            }
+          },
+          builder: (context, state) {
+            if ((state is NewsLoading) || (state is NewsInitial)) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          final newsList = state is NewsLoaded
-              ? state.newsList
-              : state is NewsError
-              ? (state.previousNewsList ?? const [])
-              : const [];
+            final newsList = state is NewsLoaded
+                ? state.newsList
+                : state is NewsError
+                ? (state.previousNewsList ?? const [])
+                : const [];
 
-          if (newsList.isEmpty) {
-            return const Center(child: Text('Нет новостей'));
-          }
+            if (newsList.isEmpty) {
+              return const Center(child: Text('Нет новостей'));
+            }
 
-          return RefreshIndicator(
-            onRefresh: () async {
-              final newsBloc = context.read<NewsBloc>();
-              newsBloc.add(FetchNews());
-              try {
-                await newsBloc.stream
-                    .firstWhere(
-                      (state) => state is NewsLoaded || state is NewsError,
-                      orElse: () => NewsError(message: 'Unknown error'),
-                    )
-                    .timeout(const Duration(seconds: 5));
-              } catch (e) {
-                rethrow;
-              }
-            },
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: newsList.length,
-              itemBuilder: (context, index) {
-                final news = newsList[index];
+            return RefreshIndicator(
+              onRefresh: () async {
+                final newsBloc = context.read<NewsBloc>();
+                newsBloc.add(FetchNews());
+                try {
+                  await newsBloc.stream
+                      .firstWhere(
+                        (state) => state is NewsLoaded || state is NewsError,
+                        orElse: () => NewsError(message: 'Unknown error'),
+                      )
+                      .timeout(const Duration(seconds: 5));
+                } catch (e) {
+                  rethrow;
+                }
+              },
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: newsList.length,
+                itemBuilder: (context, index) {
+                  final news = newsList[index];
 
-                return Card(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  elevation: 0,
-                  shadowColor: Colors.transparent,
-                  surfaceTintColor: Colors.transparent,
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => BlocProvider(
-                            create: (_) => NewsBloc(
-                              newsRepository:
-                                  context.dependencies.newsRepository,
-                            ),
-                            child: NewsDetailScreen(news: news),
-                          ),
-                        ),
-                      );
-                    },
-                    onLongPress: () {
-                      final isAdmin =
-                          context.read<AuthBloc>().state is AuthAuthenticated &&
-                          (context.read<AuthBloc>().state as AuthAuthenticated)
-                              .profileModel
-                              .userModel
-                              .role
-                              .canManageContent;
-                      if (isAdmin) _confirmDelete(context, news.id);
-                    },
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (news.fullImageUrl != null &&
-                            news.fullImageUrl!.isNotEmpty)
-                          CachedNetworkImage(
-                            imageUrl: news.fullImageUrl!,
-                            width: double.infinity,
-                            fit: BoxFit.fitWidth,
-                            placeholder: (context, url) => const AspectRatio(
-                              aspectRatio: 16 / 9,
-                              child: Center(child: CircularProgressIndicator()),
+                  return Card(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                    surfaceTintColor: Colors.transparent,
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => BlocProvider(
+                              create: (_) => NewsBloc(
+                                newsRepository:
+                                    context.dependencies.newsRepository,
+                              ),
+                              child: NewsDetailScreen(news: news),
                             ),
                           ),
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                news.title,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                        );
+                      },
+                      onLongPress: () {
+                        final isAdmin =
+                            context.read<AuthBloc>().state
+                                is AuthAuthenticated &&
+                            (context.read<AuthBloc>().state
+                                    as AuthAuthenticated)
+                                .profileModel
+                                .userModel
+                                .role
+                                .canManageContent;
+                        if (isAdmin) _confirmDelete(context, news.id);
+                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (news.fullImageUrl != null &&
+                              news.fullImageUrl!.isNotEmpty)
+                            CachedNetworkImage(
+                              imageUrl: news.fullImageUrl!,
+                              width: double.infinity,
+                              fit: BoxFit.fitWidth,
+                              placeholder: (context, url) => const AspectRatio(
+                                aspectRatio: 16 / 9,
+                                child: Center(
+                                  child: CircularProgressIndicator(),
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              ExpandableText(
-                                text: news.content,
-                                textAlign: TextAlign.justify,
-                                style: const TextStyle(fontSize: 15),
-                              ),
-                              const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                  _formatDate(news.createdAt),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
+                            ),
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  news.title,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 8),
+                                ExpandableText(
+                                  text: news.content,
+                                  textAlign: TextAlign.justify,
+                                  style: const TextStyle(fontSize: 15),
+                                ),
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Text(
+                                    _formatDate(news.createdAt),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-          );
-        },
+                  );
+                },
+              ),
+            );
+          },
+        ),
       ),
 
       floatingActionButton: AdminFab(

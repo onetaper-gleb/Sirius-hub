@@ -56,81 +56,86 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     final news = widget.news;
     return Scaffold(
       appBar: AppBar(title: const Text("Новость"), leading: const BackButton()),
-      body: BlocListener<NewsBloc, NewsState>(
-        listener: (context, state) {
-          if (state is EventSuccess) {
-            setState(() {
-              _event = state.event;
-              _eventError = null;
-            });
-          } else if (state is EventRegistrationLoading) {
-            setState(() => _registering = true);
-          } else if (state is EventRegistrationSuccess) {
-            setState(() {
-              _registering = false;
-              _registered = true;
-            });
-            context.read<NewsBloc>().add(FetchEvent(widget.news.eventId!));
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Вы зарегистрированы"),
-                backgroundColor: Colors.green,
-              ),
-            );
-          } else if (state is NewsError) {
-            setState(() {
-              _registering = false;
-              if (_event == null) _eventError = state.message;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (news.fullImageUrl != null && news.fullImageUrl!.isNotEmpty)
-                CachedNetworkImage(
-                  imageUrl: news.fullImageUrl!,
-                  width: double.infinity,
-                  fit: BoxFit.fitWidth,
-                  placeholder: (context, url) => const AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: Center(child: CircularProgressIndicator()),
+      body: SafeArea(
+        top: false,
+        child: BlocListener<NewsBloc, NewsState>(
+          listener: (context, state) {
+            if (state is EventSuccess) {
+              setState(() {
+                _event = state.event;
+                _eventError = null;
+              });
+            } else if (state is EventRegistrationLoading) {
+              setState(() => _registering = true);
+            } else if (state is EventRegistrationSuccess) {
+              setState(() {
+                _registering = false;
+                _registered = true;
+              });
+              context.read<NewsBloc>().add(FetchEvent(widget.news.eventId!));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Вы зарегистрированы"),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            } else if (state is NewsError) {
+              setState(() {
+                _registering = false;
+                if (_event == null) _eventError = state.message;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (news.fullImageUrl != null && news.fullImageUrl!.isNotEmpty)
+                  CachedNetworkImage(
+                    imageUrl: news.fullImageUrl!,
+                    width: double.infinity,
+                    fit: BoxFit.fitWidth,
+                    placeholder: (context, url) => const AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Text(
+                  news.title,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              const SizedBox(height: 8),
-              Text(
-                news.title,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(height: 8),
+                Text(
+                  news.content,
+                  textAlign: TextAlign.justify,
+                  style: const TextStyle(fontSize: 18),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                news.content,
-                textAlign: TextAlign.justify,
-                style: const TextStyle(fontSize: 18),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              if (news.hasEvent && news.eventId != null) _eventInfoBlock(),
+                if (news.hasEvent && news.eventId != null) _eventInfoBlock(),
 
-              if (news.hasTopic && news.topicId != null)
-                TextButton.icon(
-                  onPressed: () => _openTopic(context, news),
-                  icon: const Icon(Icons.forum_outlined),
-                  label: const Text("Прокомментировать"),
-                  style: TextButton.styleFrom(alignment: Alignment.centerLeft),
-                ),
-            ],
+                if (news.hasTopic && news.topicId != null)
+                  TextButton.icon(
+                    onPressed: () => _openTopic(context, news),
+                    icon: const Icon(Icons.forum_outlined),
+                    label: const Text("Прокомментировать"),
+                    style: TextButton.styleFrom(
+                      alignment: Alignment.centerLeft,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

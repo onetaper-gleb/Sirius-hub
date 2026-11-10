@@ -178,136 +178,139 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
         title: const Text('Создание новости'),
         leading: BackButton(),
       ),
-      body: BlocListener<NewsBloc, NewsState>(
-        listener: (context, state) {
-          if (state is NewsCreateSuccess) {
-            Navigator.pop(context, true);
-          } else if (state is NewsError) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
-            setState(() => _isLoading = false);
-          }
-        },
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    onTap: _pickImage,
-                    child: Container(
-                      width: double.infinity,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        color: colors.surfaceContainer,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: colors.outlineVariant),
-                      ),
-                      child: _selectedImage != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.file(
-                                _selectedImage!,
-                                fit: BoxFit.cover,
-                              ),
-                            )
-                          : Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.add_photo_alternate,
-                                  size: 48,
-                                  color: colors.onSurface,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Загрузить фото',
-                                  style: TextStyle(color: colors.onSurface),
-                                ),
-                              ],
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  TextField(
-                    controller: _titleController,
-                    maxLines: 1,
-                    maxLength: _maxTitle,
-                    maxLengthEnforcement: MaxLengthEnforcement.none,
-                    buildCounter:
-                        (
-                          context, {
-                          required currentLength,
-                          required isFocused,
-                          maxLength,
-                        }) => Text(
-                          '${_titleController.text.trim().runes.length}/$_maxTitle',
+      body: SafeArea(
+        top: false,
+        child: BlocListener<NewsBloc, NewsState>(
+          listener: (context, state) {
+            if (state is NewsCreateSuccess) {
+              Navigator.pop(context, true);
+            } else if (state is NewsError) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(state.message)));
+              setState(() => _isLoading = false);
+            }
+          },
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: Container(
+                        width: double.infinity,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          color: colors.surfaceContainer,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: colors.outlineVariant),
                         ),
-                    decoration: const InputDecoration(
-                      labelText: 'Заголовок',
-                      border: OutlineInputBorder(),
+                        child: _selectedImage != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.file(
+                                  _selectedImage!,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            : Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.add_photo_alternate,
+                                    size: 48,
+                                    color: colors.onSurface,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Загрузить фото',
+                                    style: TextStyle(color: colors.onSurface),
+                                  ),
+                                ],
+                              ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _contentController,
-                    maxLines: 10,
-                    maxLength: 859,
-                    maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                    decoration: const InputDecoration(
-                      labelText: 'Текст новости',
-                      border: OutlineInputBorder(),
-                      alignLabelWithHint: true,
+                    const SizedBox(height: 24),
+                    TextField(
+                      controller: _titleController,
+                      maxLines: 1,
+                      maxLength: _maxTitle,
+                      maxLengthEnforcement: MaxLengthEnforcement.none,
+                      buildCounter:
+                          (
+                            context, {
+                            required currentLength,
+                            required isFocused,
+                            maxLength,
+                          }) => Text(
+                            '${_titleController.text.trim().runes.length}/$_maxTitle',
+                          ),
+                      decoration: const InputDecoration(
+                        labelText: 'Заголовок',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
-                  ),
-
-                  const SizedBox(height: 16),
-                  CheckboxListTile(
-                    title: const Text("Добавить событие"),
-                    subtitle: const Text("Дата, место, регистрация"),
-                    value: _hasEvent,
-                    contentPadding: EdgeInsets.zero,
-                    onChanged: (value) {
-                      setState(() {
-                        _hasEvent = value ?? false;
-                      });
-                    },
-                  ),
-                  if (_hasEvent) _buildEventMenu(),
-
-                  CheckboxListTile(
-                    title: const Text("Добавить обсуждение"),
-                    subtitle: const Text("Комментарии к новости"),
-                    value: _hasTopic,
-                    contentPadding: EdgeInsets.zero,
-                    onChanged: (value) {
-                      setState(() {
-                        _hasTopic = value ?? false;
-                      });
-                    },
-                  ),
-                  if (_hasTopic) _buildTopicMenu(),
-
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _saveNews,
-                      child: const Text('Сохранить'),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _contentController,
+                      maxLines: 10,
+                      maxLength: 859,
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                      decoration: const InputDecoration(
+                        labelText: 'Текст новости',
+                        border: OutlineInputBorder(),
+                        alignLabelWithHint: true,
+                      ),
                     ),
-                  ),
-                ],
+
+                    const SizedBox(height: 16),
+                    CheckboxListTile(
+                      title: const Text("Добавить событие"),
+                      subtitle: const Text("Дата, место, регистрация"),
+                      value: _hasEvent,
+                      contentPadding: EdgeInsets.zero,
+                      onChanged: (value) {
+                        setState(() {
+                          _hasEvent = value ?? false;
+                        });
+                      },
+                    ),
+                    if (_hasEvent) _buildEventMenu(),
+
+                    CheckboxListTile(
+                      title: const Text("Добавить обсуждение"),
+                      subtitle: const Text("Комментарии к новости"),
+                      value: _hasTopic,
+                      contentPadding: EdgeInsets.zero,
+                      onChanged: (value) {
+                        setState(() {
+                          _hasTopic = value ?? false;
+                        });
+                      },
+                    ),
+                    if (_hasTopic) _buildTopicMenu(),
+
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _saveNews,
+                        child: const Text('Сохранить'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            if (_isLoading)
-              Container(
-                color: colors.onSurface,
-                child: const Center(child: CircularProgressIndicator()),
-              ),
-          ],
+              if (_isLoading)
+                Container(
+                  color: colors.onSurface,
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+            ],
+          ),
         ),
       ),
     );

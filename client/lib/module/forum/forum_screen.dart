@@ -17,7 +17,7 @@ class ForumScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: const _ForumView(),
+      body: const SafeArea(child: _ForumView()),
       floatingActionButton: AdminFab(
         onPressed: () => _showCreateTopicModal(context),
         heroTag: 'forum_fab',
@@ -32,20 +32,29 @@ class ForumScreen extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (modalContext) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(modalContext).viewInsets.bottom,
-          left: 16,
-          right: 16,
-          top: 16,
-        ),
-        child: _CreateTopicForm(
-          onSubmit: (title, isAnonymous) {
-            forumBloc.add(
-              ForumCreateTopicRequested(title: title, isAnonymous: isAnonymous),
-            );
-            Navigator.pop(modalContext);
-          },
+      useSafeArea: true,
+      builder: (modalContext) => SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(modalContext).viewInsets.bottom,
+              left: 16,
+              right: 16,
+              top: 16,
+            ),
+            child: _CreateTopicForm(
+              onSubmit: (title, isAnonymous) {
+                forumBloc.add(
+                  ForumCreateTopicRequested(
+                    title: title,
+                    isAnonymous: isAnonymous,
+                  ),
+                );
+                Navigator.pop(modalContext);
+              },
+            ),
+          ),
         ),
       ),
     );
