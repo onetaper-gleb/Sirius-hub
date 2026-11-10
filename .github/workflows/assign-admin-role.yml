@@ -1,0 +1,75 @@
+name: Assign requested administrator role
+on:
+  push:
+    branches: [ ops/admin-test-role-20261110 ]
+    paths: [ '.github/workflows/assign-admin-role.yml' ]
+permissions:
+  contents: read
+concurrency:
+  group: production-backend
+  cancel-in-progress: false
+jobs:
+  assign-role:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Update the existing account role
+        env:
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          private=$(mktemp -d "$RUNNER_TEMP/sirius-role.XXXXXX")
+          trap 'rm -rf "$private"' EXIT
+          printf '%s\n' "$SERVER_SSH_KEY" >"$private/key"
+          printf '%s\n' '104.143.201.57 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFxKq+usJBbk6neVphUqDuF0jjdoeLKufS5ypT1Ya4Lc' >"$private/known_hosts"
+          chmod 600 "$private/key" "$private/known_hosts"
+          cat >"$private/payload" <<'REMOTE'
+          set -euo pipefail
+          exec 9>/tmp/sirius-hub-deploy.lock
+          flock -n 9 || { echo 'Another operation holds the server lock'; exit 1; }
+          active_dir=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' camphub-fastapi)
+          test "$active_dir" = /home/deploy/app/Sirius-hub/backend
+          test "$(docker inspect --format '{{.State.Running}}' camphub-fastapi)" = true
+          docker exec -i camphub-fastapi python - <<'PYTHON'
+          import asyncio
+          import json
+          from sqlalchemy import func, select
+          from database.database import AsyncSessionLocal, engine
+          from database.models import User, UserRole
+          
+          async def main():
+              try:
+                  if engine.dialect.name != "postgresql":
+                      raise RuntimeError("Refuse a non-production database dialect")
+                  async with AsyncSessionLocal() as session:
+                      async with session.begin():
+                          rows = (await session.scalars(select(User).where(func.lower(User.email) == "admin@test.com").with_for_update())).all()
+                          if len(rows) != 1:
+                              raise RuntimeError(f"Expected exactly one existing account, matched={len(rows)}")
+                          user = rows[0]
+                          before = {column.key: getattr(user, column.key) for column in User.__table__.columns if column.key != "role"}
+                          old_role = user.role
+                          user.role = UserRole.admin.value
+                          await session.flush()
+                          await session.refresh(user)
+                          if user.role != UserRole.admin.value:
+                              raise RuntimeError("Role verification failed")
+                          if before != {key: getattr(user, key) for key in before}:
+                              raise RuntimeError("Unexpected change outside role; transaction rolled back")
+                      async with session.begin():
+                          await session.refresh(user)
+                          if user.role != UserRole.admin.value or before != {key: getattr(user, key) for key in before}:
+                              raise RuntimeError("Post-commit verification failed")
+                          print(json.dumps({"email": "admin@test.com", "matched": 1, "old_role": old_role, "new_role": user.role, "other_fields_unchanged": True, "uid_unchanged": True, "password_unchanged": True, "profile_unchanged": True, "committed": True}, sort_keys=True))
+              finally:
+                  await engine.dispose()
+          
+          asyncio.run(main())
+          PYTHON
+          REMOTE
+          timeout --signal=TERM 3m ssh -i "$private/key" -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o HostKeyAlgorithms=ssh-ed25519 -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$private/known_hosts" -o ConnectTimeout=20 \
+            "$SERVER_USER@104.143.201.57" 'bash -se' <"$private/payload"
