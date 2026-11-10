@@ -52,6 +52,8 @@ case "$revision" in
   *) echo 'Unexpected database migration version'; exit 1 ;;
 esac
 test "$(sql 'SELECT count(*) FROM (SELECT lower(email) FROM users WHERE email IS NOT NULL GROUP BY lower(email) HAVING count(*) > 1) AS duplicates')" = 0
+mkdir -p uploads
+test -w uploads || { echo 'Uploads directory is not writable by deployment user'; exit 1; }
 docker compose run --rm --no-deps api python -c 'import asyncio; from database.database import engine; from sqlalchemy import text; exec("async def check():\n async with engine.connect() as c: await c.execute(text(\"SELECT 1\"))\n await engine.dispose()"); asyncio.run(check())'
 
 stopped=false
