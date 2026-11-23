@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
-from auth.schemas import PromoteRequest, Token, UserCreate
+from auth.schemas import ChangePasswordRequest, PromoteRequest, Token, UserCreate
 from auth.security import (
     ALGORITHM,
     DUMMY_PASSWORD_HASH,
@@ -154,3 +154,27 @@ async def promote_user(
         raise HTTPException(status_code=404, detail="Пользователь не найден")
     await db.commit()
     return {"status": "success"}
+
+
+@router.post("/change-password")
+async def change_password(
+    request: ChangePasswordRequest,
+    user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(DBUser).where(DBUser.id == user["uid"]))
+    db_user = result.scalar_one_or_none()
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    valid_old_password = await run_in_threadpool(
+        verify_password, request.old_password, db_user.hashed_password
+    )
+    if not valid_old_password:
+        raise HTTPException(status_code=400, detail="Неверный текущий пароль")
+
+    db_user.hashed_password = await run_in_threadpool(
+        get_password_hash, request.new_password
+    )
+    await db.commit()
+    return {"status": "success", "message": "Пароль успешно изменен"}

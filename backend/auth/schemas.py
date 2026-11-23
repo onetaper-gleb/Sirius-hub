@@ -29,3 +29,10 @@ class UserCreate(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str = Field(min_length=1, max_length=1024)
+    new_password: str = Field(
+        min_length=USER_PASSWORD_MIN_LEN, max_length=USER_PASSWORD_MAX_LEN
+    )

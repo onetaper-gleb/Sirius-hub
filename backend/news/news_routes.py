@@ -8,8 +8,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Form, HTTPException
+from fastapi import APIRouter, Depends, Form, HTTPException, Query
 from PIL import Image
+from sqlalchemy import or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -522,11 +523,24 @@ async def delete_news(
 async def get_all_news(
     skip: int = 0,
     limit: int = 20,
+    search: Optional[str] = Query(default=None, max_length=100),
     user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    stmt = select(News)
+    if search and search.strip():
+        escaped = (
+            search.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        )
+        pattern = f"%{escaped}%"
+        stmt = stmt.where(
+            or_(
+                News.title.ilike(pattern, escape="\\"),
+                News.content.ilike(pattern, escape="\\"),
+            )
+        )
     result = await db.execute(
-        select(News).order_by(News.created_at.desc()).offset(skip).limit(limit)
+        stmt.order_by(News.created_at.desc()).offset(skip).limit(limit)
     )
     news_list = result.scalars().all()
     return news_list
