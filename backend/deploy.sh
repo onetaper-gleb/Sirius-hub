@@ -142,6 +142,7 @@ docker image inspect "$rollback_image" >/dev/null
 docker compose up -d db
 test "$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/var/lib/postgresql/data"}}{{.Name}}{{end}}{{end}}' camphub-postgres)" = "$db_volume"
 candidate_started=true
+docker rm -f camphub-fastapi >/dev/null 2>&1 || true
 docker compose up -d --no-deps api
 ready=false
 for attempt in $(seq 1 60); do
