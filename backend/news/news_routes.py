@@ -16,7 +16,15 @@ from sqlalchemy.future import select
 from auth.auth_routes import get_current_user, require_council_role
 from database.constants import COMMENT_MAX, TITLE_LEN
 from database.database import get_db
-from database.models import Events, EventStatus, News, Registrations, RegStatus, Topics
+from database.models import (
+    Events,
+    EventStatus,
+    News,
+    NewsView,
+    Registrations,
+    RegStatus,
+    Topics,
+)
 from utils.logger import set_logger
 
 from .schemas import (
@@ -24,6 +32,7 @@ from .schemas import (
     NewsCreateRequest,
     NewsResponse,
     NewsUpdateRequest,
+    NewsViewResponse,
     RegistrationResponse,
     normalize_legacy_event_time,
 )
@@ -425,6 +434,38 @@ async def update_news(
     logger.info("Transaction committed: news updated successfully")
 
     return news
+
+
+@router.post("/{news_id}/view", response_model=NewsViewResponse)
+async def increment_news_view(
+    news_id: str,
+    user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    news = await get_news_or_404(db, news_id, for_update=True)
+    viewer_key = str(user["uid"])
+
+    existing = await db.execute(
+        select(NewsView.id).where(
+            NewsView.news_id == news_id, NewsView.viewer_key == viewer_key
+        )
+    )
+    if existing.scalar_one_or_none() is not None:
+        return NewsViewResponse(
+            news_id=news.id,
+            views_count=news.views_count or 0,
+            incremented=False,
+        )
+
+    db.add(NewsView(news_id=news_id, viewer_key=viewer_key))
+    news.views_count = (news.views_count or 0) + 1
+    await db.commit()
+    await db.refresh(news)
+    return NewsViewResponse(
+        news_id=news.id,
+        views_count=news.views_count,
+        incremented=True,
+    )
 
 
 @router.get("/events/{event_id}", response_model=EventResponse)

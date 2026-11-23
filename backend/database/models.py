@@ -11,6 +11,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import relationship
@@ -38,6 +39,20 @@ class News(Base):
     event_id = Column(String, nullable=True)
     has_topic = Column(Boolean, nullable=False, default=False)
     topic_id = Column(String, nullable=True)
+    views_count = Column(Integer, nullable=False, default=0)
+
+
+class NewsView(Base):
+    __tablename__ = "news_views"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    news_id = Column(
+        String, ForeignKey("news.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    viewer_key = Column(String, nullable=False)
+    __table_args__ = (
+        UniqueConstraint("news_id", "viewer_key", name="uq_news_views_news_viewer"),
+    )
 
 
 class Events(Base):

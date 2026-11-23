@@ -676,7 +676,7 @@ def test_migrations_upgrade_downgrade_and_upgrade(tmp_path):
             assert next(row[2] for row in columns if row[1] == column) == expected
         assert connection.execute(
             "SELECT version_num FROM alembic_version"
-        ).fetchone() == ("821a1b366db6",)
+        ).fetchone() == ("9c4f1d2e3a4b",)
         assert (
             len(connection.execute("PRAGMA foreign_key_list(comments)").fetchall()) == 3
         )
