@@ -25,9 +25,16 @@ class NewsResponse(BaseModel):
     event_id: Optional[str] = None
     has_topic: bool
     topic_id: Optional[str] = None
+    views_count: int = 0
 
     class Config:
         from_attributes = True
+
+
+class NewsViewResponse(BaseModel):
+    news_id: str
+    views_count: int
+    incremented: bool
 
 
 class EventResponse(BaseModel):

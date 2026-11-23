@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.auth_routes import get_current_user
+from auth.auth_routes import get_current_user, require_council_role
 from database.constants import (
     USER_AVATAR_EMOJI_MAX_LEN,
     USER_BIO_MAX_LEN,
@@ -60,6 +60,18 @@ class StudyGroupResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class StudyGroupBody(BaseModel):
+    name: str = Field(min_length=1, max_length=USER_GROUP_CODE_MAX_LEN)
+
+    @field_validator("name")
+    @classmethod
+    def strip_name(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Название группы не может быть пустым")
+        return v
 
 
 class ProfileUpdateBody(BaseModel):
@@ -159,6 +171,54 @@ async def get_study_groups(db: AsyncSession = Depends(get_db)):
     groups = result.scalars().all()
 
     return groups
+
+
+@router.post(
+    "/groups", response_model=StudyGroupResponse, status_code=status.HTTP_201_CREATED
+)
+async def create_study_group(
+    body: StudyGroupBody,
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_council_role),
+):
+    existing = await db.execute(select(StudyGroup).where(StudyGroup.name == body.name))
+    if existing.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Группа с таким названием уже существует",
+        )
+    group = StudyGroup(name=body.name)
+    db.add(group)
+    await db.commit()
+    await db.refresh(group)
+    return group
+
+
+@router.patch("/groups/{group_id}", response_model=StudyGroupResponse)
+async def update_study_group(
+    group_id: str,
+    body: StudyGroupBody,
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_council_role),
+):
+    result = await db.execute(select(StudyGroup).where(StudyGroup.id == group_id))
+    group = result.scalar_one_or_none()
+    if group is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Группа не найдена",
+        )
+    if body.name != group.name:
+        dup = await db.execute(select(StudyGroup).where(StudyGroup.name == body.name))
+        if dup.scalar_one_or_none() is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Группа с таким названием уже существует",
+            )
+    group.name = body.name
+    await db.commit()
+    await db.refresh(group)
+    return group
 
 
 @router.put("/update", response_model=ProfileResponse)
