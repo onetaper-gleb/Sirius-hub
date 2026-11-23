@@ -58,7 +58,10 @@ jobs:
             echo 'An earlier Docker operation is still running'
             exit 1
           fi
-          active_dir=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' camphub-fastapi)
+          active_dir=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' camphub-fastapi 2>/dev/null || true)
+          if [ -z "$active_dir" ]; then
+            active_dir=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' camphub-postgres)
+          fi
           test -d "$active_dir/../.git"
           cd "$active_dir/.."
           test -z "$(git status --porcelain --untracked-files=no)"

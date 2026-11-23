@@ -11,7 +11,10 @@ docker compose version >/dev/null
 
 project=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' camphub-postgres)
 test -n "$project"
-test "$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' camphub-fastapi)" = "$project"
+fastapi_project=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' camphub-fastapi 2>/dev/null || true)
+if [ -n "$fastapi_project" ]; then
+  test "$fastapi_project" = "$project"
+fi
 db_volume=$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/var/lib/postgresql/data"}}{{.Name}}{{end}}{{end}}' camphub-postgres)
 test -n "$db_volume"
 export COMPOSE_PROJECT_NAME="$project"
@@ -68,6 +71,8 @@ rollback() {
       docker rm -f camphub-fastapi >/dev/null 2>&1 || true
       docker run -d --name camphub-fastapi --restart always --network "$network" \
         --network-alias api -p 127.0.0.1:56284:8000 \
+        --label "com.docker.compose.project=$project" \
+        --label "com.docker.compose.project.working_dir=$(pwd)" \
         -v "$(pwd)/uploads:/app/uploads" --entrypoint uvicorn "$rollback_image" \
         main:app --host 0.0.0.0 --port 8000 >/dev/null || rollback_start_failed=true
     else
