@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -21,13 +21,25 @@ forum_router = APIRouter(
 
 @forum_router.get("/topics", response_model=List[TopicScheme])
 async def get_topics(
-    user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    search: str | None = Query(default=None, max_length=100),
+    user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
+    stmt = (
         select(Topics, func.count(Comments.id).label("comment_count"))
         .outerjoin(Comments, Comments.topic_id == Topics.id)
         .group_by(Topics.id)
     )
+    if search and search.strip():
+        escaped = (
+            search.strip()
+            .replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_")
+        )
+        pattern = f"%{escaped}%"
+        stmt = stmt.where(Topics.title.ilike(pattern, escape="\\"))
+    result = await db.execute(stmt)
     rows = result.all()
 
     return [
