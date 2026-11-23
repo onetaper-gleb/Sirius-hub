@@ -8,9 +8,9 @@ Create Date: 2026-11-23 11:55:00.000000
 
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "9c4f1d2e3a4b"
@@ -38,7 +38,9 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("news_id", "viewer_key", name="uq_news_views_news_viewer"),
     )
-    op.create_index(op.f("ix_news_views_news_id"), "news_views", ["news_id"], unique=False)
+    op.create_index(
+        op.f("ix_news_views_news_id"), "news_views", ["news_id"], unique=False
+    )
 
 
 def downgrade() -> None:
