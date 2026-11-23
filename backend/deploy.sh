@@ -48,7 +48,7 @@ sql() {
 }
 revision=$(sql 'SELECT version_num FROM alembic_version')
 case "$revision" in
-  5a1e237bc965|821a1b366db6) ;;
+  5a1e237bc965|821a1b366db6|9c4f1d2e3a4b) ;;
   *) echo 'Unexpected database migration version'; exit 1 ;;
 esac
 test "$(sql 'SELECT count(*) FROM (SELECT lower(email) FROM users WHERE email IS NOT NULL GROUP BY lower(email) HAVING count(*) > 1) AS duplicates')" = 0
@@ -156,12 +156,12 @@ assert all(path in paths for path in ("/auth/register", "/auth/token", "/auth/me
 assert "/auth/init" not in paths
 assert "/auth/test-make-me-council" not in paths
 PY
-test "$(sql 'SELECT version_num FROM alembic_version')" = 821a1b366db6
+test "$(sql 'SELECT version_num FROM alembic_version')" = 9c4f1d2e3a4b
 sql "$identity_sql" >"$backup/accounts.after"
 cmp "$backup/accounts.before" "$backup/accounts.after"
 test "$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 10 https://104.143.201.57/auth/me)" = 401
 docker inspect --format '{{.Image}}' camphub-fastapi >"$backup/deployed-image"
 printf '%s\n' "$DEPLOY_SHA" >"$backup/deployed-commit"
 trap - EXIT
-echo "Deployment ready: $DEPLOY_SHA, schema 821a1b366db6"
+echo "Deployment ready: $DEPLOY_SHA, schema 9c4f1d2e3a4b"
 echo "Private recovery files: $backup"
