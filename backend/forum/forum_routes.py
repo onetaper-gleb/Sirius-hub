@@ -32,10 +32,7 @@ async def get_topics(
     )
     if search and search.strip():
         escaped = (
-            search.strip()
-            .replace("\\", "\\\\")
-            .replace("%", "\\%")
-            .replace("_", "\\_")
+            search.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         )
         pattern = f"%{escaped}%"
         stmt = stmt.where(Topics.title.ilike(pattern, escape="\\"))

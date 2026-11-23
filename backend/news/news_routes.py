@@ -489,10 +489,7 @@ async def get_all_news(
     stmt = select(News)
     if search and search.strip():
         escaped = (
-            search.strip()
-            .replace("\\", "\\\\")
-            .replace("%", "\\%")
-            .replace("_", "\\_")
+            search.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         )
         pattern = f"%{escaped}%"
         stmt = stmt.where(
